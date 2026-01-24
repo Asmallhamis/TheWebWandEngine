@@ -1,0 +1,6 @@
+<Mod
+	name="Wand Sync (External Editor)"
+	description="Syncs wand data from an external editor via Socket. Requires wand_editor."
+	request_no_api_restrictions="1"
+>
+</Mod>

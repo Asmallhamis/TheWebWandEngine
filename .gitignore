@@ -1,0 +1,57 @@
+# ==========================================
+# 1. 极致白名单：默认忽略所有内容
+# ==========================================
+/*
+!.gitignore
+
+# ==========================================
+# 2. 允许的核心逻辑文件夹
+# ==========================================
+# 后端
+!/backend/
+/backend/__pycache__/
+/backend/*.pyc
+/backend/.venv/
+/backend/.env
+/backend/test_backend.py
+/backend/test_sync.py
+/backend/test_wak.py
+
+# 前端
+!/frontend/
+/frontend/node_modules/
+/frontend/dist/
+/frontend/build/
+/frontend/.eslintcache
+/frontend/.DS_Store
+
+# 核心算法引擎 (GPL-3.0)
+!/wand_eval_tree-master/
+
+# Noita 插件代码
+!/wand_sync/
+
+# ==========================================
+# 3. 允许的根目录配置文件
+# ==========================================
+!/requirements.txt
+!/twwe.spec
+!/build_portable.bat
+!/README.md
+!/LICENSE
+
+# ==========================================
+# 4. 显式排除的第三方/敏感内容 (多重保险)
+# ==========================================
+/noitadata/
+/bin/
+/*.bat
+/*.lnk
+/*.py
+/*.txt
+
+# 再次确认允许关键文件（覆盖上一条规则）
+!/README.md
+!/requirements.txt
+!/build_portable.bat
+!/twwe.spec

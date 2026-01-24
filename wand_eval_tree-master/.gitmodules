@@ -1,0 +1,3 @@
+[submodule "AutoLuaAPI"]
+	path = AutoLuaAPI
+	url = https://github.com/NathanSnail/AutoLuaAPI.git

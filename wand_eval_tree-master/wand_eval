@@ -1,0 +1,3 @@
+#!/bin/luajit
+require("main")
+-- vim: set ft=lua
