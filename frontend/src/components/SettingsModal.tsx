@@ -278,6 +278,25 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch('Delete键删除空格子') && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-500/10 rounded-lg text-red-400">
+                        <Trash2 size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">Delete 键删除空格子</div>
+                        <div className="text-[10px] text-zinc-500">按下 Delete 键时，如果选中的格子已为空，则直接移除该槽位（减少法杖容量）。</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, deleteEmptySlots: !s.deleteEmptySlots }))}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.deleteEmptySlots ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.deleteEmptySlots ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
                 {isMatch('新增法杖默认属性') && (
                   <div className="bg-indigo-500/5 border border-indigo-500/20 p-4 rounded-lg">
                     <h3 className="text-[11px] font-black text-indigo-400 uppercase mb-4 flex items-center gap-2">默认数值模板</h3>
@@ -336,6 +355,69 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch('IF_HALF 初始状态') && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">IF_HALF 初始状态 (触发)</div>
+                        <div className="text-[10px] text-zinc-500">开启时，第一次将不跳过 IF_HALF 后的法术；关闭时则跳过。(新游戏默认第一次用是不跳过)</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, initialIfHalf: !s.initialIfHalf }))}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.initialIfHalf ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.initialIfHalf ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {isMatch('环境模拟: 低血量') && (
+                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                      <div className="flex flex-col">
+                        <div className="text-xs font-bold text-zinc-200">环境: 低血量 (小于25%)</div>
+                        <div className="text-[10px] text-zinc-500">用于 IF_HP,开启时模拟小于25%的情况,也就是开始时不跳过。</div>
+                      </div>
+                      <button
+                        onClick={() => setSettings(s => ({ ...s, simulateLowHp: !s.simulateLowHp }))}
+                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateLowHp ? 'bg-red-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateLowHp ? 'left-5' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  )}
+                  {isMatch('环境模拟: 敌人环绕') && (
+                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                      <div className="flex flex-col">
+                        <div className="text-xs font-bold text-zinc-200">环境: 敌人环绕 (大于15)</div>
+                        <div className="text-[10px] text-zinc-500">用于 IF_ENEMY,开启时模拟周围敌人大于15的情况,也就是开始时不跳过。</div>
+                      </div>
+                      <button
+                        onClick={() => setSettings(s => ({ ...s, simulateManyEnemies: !s.simulateManyEnemies }))}
+                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyEnemies ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyEnemies ? 'left-5' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  )}
+                  {isMatch('环境模拟: 弹幕密集') && (
+                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                      <div className="flex flex-col">
+                        <div className="text-xs font-bold text-zinc-200">环境: 弹幕密集</div>
+                        <div className="text-[10px] text-zinc-500">用于 IF_PROJECTILE,开启时模拟周围投射物大于20的情况,也就是开始时不跳过。</div>
+                      </div>
+                      <button
+                        onClick={() => setSettings(s => ({ ...s, simulateManyProjectiles: !s.simulateManyProjectiles }))}
+                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyProjectiles ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                      >
+                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyProjectiles ? 'left-5' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {isMatch('显示法术次数') && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
                     <div className="flex items-center gap-3">

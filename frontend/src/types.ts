@@ -69,10 +69,15 @@ export interface AppSettings {
   autoHideThreshold: number;
   showSpellCharges: boolean;
   unlimitedSpells: boolean;
+  initialIfHalf: boolean;
+  simulateLowHp: boolean;
+  simulateManyEnemies: boolean;
+  simulateManyProjectiles: boolean;
   groupIdenticalCasts: boolean;
   editorSpellGap: number;
   showStatsInFrames: boolean;
   showLegacyWandButton: boolean;
+  deleteEmptySlots: boolean;
   exportHistory: boolean;
   spellTypes: SpellTypeConfig[];
   spellGroups: SpellGroupConfig[];

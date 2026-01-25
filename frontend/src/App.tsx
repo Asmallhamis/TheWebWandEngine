@@ -108,10 +108,15 @@ function App() {
       autoHideThreshold: 20,
       showSpellCharges: false,
       unlimitedSpells: true,
+      initialIfHalf: true,
+      simulateLowHp: false,
+      simulateManyEnemies: false,
+      simulateManyProjectiles: false,
       groupIdenticalCasts: true,
       editorSpellGap: 6,
       showStatsInFrames: true,
       showLegacyWandButton: false,
+      deleteEmptySlots: true,
       exportHistory: true,
       spellTypes: DEFAULT_SPELL_TYPES,
       spellGroups: DEFAULT_SPELL_GROUPS
@@ -376,7 +381,11 @@ function App() {
           spells,
           spell_uses: wand.spell_uses || {},
           number_of_casts: settings.numCasts || 10,
-          unlimited_spells: settings.unlimitedSpells
+          unlimited_spells: settings.unlimitedSpells,
+          initial_if_half: settings.initialIfHalf,
+          simulate_low_hp: settings.simulateLowHp,
+          simulate_many_enemies: settings.simulateManyEnemies,
+          simulate_many_projectiles: settings.simulateManyProjectiles
         })
       });
       const data = await res.json();
@@ -386,7 +395,7 @@ function App() {
     } catch (e) {
       console.error("Evaluation failed:", e);
     }
-  }, [settings.numCasts, settings.unlimitedSpells]);
+  }, [settings.numCasts, settings.unlimitedSpells, settings.initialIfHalf, settings.simulateLowHp, settings.simulateManyEnemies, settings.simulateManyProjectiles]);
 
   useEffect(() => {
     if (!activeTab || !activeTab.expandedWands) return;
@@ -542,6 +551,9 @@ function App() {
       // Full wand format
       textToCopy = `{{Wand2
 | wandCard     = Yes
+| wandPic      = 
+| spellsCast   = ${wand.actions_per_round}
+| shuffle      = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
 | castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}
 | rechargeTime = ${(wand.reload_time / 60).toFixed(2)}
 | manaMax      = ${wand.mana_max.toFixed(2)}
@@ -648,7 +660,8 @@ function App() {
 
         const newWand: WandData = {
           ...DEFAULT_WAND,
-          shuffle_deck_when_empty: isWand2Data ? (getVal('shuffle') === 'true') : (getVal('shuffle')?.toLowerCase() === 'yes'),
+          shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true',
+          actions_per_round: parseInt(getVal('spellsCast') || (isWand2Data ? '1' : '')) || parseInt(getVal('spellsPerCast') || '1') || DEFAULT_WAND.actions_per_round,
           mana_max: parseFloat(getVal('manaMax') || '0') || DEFAULT_WAND.mana_max,
           mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || DEFAULT_WAND.mana_charge_speed,
           reload_time: Math.round(parseFloat(getVal('rechargeTime') || '0') * 60) || DEFAULT_WAND.reload_time,
@@ -729,7 +742,8 @@ function App() {
       }
       
       const updates: Partial<WandData> = {
-        shuffle_deck_when_empty: isWand2Data ? (getVal('shuffle') === 'true') : (getVal('shuffle')?.toLowerCase() === 'yes'),
+        shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true',
+        actions_per_round: parseInt(getVal('spellsCast') || (isWand2Data ? '1' : '')) || parseInt(getVal('spellsPerCast') || '1') || wand.actions_per_round,
         mana_max: parseFloat(getVal('manaMax') || '0') || wand.mana_max,
         mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || wand.mana_charge_speed,
         reload_time: Math.round(parseFloat(getVal('rechargeTime') || '0') * 60) || wand.reload_time,
@@ -888,13 +902,39 @@ function App() {
           e.preventDefault();
           const wand = activeTab.wands[targetSlot];
           if (wand) {
-            const newSpells = { ...wand.spells };
-            const newSpellUses = { ...(wand.spell_uses || {}) };
-            targetIndices.forEach(idx => {
-              delete newSpells[idx];
-              delete newSpellUses[idx];
-            });
-            updateWand(targetSlot, { spells: newSpells, spell_uses: newSpellUses }, '删除法术');
+            if (settings.deleteEmptySlots && e.key === 'Delete') {
+              const indicesToRem = new Set(targetIndices.filter(i => i <= wand.deck_capacity));
+              if (indicesToRem.size > 0) {
+                const newSpells: Record<string, string> = {};
+                const newSpellUses: Record<string, number> = {};
+                let nextIdx = 1;
+                for (let i = 1; i <= wand.deck_capacity; i++) {
+                  if (indicesToRem.has(i)) continue;
+                  if (wand.spells[i.toString()]) {
+                    newSpells[nextIdx.toString()] = wand.spells[i.toString()];
+                    if (wand.spell_uses?.[i.toString()] !== undefined) {
+                      newSpellUses[nextIdx.toString()] = wand.spell_uses[i.toString()];
+                    }
+                  }
+                  nextIdx++;
+                }
+                const newCap = Math.max(1, wand.deck_capacity - indicesToRem.size);
+                updateWand(targetSlot, { 
+                  spells: newSpells, 
+                  spell_uses: newSpellUses, 
+                  deck_capacity: newCap 
+                }, '删除法杖格子');
+                setSelection(null);
+              }
+            } else {
+              const newSpells = { ...wand.spells };
+              const newSpellUses = { ...(wand.spell_uses || {}) };
+              targetIndices.forEach(idx => {
+                delete newSpells[idx];
+                delete newSpellUses[idx];
+              });
+              updateWand(targetSlot, { spells: newSpells, spell_uses: newSpellUses }, '删除法术');
+            }
           }
         }
       } else if (e.key === ' ') {
@@ -1212,6 +1252,9 @@ function App() {
       // Generate Wand2 wiki text for system clipboard
       const wikiText = `{{Wand2
 | wandCard     = Yes
+| wandPic      = 
+| spellsCast   = ${wand.actions_per_round}
+| shuffle      = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
 | castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}
 | rechargeTime = ${(wand.reload_time / 60).toFixed(2)}
 | manaMax      = ${wand.mana_max.toFixed(2)}
@@ -1358,8 +1401,8 @@ function App() {
         // Detect if it's a full workflow object or just a wands record
         const isFullWorkflow = data && data.type === 'twwe_workflow' && data.wands;
         const wands = isFullWorkflow ? data.wands : data;
-        const past = (isFullWorkflow && settings.exportHistory) ? (data.past || []) : [];
-        const future = (isFullWorkflow && settings.exportHistory) ? (data.future || []) : [];
+        const past = isFullWorkflow ? (data.past || []) : [];
+        const future = isFullWorkflow ? (data.future || []) : [];
 
         setTabs(prev => [
           ...prev,
@@ -1451,6 +1494,7 @@ function App() {
               handleSlotMouseLeave={handleSlotMouseLeave}
               openPicker={openPicker}
               setSelection={setSelection}
+              setSettings={setSettings}
               evalData={evalResults[`${activeTab.id}-${slot}`]}
               settings={settings}
             />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer } from 'lucide-react';
+import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw } from 'lucide-react';
 import { WandData, Tab, SpellInfo, EvalResponse } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
@@ -26,6 +26,7 @@ interface WandCardProps {
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent) => void;
   setSelection: (s: any) => void;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   evalData?: EvalResponse;
   settings: any;
 }
@@ -51,9 +52,31 @@ export function WandCard({
   handleSlotMouseLeave,
   openPicker,
   setSelection,
+  setSettings,
   evalData,
   settings
 }: WandCardProps) {
+  const renderTimeStat = (label: string, frames: number, colorClass: string) => {
+    const primary = settings.showStatsInFrames ? frames : (frames / 60).toFixed(2) + 's';
+    const secondary = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames;
+    return (
+      <div className="flex flex-col">
+        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
+        <div className="flex items-baseline gap-1">
+          <span className={`text-[13px] font-mono font-bold leading-none ${colorClass}`}>{primary}</span>
+          <span className="text-[10px] font-mono text-zinc-600 leading-none">{secondary}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const StatItem = ({ label, value, colorClass }: { label: string, value: string | number, colorClass?: string }) => (
+    <div className="flex flex-col">
+      <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
+      <span className={`text-[13px] font-mono font-bold leading-none ${colorClass || 'text-zinc-200'}`}>{value}</span>
+    </div>
+  );
+
   return (
     <div className={`glass-card group/wand overflow-hidden border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20'}`}>
       <div
@@ -73,15 +96,27 @@ export function WandCard({
             .map(([idx, sid]) => {
               const spell = spellDb[sid];
               const uses = (data.spell_uses || {})[idx] ?? (spell as any)?.max_uses;
-              const shouldShowCharge = uses === 0 || settings.showSpellCharges;
+              const isTriggered = (sid === 'IF_HP' && settings.simulateLowHp) || 
+                                 (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
+                                 (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
+              const isGrayscale = (uses === 0) || isTriggered;
+              const shouldShowCharge = (uses === 0 || settings.showSpellCharges) && !isTriggered;
+              
               return spell ? (
                 <div key={idx} className="relative shrink-0">
                   <img
                     src={`/api/icon/${spell.icon}`}
-                    className={`w-7 h-7 image-pixelated border border-white/10 rounded bg-black/20 ${uses === 0 ? 'grayscale opacity-50' : ''}`}
+                    className={`w-7 h-7 image-pixelated border border-white/10 rounded bg-black/20 ${isGrayscale ? 'grayscale opacity-50' : ''}`}
                     alt={spell.name}
                     title={`${idx}: ${spell.name}${uses !== undefined ? ` (次数: ${uses})` : ''}`}
                   />
+                  {isTriggered && (
+                    <div className="absolute bottom-0 left-0">
+                      <svg width="8" height="8" viewBox="0 0 12 12">
+                        <path d="M0 12 L12 12 L0 0 Z" fill="rgb(239, 68, 68)" />
+                      </svg>
+                    </div>
+                  )}
                   {uses !== undefined && uses !== -1 && shouldShowCharge && (
                     <div className={`absolute bottom-0 left-0 px-0.5 bg-black/80 text-[6px] font-mono leading-none border-tr border-white/10 rounded-tr ${uses === 0 ? 'text-red-500' : 'text-amber-400'}`}>
                       {uses}
@@ -95,16 +130,38 @@ export function WandCard({
           )}
         </div>
 
-        <div className="flex items-center gap-4 border-l border-white/5 pl-4 shrink-0">
-          <CompactStat icon={<Battery size={10} />} value={data.mana_max.toString()} label="Max" />
-          <CompactStat icon={<Zap size={10} />} value={data.mana_charge_speed.toString()} label="Chg" />
-          <CompactStat 
-            icon={<Timer size={10} />} 
-            value={settings.showStatsInFrames ? data.reload_time.toString() : (data.reload_time / 60).toFixed(2) + 's'} 
-            label="Rel" 
-          />
-          
-          <div className="flex items-center bg-black/40 rounded-md p-0.5 opacity-0 group-hover/wand:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0 border-l border-white/5 shrink-0 h-10">
+          {/* Group 1: Shuffle */}
+          <div className="px-3 h-full flex items-center border-r border-white/5">
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${data.shuffle_deck_when_empty ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
+              <div className={`w-1 h-1 rounded-full ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
+              <span className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
+                {data.shuffle_deck_when_empty ? 'Shuffle' : 'No Shuffle'}
+              </span>
+            </div>
+          </div>
+
+          {/* Group 2: Mana */}
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+            <StatItem label="Mana Max" value={data.mana_max} colorClass="text-cyan-400" />
+            <StatItem label="Recharge" value={data.mana_charge_speed} colorClass="text-cyan-400" />
+          </div>
+
+          {/* Group 3: Timing */}
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+            {renderTimeStat("Cast Delay", data.fire_rate_wait, "text-amber-300")}
+            {renderTimeStat("Rechg. Time", data.reload_time, "text-amber-300")}
+          </div>
+
+          {/* Group 4: Capacity & Other */}
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+            <StatItem label="Capacity" value={data.deck_capacity} />
+            <StatItem label="Spread" value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
+            <StatItem label="Cast" value={data.actions_per_round} />
+            <StatItem label="Speed" value={data.speed_multiplier.toFixed(2) + 'x'} colorClass="text-indigo-400" />
+          </div>
+
+          <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">
             <button
               onClick={(e) => { e.stopPropagation(); copyWand(slot); }}
               className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors"
@@ -158,6 +215,7 @@ export function WandCard({
             handleSlotMouseLeave={handleSlotMouseLeave}
             openPicker={openPicker}
             setSelection={setSelection}
+            setSettings={setSettings}
             settings={settings}
           />
           {evalData && (

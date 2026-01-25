@@ -313,6 +313,9 @@ def parse_wiki_wand(text):
         
         capacity = get_val("capacity")
         if capacity: data["deck_capacity"] = int(capacity)
+
+        spells_cast = get_val("spellsCast") or get_val("spellsPerCast")
+        if spells_cast: data["actions_per_round"] = int(spells_cast)
         
         spread = get_val("spread")
         if spread: data["spread_degrees"] = float(spread)
@@ -393,8 +396,87 @@ def evaluate_wand():
         "-cd", format_lua_arg(data.get("fire_rate_wait", 0)),
         "-nc", format_lua_arg(data.get("number_of_casts", 10)), # 默认模拟 10 轮
         "-u", "true" if data.get("unlimited_spells", True) else "false", # 无限法术天赋
+        "-e", "true" if data.get("initial_if_half", True) else "false", # IF_HALF 初始状态
     ]
+
+    # 环境模拟 (IF_HP, IF_ENEMY, IF_PROJECTILE)
+    mock_lua = []
+    if data.get("simulate_low_hp"):
+        mock_lua.append("_TWWE_LOW_HP = true")
+    if data.get("simulate_many_enemies"):
+        mock_lua.append("_TWWE_MANY_ENEMIES = true")
+    if data.get("simulate_many_projectiles"):
+        mock_lua.append("_TWWE_MANY_PROJECTILES = true")
     
+    if mock_lua:
+        # 创建临时 Mod 来注入模拟逻辑
+        # 必须写在 EXTRACTED_DATA_ROOT 目录下，因为 -mp 指向那里
+        mod_base = os.path.join(EXTRACTED_DATA_ROOT, "mods", "twwe_mock")
+        os.makedirs(mod_base, exist_ok=True)
+        with open(os.path.join(mod_base, "init.lua"), "w", encoding="utf-8") as f:
+            f.write("\n".join(mock_lua) + "\n")
+            f.write("""
+-- 覆盖环境检测函数以支持 IF_HP, IF_ENEMY, IF_PROJECTILE
+local _old_EntityGetWithTag = EntityGetWithTag
+function EntityGetWithTag(tag)
+    if tag == "player_unit" and _TWWE_LOW_HP then return { 12345 } end
+    return _old_EntityGetWithTag(tag)
+end
+
+local _old_GetUpdatedEntityID = GetUpdatedEntityID
+function GetUpdatedEntityID()
+    if _TWWE_LOW_HP or _TWWE_MANY_ENEMIES or _TWWE_MANY_PROJECTILES then return 12345 end
+    return _old_GetUpdatedEntityID()
+end
+
+local _old_EntityGetFirstComponent = EntityGetFirstComponent
+function EntityGetFirstComponent(ent, type, tag)
+    if ent == 12345 and type == "DamageModelComponent" and _TWWE_LOW_HP then return 67890 end
+    return _old_EntityGetFirstComponent(ent, type, tag)
+end
+
+local _old_ComponentGetValue2 = ComponentGetValue2
+function ComponentGetValue2(comp, field)
+    if comp == 67890 then
+        if field == "hp" then return 0.1 end     -- 10% 血量
+        if field == "max_hp" then return 1.0 end
+    end
+    return _old_ComponentGetValue2(comp, field)
+end
+
+local _old_EntityGetInRadiusWithTag = EntityGetInRadiusWithTag
+function EntityGetInRadiusWithTag(x, y, radius, tag)
+    if tag == "homing_target" and _TWWE_MANY_ENEMIES then
+        -- 返回超过 15 个假实体以触发 IF_ENEMY
+        local res = {}
+        for i=1,20 do table.insert(res, i) end
+        return res
+    end
+    if tag == "projectile" and _TWWE_MANY_PROJECTILES then
+        -- 返回超过 20 个假实体以触发 IF_PROJECTILE
+        local res = {}
+        for i=1,30 do table.insert(res, i) end
+        return res
+    end
+    return _old_EntityGetInRadiusWithTag(x, y, radius, tag)
+end
+            """)
+        cmd.append("-md")
+        cmd.append("twwe_mock")
+
+    # 添加始终施法
+    always_casts = data.get("always_cast", [])
+    if always_casts:
+        cmd.append("-ac")
+        for ac in always_casts:
+            if ac: cmd.append(str(ac))
+    
+    # 乱序设置
+    if data.get("shuffle_deck_when_empty"):
+        # wand_eval_tree 默认是非乱序，如果需要乱序，通常需要特定参数或者它目前可能不支持完美模拟乱序
+        # 暂时保持默认，因为用户说没人用乱序
+        pass
+
     # 添加法术列表
     cmd.append("-sp")
     spell_count = 0

@@ -19,7 +19,7 @@
 在开发过程中，以下项目的代码逻辑、数据结构或设计思路为本项目提供了巨大的灵感和参考，特此致谢：
 - **[Component Explorer](https://github.com/dextercd/Noita-Component-Explorer)**: 提供了详尽的组件字段解析参考。
 - **[Spell Lab Shugged](https://github.com/shoozzzh/Spell-Lab-Shugged)**: 法杖逻辑模拟与 UI 交互的先驱。
-- **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 提供了优秀的交互灵感。
+- **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 提供了优秀的交互灵感，以及使用了部分Wand Editor的代码。
 
 本项目遵守 **GPL-3.0** 开源协议。
 
@@ -27,9 +27,7 @@
 
 ### 1. 下载与安装 (推荐)
 直接从 [Releases](https://github.com/NathanSnail/TWWE/releases) 下载最新的绿色便携版：
-1. 下载 `TWWE_vX.X.X.zip` 并解压。
-2. 将游戏解包后的 `data` 文件夹重命名为 `noitadata` 放在程序根目录下（或者在 `config.json` 中配置路径）。
-3. 运行 `TWWE.exe` 即可启动。
+运行 `TheWebWandEngine.exe` 即可启动。
 
 ### 2. 游戏内同步
 将解压包内的 `wand_sync` 文件夹复制到 Noita 的 `mods` 目录下并在游戏中启用。

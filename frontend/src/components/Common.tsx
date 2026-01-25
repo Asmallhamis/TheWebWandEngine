@@ -12,16 +12,22 @@ export function CompactStat({ icon, value, label }: { icon: React.ReactNode, val
   );
 }
 
-export function PropInput({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) {
+export function PropInput({ label, value, onChange, colorClass, secondaryValue }: { label: string, value: number | string, onChange: (v: number) => void, colorClass?: string, secondaryValue?: string }) {
   return (
-    <div className="bg-zinc-900 px-3 py-1.5 rounded border border-white/5 hover:border-indigo-500/30 transition-colors shrink-0">
-      <label className="text-[8px] font-black text-zinc-500 block mb-0.5 uppercase tracking-tighter">{label}</label>
-      <input
-        type="number"
-        value={value}
-        onChange={e => onChange(parseFloat(e.target.value) || 0)}
-        className="bg-transparent text-indigo-400 font-mono text-sm w-16 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
+    <div className="flex flex-col group/prop">
+      <label className="text-[10px] font-black text-zinc-500 mb-1 uppercase tracking-wider transition-colors group-hover/prop:text-zinc-400">{label}</label>
+      <div className="flex items-baseline gap-2">
+        <input
+          type="number"
+          value={value}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          className={`bg-transparent font-mono text-xl font-bold w-24 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${colorClass || 'text-white'}`}
+        />
+        {secondaryValue && (
+          <span className="text-xs font-mono text-zinc-600 italic whitespace-nowrap">{secondaryValue}</span>
+        )}
+      </div>
+      <div className="h-0.5 w-full bg-white/5 group-hover/prop:bg-indigo-500/30 transition-colors mt-1" />
     </div>
   );
 }
