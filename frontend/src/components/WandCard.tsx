@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw } from 'lucide-react';
-import { WandData, Tab, SpellInfo, EvalResponse } from '../types';
+import { WandData, Tab, SpellInfo, EvalResponse, AppSettings } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
