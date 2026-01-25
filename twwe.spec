@@ -10,14 +10,18 @@ a = Analysis(
         # 嵌入前端网页
         ('frontend/dist', 'frontend/dist'),
         # 嵌入核心数据 (Lua定义)
-        ('noitadata/data/scripts/gun/gun_actions.lua', 'noitadata_internal/data/scripts/gun'),
+        ('noitadata/data/scripts', 'noitadata_internal/data/scripts'),
         # 嵌入核心数据 (图标 - 整个目录)
         ('noitadata/data/ui_gfx/gun_actions', 'noitadata_internal/data/ui_gfx/gun_actions'),
+        # 嵌入翻译数据
+        ('noitadata/data/translations/common.csv', 'noitadata_internal/data/translations'),
+        ('noitadata/data/translations/common_dev.csv', 'noitadata_internal/data/translations'),
+        ('2026-01-24 01-51-03.txt', '.'),
         # 嵌入 Lua 引擎和评估脚本
         ('bin', 'bin'),
         ('wand_eval_tree-master', 'wand_eval_tree-master')
     ],
-    hiddenimports=['flask', 'flask_cors', 'engineio.async_drivers.threading'],
+    hiddenimports=['flask', 'flask_cors', 'engineio.async_drivers.threading', 'pypinyin'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

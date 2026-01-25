@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function CompactStat({ icon, value, label }: { icon: React.ReactNode, value: number, label: string }) {
+export function CompactStat({ icon, value, label }: { icon: React.ReactNode, value: string | number, label: string }) {
   return (
     <div className="flex flex-col min-w-[40px]">
       <div className="flex items-center gap-1 text-zinc-500">

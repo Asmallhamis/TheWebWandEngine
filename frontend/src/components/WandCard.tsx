@@ -17,6 +17,7 @@ interface WandCardProps {
   toggleExpand: (slot: string) => void;
   deleteWand: (slot: string) => void;
   copyWand: (slot: string) => void;
+  copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, partial: Partial<WandData>) => void;
   handleSlotMouseDown: (slot: string, idx: number) => void;
@@ -41,6 +42,7 @@ export function WandCard({
   toggleExpand,
   deleteWand,
   copyWand,
+  copyLegacyWand,
   pasteWand,
   updateWand,
   handleSlotMouseDown,
@@ -94,9 +96,13 @@ export function WandCard({
         </div>
 
         <div className="flex items-center gap-4 border-l border-white/5 pl-4 shrink-0">
-          <CompactStat icon={<Battery size={10} />} value={data.mana_max} label="Max" />
-          <CompactStat icon={<Zap size={10} />} value={data.mana_charge_speed} label="Chg" />
-          <CompactStat icon={<Timer size={10} />} value={data.reload_time} label="Rel" />
+          <CompactStat icon={<Battery size={10} />} value={data.mana_max.toString()} label="Max" />
+          <CompactStat icon={<Zap size={10} />} value={data.mana_charge_speed.toString()} label="Chg" />
+          <CompactStat 
+            icon={<Timer size={10} />} 
+            value={settings.showStatsInFrames ? data.reload_time.toString() : (data.reload_time / 60).toFixed(2) + 's'} 
+            label="Rel" 
+          />
           
           <div className="flex items-center bg-black/40 rounded-md p-0.5 opacity-0 group-hover/wand:opacity-100 transition-opacity">
             <button
@@ -106,6 +112,15 @@ export function WandCard({
             >
               <Scissors size={14} />
             </button>
+            {settings.showLegacyWandButton && (
+              <button
+                onClick={(e) => { e.stopPropagation(); copyLegacyWand(slot); }}
+                className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-amber-400 rounded transition-colors text-[10px] font-black"
+                title="复制为老版Wand模板"
+              >
+                W
+              </button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); pasteWand(slot); }}
               disabled={!clipboard}

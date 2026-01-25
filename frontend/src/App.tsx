@@ -36,7 +36,7 @@ import {
 
 // --- Internal ---
 import { SpellInfo, WandData, HistoryItem, Tab, AppSettings, EvalResponse } from './types';
-import { DEFAULT_WAND, SPELL_GROUPS } from './constants';
+import { DEFAULT_WAND, DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from './constants';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { WandCard } from './components/WandCard';
@@ -107,7 +107,14 @@ function App() {
       numCasts: 10,
       autoHideThreshold: 20,
       showSpellCharges: false,
-      unlimitedSpells: true
+      unlimitedSpells: true,
+      groupIdenticalCasts: true,
+      editorSpellGap: 6,
+      showStatsInFrames: true,
+      showLegacyWandButton: false,
+      exportHistory: true,
+      spellTypes: DEFAULT_SPELL_TYPES,
+      spellGroups: DEFAULT_SPELL_GROUPS
     };
     if (saved) {
       try {
@@ -134,6 +141,35 @@ function App() {
   const [tabMenu, setTabMenu] = useState<{ x: number, y: number, tabId: string } | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [notification, setNotification] = useState<{ msg: string; type: 'info' | 'success' } | null>(null);
+
+  const spellNameToId = useMemo(() => {
+    const map: Record<string, string> = {};
+    Object.entries(spellDb).forEach(([id, info]) => {
+      // 1. Normalize ID (e.g. "LIGHT_BULLET" -> "lightbullet")
+      const idNorm = id.toLowerCase().replace(/[^a-z0-9]/g, '');
+      map[idNorm] = id;
+      
+      // 2. Normalize Localized Name (e.g. "二重咒语" -> "二重咒语")
+      if (info.name) {
+        const nameNorm = info.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (nameNorm) map[nameNorm] = id;
+      }
+
+      // 3. Normalize English Name (e.g. "Double Spell" -> "doublespell")
+      if (info.en_name) {
+        const enNorm = info.en_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (enNorm) map[enNorm] = id;
+      }
+
+      // 4. Heuristics for internal IDs with underscores
+      if (id.includes('_')) {
+        const idSimple = id.toLowerCase().replace(/_/g, '');
+        map[idSimple] = id;
+      }
+    });
+
+    return map;
+  }, [spellDb]);
 
   // --- Conflict Resolution ---
   const lastKnownGameWandsRef = useRef<Record<string, Record<string, WandData>>>({});
@@ -387,24 +423,56 @@ function App() {
     const allSpells = Object.values(spellDb);
     const overall = getTopN(allSpells, settings.commonLimit, pickerExpandedGroups.has(-1));
 
-    const categories = SPELL_GROUPS.map((group, idx) => {
+    const categories = settings.spellGroups.map((group, idx) => {
       const filtered = allSpells.filter(s => group.types.includes(s.type));
       return getTopN(filtered, settings.categoryLimit, pickerExpandedGroups.has(idx));
     });
 
     return { overall, categories };
-  }, [tabs, spellDb, settings.commonLimit, settings.categoryLimit, pickerExpandedGroups]);
+  }, [tabs, spellDb, settings.commonLimit, settings.categoryLimit, settings.spellGroups, pickerExpandedGroups]);
 
   const searchResults = useMemo(() => {
     if (!pickerSearch) return null;
-    const query = pickerSearch.toLowerCase();
+    const query = pickerSearch.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!query) return null;
+
     const allSpells = Object.values(spellDb);
-    return SPELL_GROUPS.map(group =>
-      allSpells.filter(s =>
-        group.types.includes(s.type) &&
-        (s.name.toLowerCase().includes(query) || s.id.toLowerCase().includes(query))
-      )
-    );
+    
+    // Score-based search
+    const scored = allSpells.map(s => {
+      let score = 0;
+      const id = s.id.toLowerCase();
+      const name = s.name.toLowerCase();
+      const en = (s.en_name || "").toLowerCase();
+      const py = (s.pinyin || "").toLowerCase();
+      const init = (s.pinyin_initials || "").toLowerCase();
+
+      // Exact matches
+      if (id === query) score += 100;
+      else if (name === query) score += 90;
+      else if (en === query) score += 85;
+      
+      // Starts with
+      else if (id.startsWith(query)) score += 70;
+      else if (name.startsWith(query)) score += 65;
+      else if (en.startsWith(query)) score += 60;
+      else if (init.startsWith(query)) score += 55;
+      else if (py.startsWith(query)) score += 50;
+
+      // Includes
+      else if (id.includes(query)) score += 30;
+      else if (name.includes(query)) score += 25;
+      else if (en.includes(query)) score += 20;
+      else if (init.includes(query)) score += 15;
+      else if (py.includes(query)) score += 10;
+
+      return { spell: s, score };
+    }).filter(x => x.score > 0);
+
+    // Sort by score descending, then by original order/id
+    scored.sort((a, b) => b.score - a.score || a.spell.id.localeCompare(b.spell.id));
+
+    return [scored.map(x => x.spell)];
   }, [pickerSearch, spellDb]);
 
   // --- Selection & Clipboard Logic ---
@@ -436,9 +504,25 @@ function App() {
   };
 
   const copyToClipboard = async (isCut = false) => {
+    let wandSlot: string;
+    let indices: number[];
+
     const sel = selectionRef.current;
-    if (!sel) return;
-    const { wandSlot, indices } = sel;
+    const hovered = hoveredSlotRef.current;
+
+    if (sel && hovered && hovered.wandSlot === sel.wandSlot && sel.indices.includes(hovered.idx)) {
+      wandSlot = sel.wandSlot;
+      indices = sel.indices;
+    } else if (hovered && hovered.wandSlot) {
+      wandSlot = hovered.wandSlot;
+      indices = [hovered.idx];
+    } else if (sel) {
+      wandSlot = sel.wandSlot;
+      indices = sel.indices;
+    } else {
+      return;
+    }
+
     const wand = activeTab.wands[wandSlot];
     if (!wand) return;
 
@@ -448,6 +532,11 @@ function App() {
     let textToCopy = "";
     // Get sequence including empty slots (empty strings)
     const sequence = sortedIndices.map(i => wand.spells[i.toString()] || "");
+
+    // If it's a single empty slot being copied, don't do anything unless it's a cut operation?
+    // Actually, copying an empty slot might be useful to "paste" an empty space.
+    // But usually people want to copy a spell.
+    if (sequence.length === 1 && !sequence[0] && !isCut) return;
 
     if (sortedIndices.length >= wand.deck_capacity && sortedIndices.length > 1) {
       // Full wand format
@@ -487,7 +576,9 @@ function App() {
     const text = (await navigator.clipboard.readText()).trim();
     if (!text) return false;
 
-    const isWandData = text.includes('{{Wand2');
+    const isWand2Data = text.includes('{{Wand2');
+    const isWikiWand = text.includes('{{Wand') && !isWand2Data;
+    const isWandData = isWand2Data || isWikiWand;
     const isSpellSeq = text.includes(',') || Object.keys(spellDb).some(id => text.includes(id));
 
     if (!isWandData && !isSpellSeq) return false;
@@ -505,33 +596,68 @@ function App() {
     }
 
     if (!targetWandSlot || !startIdx) {
-      // If no target slot but it's Wand2 data, create a new wand instead of failing
+      // If no target slot but it's Wand data, create a new wand instead of failing
       if (isWandData) {
         const nextSlot = (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
         
-        const getValue = (key: string) => {
+        const getVal = (key: string) => {
+          // Use boundary logic to avoid spell1 matching spell10
           const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
           const match = text.match(regex);
-          return match ? match[1].trim() : null;
+          if (!match) return null;
+          return match[1].trim();
         };
 
-        const spellsStr = getValue('spells');
-        const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
         const newSpells: Record<string, string> = {};
-        spellsList.forEach((sid, i) => {
-          if (sid) newSpells[(i + 1).toString()] = sid;
-        });
+        const alwaysCasts: string[] = [];
+        let deckCapacity = 0;
+
+        if (isWand2Data) {
+          const spellsStr = getVal('spells');
+          const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
+          spellsList.forEach((sid, i) => {
+            if (sid) newSpells[(i + 1).toString()] = sid;
+          });
+          deckCapacity = parseInt(getVal('capacity') || '0') || DEFAULT_WAND.deck_capacity;
+
+          const acStr = getVal('alwaysCasts');
+          if (acStr) {
+            acStr.split(',').forEach(s => {
+              const sid = s.trim();
+              if (sid) alwaysCasts.push(sid);
+            });
+          }
+        } else {
+          // Wiki Wand
+          deckCapacity = parseInt(getVal('capacity') || '0') || DEFAULT_WAND.deck_capacity;
+          for (let i = 1; i <= Math.max(deckCapacity, 100); i++) {
+            const name = getVal(`spell${i}`);
+            if (name) {
+              const norm = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const id = spellNameToId[norm];
+              if (id) newSpells[i.toString()] = id;
+            }
+          }
+          const acName = getVal('alwaysCasts');
+          if (acName) {
+            const norm = acName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const id = spellNameToId[norm];
+            if (id) alwaysCasts.push(id);
+          }
+        }
 
         const newWand: WandData = {
           ...DEFAULT_WAND,
-          mana_max: parseFloat(getValue('manaMax') || '0') || DEFAULT_WAND.mana_max,
-          mana_charge_speed: parseFloat(getValue('manaCharge') || '0') || DEFAULT_WAND.mana_charge_speed,
-          reload_time: Math.round(parseFloat(getValue('rechargeTime') || '0') * 60) || DEFAULT_WAND.reload_time,
-          fire_rate_wait: Math.round(parseFloat(getValue('castDelay') || '0') * 60) || DEFAULT_WAND.fire_rate_wait,
-          deck_capacity: parseInt(getValue('capacity') || '0') || DEFAULT_WAND.deck_capacity,
-          spread_degrees: parseFloat(getValue('spread') || '0') || DEFAULT_WAND.spread_degrees,
-          speed_multiplier: parseFloat(getValue('speed') || '1') || DEFAULT_WAND.speed_multiplier,
-          spells: newSpells
+          shuffle_deck_when_empty: isWand2Data ? (getVal('shuffle') === 'true') : (getVal('shuffle')?.toLowerCase() === 'yes'),
+          mana_max: parseFloat(getVal('manaMax') || '0') || DEFAULT_WAND.mana_max,
+          mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || DEFAULT_WAND.mana_charge_speed,
+          reload_time: Math.round(parseFloat(getVal('rechargeTime') || '0') * 60) || DEFAULT_WAND.reload_time,
+          fire_rate_wait: Math.round(parseFloat(getVal('castDelay') || '0') * 60) || DEFAULT_WAND.fire_rate_wait,
+          deck_capacity: deckCapacity,
+          spread_degrees: parseFloat(getVal('spread') || '0') || DEFAULT_WAND.spread_degrees,
+          speed_multiplier: parseFloat(getVal('speed') || '1') || DEFAULT_WAND.speed_multiplier,
+          spells: newSpells,
+          always_cast: alwaysCasts
         };
 
         performAction(prevWands => ({
@@ -557,31 +683,64 @@ function App() {
     const wand = activeTab.wands[targetWandSlot] || { ...DEFAULT_WAND };
 
     if (isWandData) {
-      // --- Wand2 Template Parsing (Overwrite style) ---
-      const getValue = (key: string) => {
+      // --- Template Parsing (Overwrite style) ---
+      const getVal = (key: string) => {
         const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
         const match = text.match(regex);
         return match ? match[1].trim() : null;
       };
 
-      const spellsStr = getValue('spells');
-      const spells = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
+      const newSpells: Record<string, string> = {};
+      const alwaysCasts: string[] = [];
+      let deckCapacity = wand.deck_capacity;
+
+      if (isWand2Data) {
+        const spellsStr = getVal('spells');
+        const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
+        spellsList.forEach((sid, i) => {
+          if (sid) newSpells[(i + 1).toString()] = sid;
+        });
+        deckCapacity = parseInt(getVal('capacity') || '0') || deckCapacity;
+
+        const acStr = getVal('alwaysCasts');
+        if (acStr) {
+          acStr.split(',').forEach(s => {
+            const sid = s.trim();
+            if (sid) alwaysCasts.push(sid);
+          });
+        }
+      } else {
+        // Wiki Wand
+        deckCapacity = parseInt(getVal('capacity') || '0') || deckCapacity;
+        for (let i = 1; i <= Math.max(deckCapacity, 100); i++) {
+          const val = getVal(`spell${i}`);
+          if (val) {
+            const norm = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const id = spellNameToId[norm];
+            if (id) newSpells[i.toString()] = id;
+          }
+        }
+        const acName = getVal('alwaysCasts');
+        if (acName) {
+          const norm = acName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const id = spellNameToId[norm];
+          if (id) alwaysCasts.push(id);
+        }
+      }
       
       const updates: Partial<WandData> = {
-        mana_max: parseFloat(getValue('manaMax') || '0') || wand.mana_max,
-        mana_charge_speed: parseFloat(getValue('manaCharge') || '0') || wand.mana_charge_speed,
-        reload_time: Math.round(parseFloat(getValue('rechargeTime') || '0') * 60) || wand.reload_time,
-        fire_rate_wait: Math.round(parseFloat(getValue('castDelay') || '0') * 60) || wand.fire_rate_wait,
-        deck_capacity: parseInt(getValue('capacity') || '0') || wand.deck_capacity,
-        spread_degrees: parseFloat(getValue('spread') || '0') || wand.spread_degrees,
-        speed_multiplier: parseFloat(getValue('speed') || '1') || wand.speed_multiplier,
+        shuffle_deck_when_empty: isWand2Data ? (getVal('shuffle') === 'true') : (getVal('shuffle')?.toLowerCase() === 'yes'),
+        mana_max: parseFloat(getVal('manaMax') || '0') || wand.mana_max,
+        mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || wand.mana_charge_speed,
+        reload_time: Math.round(parseFloat(getVal('rechargeTime') || '0') * 60) || wand.reload_time,
+        fire_rate_wait: Math.round(parseFloat(getVal('castDelay') || '0') * 60) || wand.fire_rate_wait,
+        deck_capacity: deckCapacity,
+        spread_degrees: parseFloat(getVal('spread') || '0') || wand.spread_degrees,
+        speed_multiplier: parseFloat(getVal('speed') || '1') || wand.speed_multiplier,
+        always_cast: alwaysCasts
       };
 
-      const newSpells: Record<string, string> = {};
-      spells.forEach((sid, i) => {
-        if (sid) newSpells[(i + 1).toString()] = sid;
-      });
-      updateWand(targetWandSlot, { ...updates, spells: newSpells }, '粘贴法杖数据 (Wand2)', spells.filter(s => s));
+      updateWand(targetWandSlot, { ...updates, spells: newSpells }, '粘贴法杖数据', Object.values(newSpells));
       return true;
     } else {
       // --- Spell Sequence Parsing (Insertion style) ---
@@ -627,6 +786,44 @@ function App() {
     }
   };
 
+  const insertEmptySlot = () => {
+    let targetWandSlot = hoveredSlotRef.current?.wandSlot;
+    let startIdx = hoveredSlotRef.current ? (hoveredSlotRef.current.idx + (hoveredSlotRef.current.isRightHalf ? 1 : 0)) : null;
+
+    if (!targetWandSlot && selectionRef.current) {
+      targetWandSlot = selectionRef.current.wandSlot;
+      startIdx = Math.min(...selectionRef.current.indices);
+    }
+
+    if (!targetWandSlot || startIdx === null) return;
+
+    const wand = activeTab.wands[targetWandSlot];
+    if (!wand) return;
+
+    const existingSpells: (string | null)[] = [];
+    const maxIdx = Math.max(wand.deck_capacity, ...Object.keys(wand.spells).map(Number));
+    for (let i = 1; i <= maxIdx; i++) {
+      existingSpells.push(wand.spells[i.toString()] || null);
+    }
+
+    const head = existingSpells.slice(0, startIdx - 1);
+    const tail = existingSpells.slice(startIdx - 1);
+    const combined = [...head, null, ...tail];
+
+    const finalSpellsObj: Record<string, string> = {};
+    combined.forEach((sid, i) => {
+      if (sid) finalSpellsObj[(i + 1).toString()] = sid;
+    });
+
+    let newCapacity = wand.deck_capacity;
+    const lastSpellIdx = combined.reduce((acc, val, idx) => val !== null ? idx + 1 : acc, 0);
+    if (lastSpellIdx > wand.deck_capacity) {
+      newCapacity = lastSpellIdx;
+    }
+
+    updateWand(targetWandSlot, { spells: finalSpellsObj, deck_capacity: newCapacity }, '插入空法术位');
+  };
+
   useEffect(() => {
     const handleMouseUp = () => setIsSelecting(false);
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -643,7 +840,10 @@ function App() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       
       if ((e.ctrlKey || e.metaKey)) {
-        if (e.key === 'a') {
+        if (e.key === 'h') {
+          e.preventDefault();
+          setIsHistoryOpen(prev => !prev);
+        } else if (e.key === 'a') {
           const targetSlot = selectionRef.current?.wandSlot || Object.keys(activeTab.wands).find(slot => activeTab.expandedWands.has(slot));
           if (targetSlot) {
             e.preventDefault();
@@ -668,20 +868,39 @@ function App() {
         }
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         const sel = selectionRef.current;
-        if (sel && sel.indices.length > 0) {
+        const hovered = hoveredSlotRef.current;
+        
+        let targetSlot: string | null = null;
+        let targetIndices: number[] = [];
+
+        if (sel && hovered && hovered.wandSlot === sel.wandSlot && sel.indices.includes(hovered.idx)) {
+          targetSlot = sel.wandSlot;
+          targetIndices = sel.indices;
+        } else if (hovered && hovered.wandSlot) {
+          targetSlot = hovered.wandSlot;
+          targetIndices = [hovered.idx];
+        } else if (sel && sel.indices.length > 0) {
+          targetSlot = sel.wandSlot;
+          targetIndices = sel.indices;
+        }
+
+        if (targetSlot) {
           e.preventDefault();
-          const wand = activeTab.wands[sel.wandSlot];
+          const wand = activeTab.wands[targetSlot];
           if (wand) {
             const newSpells = { ...wand.spells };
             const newSpellUses = { ...(wand.spell_uses || {}) };
-            sel.indices.forEach(idx => {
+            targetIndices.forEach(idx => {
               delete newSpells[idx];
               delete newSpellUses[idx];
             });
-            updateWand(sel.wandSlot, { spells: newSpells, spell_uses: newSpellUses }, '删除所选法术');
-            // If it was a single selection, maybe clear selection? 
-            // Better to keep it so user knows where they are.
+            updateWand(targetSlot, { spells: newSpells, spell_uses: newSpellUses }, '删除法术');
           }
+        }
+      } else if (e.key === ' ') {
+        if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+          e.preventDefault();
+          insertEmptySlot();
         }
       }
 
@@ -859,6 +1078,34 @@ function App() {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, isRealtime: !t.isRealtime } : t));
   };
 
+  const pushAllToGame = async () => {
+    if (!isConnected) {
+      setNotification({ msg: '未连接到游戏，无法推送', type: 'info' });
+      return;
+    }
+    const wands = activeTab.wands;
+    const entries = Object.entries(wands);
+    if (entries.length === 0) return;
+
+    try {
+      // Use Promise.all for faster sync if many wands, but sequential is safer for Noita
+      for (const [slot, data] of entries) {
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            slot: parseInt(slot), 
+            delete: false,
+            ...data 
+          })
+        });
+      }
+      setNotification({ msg: `已将当前工作流的 ${entries.length} 根法杖推送到游戏`, type: 'success' });
+    } catch (e) {
+      setNotification({ msg: '推送失败', type: 'info' });
+    }
+  };
+
   const syncWand = async (slot: string, data: WandData | null, isDelete = false) => {
     if (!activeTab.isRealtime || !isConnected) return;
     try {
@@ -983,6 +1230,31 @@ function App() {
     }
   };
 
+  const copyLegacyWand = async (slot: string) => {
+    const wand = activeTab.wands[slot];
+    if (wand) {
+      let wikiText = `{{Wand
+| wandPic =
+| capacity = ${wand.deck_capacity}
+| shuffle = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
+| spellsCast = ${wand.actions_per_round}
+| alwaysCasts = ${wand.always_cast ? wand.always_cast.map(id => spellDb[id]?.en_name || id).join(',') : ''}
+`;
+      for (let i = 1; i <= wand.deck_capacity; i++) {
+        const sid = wand.spells[i.toString()];
+        const name = sid ? (spellDb[sid]?.en_name || sid) : '';
+        wikiText += `| spell${i} = ${name}\n`;
+      }
+      wikiText += `}}`;
+      try {
+        await navigator.clipboard.writeText(wikiText);
+        setNotification({ msg: '已复制为老版Wand模板', type: 'success' });
+      } catch (err) {
+        console.error('Clipboard error:', err);
+      }
+    }
+  };
+
   const cutWand = (slot: string) => {
     copyWand(slot);
     deleteWand(slot);
@@ -1031,7 +1303,14 @@ function App() {
       version: '1.0',
       timestamp: Date.now(),
       settings: settings,
-      tabs: tabs.map(t => ({ ...t, expandedWands: Array.from(t.expandedWands) }))
+      tabs: tabs.map(t => {
+        const tabData = { ...t, expandedWands: Array.from(t.expandedWands) };
+        if (!settings.exportHistory) {
+          tabData.past = [];
+          tabData.future = [];
+        }
+        return tabData;
+      })
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1076,16 +1355,22 @@ function App() {
         const newTabId = Date.now().toString();
         const fileName = file.name.replace('.json', '');
 
+        // Detect if it's a full workflow object or just a wands record
+        const isFullWorkflow = data && data.type === 'twwe_workflow' && data.wands;
+        const wands = isFullWorkflow ? data.wands : data;
+        const past = (isFullWorkflow && settings.exportHistory) ? (data.past || []) : [];
+        const future = (isFullWorkflow && settings.exportHistory) ? (data.future || []) : [];
+
         setTabs(prev => [
           ...prev,
           {
             id: newTabId,
-            name: fileName,
+            name: isFullWorkflow ? (data.name || fileName) : fileName,
             isRealtime: false,
-            wands: data,
-            expandedWands: new Set(Object.keys(data)),
-            past: [],
-            future: []
+            wands: wands,
+            expandedWands: new Set(Object.keys(wands)),
+            past: past,
+            future: future
           }
         ]);
         setActiveTabId(newTabId);
@@ -1098,7 +1383,19 @@ function App() {
   const exportWorkflow = (tabId?: string) => {
     const targetTab = tabId ? tabs.find(t => t.id === tabId) : activeTab;
     if (!targetTab) return;
-    const blob = new Blob([JSON.stringify(targetTab.wands, null, 2)], { type: 'application/json' });
+
+    let exportData: any = targetTab.wands;
+    if (settings.exportHistory) {
+      exportData = {
+        type: 'twwe_workflow',
+        name: targetTab.name,
+        wands: targetTab.wands,
+        past: targetTab.past,
+        future: targetTab.future
+      };
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1117,6 +1414,7 @@ function App() {
         addNewTab={addNewTab}
         deleteTab={deleteTab}
         pullData={pullData}
+        pushData={pushAllToGame}
         toggleSync={toggleSync}
         addWand={addWand}
         clipboard={clipboard}
@@ -1144,6 +1442,7 @@ function App() {
               toggleExpand={toggleExpand}
               deleteWand={deleteWand}
               copyWand={copyWand}
+              copyLegacyWand={copyLegacyWand}
               pasteWand={pasteWand}
               updateWand={updateWand}
               handleSlotMouseDown={handleSlotMouseDown}
@@ -1199,6 +1498,17 @@ function App() {
             
             <button
               onClick={() => {
+                toggleSync(tabMenu.tabId);
+                setTabMenu(null);
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-zinc-300 hover:bg-white/5 flex items-center gap-2"
+            >
+              <Activity size={12} className={tabs.find(t => t.id === tabMenu.tabId)?.isRealtime ? "text-green-500" : "text-zinc-500"} />
+              {tabs.find(t => t.id === tabMenu.tabId)?.isRealtime ? '关闭自动同步' : '开启自动同步'}
+            </button>
+
+            <button
+              onClick={() => {
                 const tab = tabs.find(t => t.id === tabMenu.tabId);
                 const newName = prompt('重命名工作流:', tab?.name);
                 if (newName) {
@@ -1228,9 +1538,12 @@ function App() {
                 setIsHistoryOpen(true);
                 setTabMenu(null);
               }}
-              className="w-full px-3 py-2 text-left text-xs text-zinc-300 hover:bg-white/5 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-xs text-zinc-300 hover:bg-white/5 flex items-center justify-between group"
             >
-              <History size={12} className="text-indigo-400" /> 打开历史记录面板
+              <div className="flex items-center gap-2">
+                <History size={12} className="text-indigo-400" /> 打开历史记录面板
+              </div>
+              <span className="text-[9px] text-zinc-500 font-mono group-hover:text-zinc-400">Ctrl+H</span>
             </button>
 
             <button

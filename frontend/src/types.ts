@@ -2,6 +2,9 @@ export interface SpellInfo {
   id: string;
   icon: string;
   name: string;
+  en_name?: string;
+  pinyin?: string;
+  pinyin_initials?: string;
   type: number;
   max_uses?: number;
 }
@@ -39,6 +42,18 @@ export interface Tab {
   future: HistoryItem[];
 }
 
+export interface SpellTypeConfig {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface SpellGroupConfig {
+  name: string;
+  types: number[];
+  color?: string;
+}
+
 export interface AppSettings {
   commonLimit: number;
   categoryLimit: number;
@@ -54,6 +69,13 @@ export interface AppSettings {
   autoHideThreshold: number;
   showSpellCharges: boolean;
   unlimitedSpells: boolean;
+  groupIdenticalCasts: boolean;
+  editorSpellGap: number;
+  showStatsInFrames: boolean;
+  showLegacyWandButton: boolean;
+  exportHistory: boolean;
+  spellTypes: SpellTypeConfig[];
+  spellGroups: SpellGroupConfig[];
 }
 
 export interface EvalNode {
@@ -74,4 +96,5 @@ export interface EvalResponse {
   tree: EvalNode;
   states: ShotState[];
   counts: Record<string, number>;
+  cast_counts: Record<string, Record<string, number>>;
 }

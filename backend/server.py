@@ -7,6 +7,11 @@ import re
 import io
 import subprocess
 import webbrowser
+try:
+    from pypinyin import pinyin, Style
+    HAS_PYPINYIN = True
+except ImportError:
+    HAS_PYPINYIN = False
 from threading import Timer
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
@@ -25,16 +30,13 @@ if getattr(sys, 'frozen', False):
     EXTRACTED_DATA_ROOT = os.path.join(BASE_DIR, "noitadata_internal")
     FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
     WAND_EVAL_DIR = os.path.join(BASE_DIR, "wand_eval_tree-master")
-    LUAJIT_PATH = os.path.join(BASE_DIR, "luajit.exe")
+    LUAJIT_PATH = os.path.join(BASE_DIR, "bin", "luajit.exe")
 else:
     # 开发模式
     BASE_DIR = os.getcwd()
-    # 优先使用项目根目录下的 noitadata，否则尝试从环境变量获取，最后使用默认相对路径
-    EXTRACTED_DATA_ROOT = os.getenv("NOITA_DATA_PATH", os.path.join(BASE_DIR, "noitadata"))
-    
+    EXTRACTED_DATA_ROOT = os.path.join(BASE_DIR, "noitadata")
     if not os.path.exists(EXTRACTED_DATA_ROOT):
-        # 如果都不存在，可以在此处打印警告，而不是硬编码个人路径
-        print(f"Warning: Noita data not found at {EXTRACTED_DATA_ROOT}. Please check your configuration.")
+        EXTRACTED_DATA_ROOT = r"E:\download\TheWebWandEngine\noitadata"
     
     FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "../frontend/dist")
     WAND_EVAL_DIR = os.path.join(BASE_DIR, "wand_eval_tree-master")
@@ -42,13 +44,81 @@ else:
     local_luajit = os.path.join(BASE_DIR, "bin/luajit.exe")
     LUAJIT_PATH = local_luajit if os.path.exists(local_luajit) else "luajit"
 
-# 预加载法术数据库
+# 预加载数据
 _SPELL_CACHE = {}
+_TRANSLATIONS = {}
+
+def get_pinyin_data(text):
+    if not HAS_PYPINYIN or not text:
+        return "", ""
+    try:
+        # Full pinyin without tones
+        full = "".join([item[0] for item in pinyin(text, style=Style.NORMAL)])
+        # Initials
+        initials = "".join([item[0] for item in pinyin(text, style=Style.FIRST_LETTER)])
+        return full.lower(), initials.lower()
+    except:
+        return "", ""
+
+def load_translations():
+    global _TRANSLATIONS
+    if _TRANSLATIONS: return _TRANSLATIONS
+    
+    trans_files = [
+        os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common.csv"),
+        os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common_dev.csv"),
+        os.path.join(BASE_DIR, "2026-01-24 01-51-03.txt") # User provided translation file
+    ]
+    
+    translations = {}
+    for file_path in trans_files:
+        if not os.path.exists(file_path):
+            continue
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                import csv
+                # Noita CSVs often have junk or extra commas, we use a simple reader
+                reader = csv.reader(f)
+                header = next(reader, None)
+                if not header: continue
+                
+                # Standard Noita indices
+                en_idx = 1
+                zh_idx = 9 # Default zh-cn index
+                
+                # Dynamic index detection
+                for i, h in enumerate(header):
+                    h_lower = h.lower()
+                    if h_lower == 'en': en_idx = i
+                    elif h_lower == 'zh-cn': zh_idx = i
+                    elif 'zh-cn汉化mod' in h_lower: zh_idx = i # Prefer modded zh-cn if available
+                    elif h_lower == '简体中文' and zh_idx == 9: zh_idx = i
+                
+                for row in reader:
+                    if not row or len(row) < 2: continue
+                    key = row[0].lstrip('$')
+                    if not key: continue
+                    
+                    en_val = row[en_idx] if len(row) > en_idx else ""
+                    zh_val = row[zh_idx] if len(row) > zh_idx else ""
+                    
+                    # Store translations
+                    if key not in translations:
+                        translations[key] = {"en": "", "zh": ""}
+                    
+                    if en_val: translations[key]["en"] = en_val.replace('\\n', '\n').strip('"')
+                    if zh_val: translations[key]["zh"] = zh_val.replace('\\n', '\n').strip('"')
+        except Exception as e:
+            print(f"Error loading translations from {file_path}: {e}")
+            
+    _TRANSLATIONS = translations
+    return translations
 
 def load_spell_database():
     global _SPELL_CACHE
     if _SPELL_CACHE: return _SPELL_CACHE
     
+    trans = load_translations()
     actions_file = os.path.join(EXTRACTED_DATA_ROOT, "data/scripts/gun/gun_actions.lua")
     if not os.path.exists(actions_file):
         print(f"Warning: gun_actions.lua not found at {actions_file}")
@@ -59,9 +129,7 @@ def load_spell_database():
             content = f.read()
         
         # 1. 剥离 Lua 注释
-        # 剥离多行注释 --[[ ... ]]
         content = re.sub(r'--\[\[.*?\]\]', '', content, flags=re.DOTALL)
-        # 剥离单行注释 -- ...
         content = re.sub(r'--.*', '', content)
 
         # 2. 定义类型映射
@@ -77,28 +145,44 @@ def load_spell_database():
         }
 
         # 3. 提取法术块
-        # 我们寻找以 { id = "..." 开始，并包含 price = ... (通常所有合法法术都有价格) 的结构
-        # 使用更精确的正则匹配法术定义块
         action_blocks = re.findall(r'\{\s*(id\s*=\s*"[^"]+".*?price\s*=\s*\d+.*?)\s*\},', content, re.DOTALL)
         
         db = {}
         for block in action_blocks:
             id_match = re.search(r'id\s*=\s*"([^"]+)"', block)
+            name_match = re.search(r'name\s*=\s*"([^"]+)"', block)
             sprite_match = re.search(r'sprite\s*=\s*"([^"]+)"', block)
             type_match = re.search(r'type\s*=\s*([A-Z0-9_]+)', block)
             uses_match = re.search(r'max_uses\s*=\s*(-?\d+)', block)
             
             if id_match and sprite_match:
                 spell_id = id_match.group(1)
+                raw_name = name_match.group(1) if name_match else spell_id
+                
+                # 获取翻译
+                en_name = raw_name
+                zh_name = raw_name
+                
+                if raw_name.startswith("$"):
+                    trans_key = raw_name.lstrip("$")
+                    if trans_key in trans:
+                        en_name = trans[trans_key]["en"] or raw_name
+                        zh_name = trans[trans_key]["zh"] or raw_name
+                
+                py_full, py_init = get_pinyin_data(zh_name)
+                
                 type_str = type_match.group(1) if type_match else "ACTION_TYPE_PROJECTILE"
                 db[spell_id] = {
                     "icon": sprite_match.group(1).lstrip("/"),
-                    "name": spell_id,
+                    "name": zh_name,
+                    "en_name": en_name,
+                    "pinyin": py_full,
+                    "pinyin_initials": py_init,
                     "type": TYPE_MAP.get(type_str, 0),
                     "max_uses": int(uses_match.group(1)) if uses_match else None
                 }
         _SPELL_CACHE = db
-        print(f"Loaded {len(db)} clean spells from local data")
+        print(f"Loaded {len(db)} clean spells with translations")
         return db
     except Exception as e:
         print(f"Error parsing local spells: {e}")
@@ -267,8 +351,8 @@ def sync_wiki():
     talk_to_game(json.dumps(wand))
     return jsonify({"success": True, "parsed_wand": wand})
 
-# 路径配置
-WAND_EVAL_DIR = os.path.join(os.getcwd(), "wand_eval_tree-master")
+# 已经由前面的逻辑定义，不要在这里重新定义
+# WAND_EVAL_DIR = os.path.join(os.getcwd(), "wand_eval_tree-master")
 
 @app.route("/api/evaluate", methods=["POST"])
 def evaluate_wand():
@@ -292,13 +376,14 @@ def evaluate_wand():
         except:
             return str(val)
 
-    # 计算相对路径，确保 Lua 引擎能找到嵌入的数据
-    data_rel_path = os.path.relpath(EXTRACTED_DATA_ROOT, WAND_EVAL_DIR).replace("\\", "/") + "/"
+    # 使用绝对路径并统一斜杠方向，避免 Lua 字符串转义问题
+    abs_data_path = EXTRACTED_DATA_ROOT.replace("\\", "/") + "/"
 
     cmd = [
-        LUAJIT_PATH, "main.lua",
-        "-dp", data_rel_path, 
-        "-mp", data_rel_path,
+        LUAJIT_PATH, 
+        "main.lua",
+        "-dp", abs_data_path, 
+        "-mp", abs_data_path,
         "-j",                    # 开启 JSON 输出
         "-sc", format_lua_arg(data.get("actions_per_round", 1)),
         "-ma", format_lua_arg(data.get("mana_max", 100)),
@@ -312,12 +397,20 @@ def evaluate_wand():
     
     # 添加法术列表
     cmd.append("-sp")
+    spell_count = 0
     for i, s in enumerate(spells_data):
         if s: 
             cmd.append(str(s))
+            spell_count += 1
             slot_key = str(i + 1)
             if slot_key in spell_uses:
                 cmd.append(str(spell_uses[slot_key]))
+
+    if spell_count == 0:
+        return jsonify({"success": False, "error": "No spells selected for evaluation"})
+
+    print(f"[Eval] Executing in {WAND_EVAL_DIR}")
+    print(f"[Eval] Command: {' '.join(cmd)}")
 
     try:
         # 执行命令
@@ -327,10 +420,12 @@ def evaluate_wand():
             capture_output=True, 
             text=True, 
             encoding="utf-8",
-            shell=True # Windows 下运行 luajit 可能需要
+            errors="replace" # 避免编码错误导致崩溃
         )
         
         if result.returncode != 0:
+            print(f"[Eval] Failed with return code {result.returncode}")
+            print(f"[Eval] Stderr: {result.stderr}")
             return jsonify({
                 "success": False, 
                 "error": "Evaluation failed", 
@@ -344,7 +439,9 @@ def evaluate_wand():
                 "success": True, 
                 "data": eval_data
             })
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as je:
+            print(f"[Eval] JSON parse error: {je}")
+            print(f"[Eval] Raw output: {result.stdout}")
             return jsonify({
                 "success": False, 
                 "error": "Failed to parse evaluator output", 
@@ -352,6 +449,8 @@ def evaluate_wand():
             }), 500
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/")

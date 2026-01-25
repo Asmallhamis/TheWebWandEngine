@@ -352,8 +352,24 @@ local function render_combined_json(calls, engine_data, text_formatter)
 		first = false
 	end
 	counts_json = counts_json .. "}"
+
+	local cast_counts_json = "{"
+	local first_cast = true
+	for cast_num, counts in pairs(engine_data.cast_counts) do
+		if not first_cast then cast_counts_json = cast_counts_json .. ", " end
+		cast_counts_json = cast_counts_json .. "\"" .. cast_num .. "\": {"
+		local first_spell = true
+		for spell_id, count in pairs(counts) do
+			if not first_spell then cast_counts_json = cast_counts_json .. ", " end
+			cast_counts_json = cast_counts_json .. "\"" .. spell_id .. "\": " .. count
+			first_spell = false
+		end
+		cast_counts_json = cast_counts_json .. "}"
+		first_cast = false
+	end
+	cast_counts_json = cast_counts_json .. "}"
 	
-	return "{\"tree\": " .. tree_json .. ", \"states\": " .. states_json .. ", \"counts\": " .. counts_json .. "}"
+	return "{\"tree\": " .. tree_json .. ", \"states\": " .. states_json .. ", \"counts\": " .. counts_json .. ", \"cast_counts\": " .. cast_counts_json .. "}"
 end
 
 ---@param calls node

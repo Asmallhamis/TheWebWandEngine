@@ -272,6 +272,8 @@ function M.initialise_engine(text_formatter, options)
 				local old_node = M.cur_node
 				local new_node = { name = v.id, children = {}, index = clone.deck_index }
 				M.counts[v.id] = (M.counts[v.id] or 0) + 1
+				M.cast_counts[M.cur_cast_num] = M.cast_counts[M.cur_cast_num] or {}
+				M.cast_counts[M.cur_cast_num][v.id] = (M.cast_counts[M.cur_cast_num][v.id] or 0) + 1
 				M.cur_node = new_node.children
 				M.cur_parent = new_node
 				table.insert(old_node, new_node)
@@ -366,6 +368,8 @@ local function reset_wand(options, text_formatter, spells)
 	M.cur_shot_in_cast_num = 1
 	---@type table<string, integer>
 	M.counts = {}
+	---@type table<integer, table<string, integer>>
+	M.cast_counts = {}
 
 	_clear_deck(false)
 	for _, v in ipairs(spells) do

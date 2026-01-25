@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, Star, Minimize2, Plus } from 'lucide-react';
-import { SpellInfo, AppSettings } from '../types';
+import { SpellInfo, AppSettings, SpellTypeConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
 
 interface SpellPickerProps {
@@ -59,33 +59,44 @@ export function SpellPicker({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-4">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar p-2 ${settings.hideLabels ? 'space-y-2' : 'space-y-4'}`}>
           {pickerSearch ? (
-            searchResults?.map((group, gIdx) => (
-              <div key={gIdx} className={group.length === 0 ? 'hidden' : ''}>
-                <div className="flex items-center gap-2 px-2 mb-2">
-                  <div className="w-1 h-3 rounded-full bg-zinc-700" />
-                  <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{SPELL_GROUPS[gIdx].name}</span>
-                </div>
-                <div className="grid grid-cols-6 gap-1.5 px-1">
-                  {group.map((s: SpellInfo) => (
-                    <button
-                      key={s.id}
-                      onClick={() => pickSpell(s.id)}
-                      className="aspect-square bg-white/5 hover:bg-white/10 border border-white/5 rounded flex items-center justify-center transition-all group"
-                    >
-                      <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
-                    </button>
-                  ))}
+            searchResults?.[0]?.length ? (
+              <div>
+                {!settings.hideLabels && (
+                  <div className="flex items-center gap-2 px-2 mb-2">
+                    <Search size={12} className="text-indigo-400" />
+                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">搜索结果 (按匹配度排序)</span>
+                  </div>
+                )}
+                <div className={`flex flex-wrap gap-1.5 px-1 ${settings.hideLabels ? 'mb-4' : ''}`}>
+                  {searchResults[0].map((s: SpellInfo) => {
+                    const typeConfig = settings.spellTypes.find(t => t.id === s.type);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => pickSpell(s.id)}
+                        style={{ 
+                          height: settings.pickerRowHeight, 
+                          width: settings.pickerRowHeight,
+                          backgroundColor: typeConfig?.color || 'rgba(255,255,255,0.05)' 
+                        }}
+                        className="aspect-square hover:bg-white/10 border border-white/5 rounded flex items-center justify-center transition-all group overflow-hidden"
+                        title={`${s.name} (${s.en_name})\nID: ${s.id}`}
+                      >
+                        <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            ))
+            ) : null
           ) : (
             <>
               {spellStats.overall.length > 0 && (
-                <div className="rounded-lg overflow-hidden mb-2">
-                  <div className="p-2 bg-gradient-to-r from-indigo-500/10 to-zinc-800/20">
-                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'mb-0' : 'mb-2'}`}>
+                <div className={`rounded-lg overflow-hidden ${settings.hideLabels ? 'bg-white/5 border border-white/5 shadow-inner' : ''}`}>
+                  <div className={`p-2 relative group/header ${settings.hideLabels ? 'pt-1.5 pb-1.5' : `bg-gradient-to-r from-indigo-500/10 to-zinc-800/20 ${settings.hideLabels ? '' : 'mb-2'}`}`}>
+                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute top-1 right-1 z-10' : 'mb-2'}`}>
                       {!settings.hideLabels && (
                         <div className="flex items-center gap-2">
                           <Star size={12} className="text-amber-500" />
@@ -99,7 +110,7 @@ export function SpellPicker({
                           else next.add(-1);
                           return next;
                         })}
-                        className="w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-colors group/plus ml-auto"
+                        className={`w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-all group/plus ${settings.hideLabels ? 'opacity-0 group-hover/header:opacity-100 shadow-lg' : 'ml-auto'}`}
                       >
                         {pickerExpandedGroups.has(-1) ? (
                           <Minimize2 size={12} className="text-white/50 group-hover/plus:text-white" />
@@ -109,26 +120,33 @@ export function SpellPicker({
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5 px-0.5">
-                      {spellStats.overall.map((s: SpellInfo) => (
-                        <button
-                          key={s.id}
-                          onClick={() => pickSpell(s.id)}
-                          style={{ height: settings.pickerRowHeight, width: settings.pickerRowHeight }}
-                          className="aspect-square bg-black/20 hover:bg-black/40 border border-white/5 rounded flex items-center justify-center transition-all group overflow-hidden"
-                          title={s.name}
-                        >
-                          <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
-                        </button>
-                      ))}
+                      {spellStats.overall.map((s: SpellInfo) => {
+                        const typeConfig = settings.spellTypes.find(t => t.id === s.type);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => pickSpell(s.id)}
+                            style={{ 
+                              height: settings.pickerRowHeight, 
+                              width: settings.pickerRowHeight,
+                              backgroundColor: typeConfig?.color || 'rgba(0,0,0,0.2)' 
+                            }}
+                            className="aspect-square hover:bg-black/40 border border-white/5 rounded flex items-center justify-center transition-all group overflow-hidden"
+                            title={s.name}
+                          >
+                            <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               )}
 
-              {SPELL_GROUPS.map((group, gIdx) => (
-                <div key={group.name} className={`rounded-lg overflow-hidden ${spellStats.categories[gIdx].length === 0 ? 'hidden' : ''}`}>
-                  <div className={`p-2 bg-gradient-to-r ${settings.themeColors[gIdx]}`}>
-                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'mb-0' : 'mb-2'}`}>
+              {settings.spellGroups.map((group, gIdx) => (
+                <div key={group.name} className={`rounded-lg overflow-hidden ${spellStats.categories[gIdx].length === 0 ? 'hidden' : ''} ${settings.hideLabels ? 'bg-white/5 border border-white/5 shadow-inner' : ''}`}>
+                  <div className={`p-2 relative group/header ${settings.hideLabels ? 'pt-1.5 pb-1.5' : `bg-gradient-to-r ${group.color || 'from-zinc-800/20 to-zinc-800/20'} ${settings.hideLabels ? '' : 'mb-2'}`}`}>
+                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute top-1 right-1 z-10' : 'mb-2'}`}>
                       {!settings.hideLabels && (
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-3 rounded-full bg-white/20" />
@@ -142,7 +160,7 @@ export function SpellPicker({
                           else next.add(gIdx);
                           return next;
                         })}
-                        className="w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-colors group/plus ml-auto"
+                        className={`w-5 h-5 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded transition-all group/plus ${settings.hideLabels ? 'opacity-0 group-hover/header:opacity-100 shadow-lg' : 'ml-auto'}`}
                       >
                         {pickerExpandedGroups.has(gIdx) ? (
                           <Minimize2 size={12} className="text-white/50 group-hover/plus:text-white" />
@@ -152,17 +170,24 @@ export function SpellPicker({
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5 px-0.5">
-                      {spellStats.categories[gIdx].map((s: SpellInfo) => (
-                        <button
-                          key={s.id}
-                          onClick={() => pickSpell(s.id)}
-                          style={{ height: settings.pickerRowHeight, width: settings.pickerRowHeight }}
-                          className="aspect-square bg-black/20 hover:bg-black/40 border border-white/5 rounded flex items-center justify-center transition-all group overflow-hidden"
-                          title={s.name}
-                        >
-                          <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
-                        </button>
-                      ))}
+                      {spellStats.categories[gIdx].map((s: SpellInfo) => {
+                        const typeConfig = settings.spellTypes.find(t => t.id === s.type);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => pickSpell(s.id)}
+                            style={{ 
+                              height: settings.pickerRowHeight, 
+                              width: settings.pickerRowHeight,
+                              backgroundColor: typeConfig?.color || 'rgba(0,0,0,0.2)'
+                            }}
+                            className="aspect-square hover:bg-black/40 border border-white/5 rounded flex items-center justify-center transition-all group overflow-hidden"
+                            title={s.name}
+                          >
+                            <img src={`/api/icon/${s.icon}`} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

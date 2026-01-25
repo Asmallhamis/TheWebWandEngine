@@ -23,16 +23,30 @@
 
 本项目遵守 **GPL-3.0** 开源协议。
 
-## 🛠️ 快速开始
+## 🚀 快速开始
+
+### 1. 下载与安装 (推荐)
+直接从 [Releases](https://github.com/NathanSnail/TWWE/releases) 下载最新的绿色便携版：
+1. 下载 `TWWE_vX.X.X.zip` 并解压。
+2. 将游戏解包后的 `data` 文件夹重命名为 `noitadata` 放在程序根目录下（或者在 `config.json` 中配置路径）。
+3. 运行 `TWWE.exe` 即可启动。
+
+### 2. 游戏内同步
+将解压包内的 `wand_sync` 文件夹复制到 Noita 的 `mods` 目录下并在游戏中启用。
+
+---
+
+## 🛠️ 开发与构建 (进阶)
+
+如果您想自行编译或参与开发，请参考以下步骤：
 
 ### 1. 环境准备
 - **Python 3.8+**
 - **Node.js 16+**
 - **LuaJIT**: 请自行下载 `luajit.exe` 并放置于 `bin/` 目录下。
 
-### 2. 配置说明 (重要)
-由于本工具需要读取 Noita 的解包数据（`data/` 文件夹），请在 `backend/` 目录下根据您的实际路径修改配置。
-> **提示**: 在 `server.py` 中，程序会优先寻找项目根目录下的 `noitadata` 文件夹。您可以将游戏解包后的 `data` 文件夹重命名为 `noitadata` 放在根目录。
+### 2. 配置说明
+程序会优先寻找项目根目录下的 `noitadata` 文件夹。您可以将游戏解包后的 `data` 文件夹重命名为 `noitadata` 放在根目录。
 
 ### 3. 安装运行
 ```bash
@@ -46,10 +60,7 @@ npm install
 npm run dev
 ```
 
-### 4. 游戏插件
-将 `wand_sync` 文件夹复制到 Noita 的 `mods` 目录下并在游戏中启用。
-
-### 5. 打包与发布
+### 4. 打包与发布
 - **本地打包**: 运行 `build_portable.bat` 生成单文件 EXE。
 - **发布到 Release**: 确保安装了 [GitHub CLI](https://cli.github.com/)，然后运行 `publish.bat` 即可一键完成：打包、Git 提交、打标签、上传到 GitHub Release。
 

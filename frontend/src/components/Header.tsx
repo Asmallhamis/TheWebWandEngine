@@ -11,6 +11,7 @@ interface HeaderProps {
   addNewTab: () => void;
   deleteTab: (id: string, e: React.MouseEvent) => void;
   pullData: (force?: boolean) => void;
+  pushData: () => void;
   toggleSync: (id: string) => void;
   addWand: () => void;
   clipboard: { type: 'wand'; data: WandData } | null;
@@ -31,6 +32,7 @@ export function Header({
   addNewTab,
   deleteTab,
   pullData,
+  pushData,
   toggleSync,
   addWand,
   clipboard,
@@ -102,8 +104,8 @@ export function Header({
       <div className="flex items-center gap-1.5 pr-4 pb-1">
         <button
           onClick={() => pullData(true)}
-          onContextMenu={(e) => { e.preventDefault(); toggleSync(activeTabId); }}
-          title="左键: 拉取一次 / 右键: 切换自动同步"
+          onContextMenu={(e) => { e.preventDefault(); pushData(); }}
+          title="左键: 拉取一次 / 右键: 推送当前到游戏"
           className={`
             neo-button text-[10px] w-32 justify-between px-3
             ${activeTab.isRealtime
@@ -118,7 +120,10 @@ export function Header({
             ) : (
               <RefreshCw size={14} />
             )}
-            <span>{activeTab.isRealtime ? '自动同步 ON' : '手动拉取'}</span>
+            <div className="flex flex-col items-start leading-none">
+              <span className="text-[8px] opacity-70 mb-0.5">{activeTab.isRealtime ? '自动同步' : '同步模式'}</span>
+              <span className="font-black">{activeTab.isRealtime ? 'ON' : '手动'}</span>
+            </div>
           </div>
           {activeTab.isRealtime ? <Unlock size={10} className="opacity-50" /> : <Lock size={10} className="opacity-50" />}
         </button>
