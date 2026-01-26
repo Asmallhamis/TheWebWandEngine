@@ -85,6 +85,40 @@ export function WandWarehouse({
   const [editingSmartTag, setEditingSmartTag] = useState<SmartTag | null>(null);
   const [spellSearchQuery, setSpellSearchQuery] = useState('');
 
+  // Paste Support for Smart Tag Editor
+  useEffect(() => {
+    if (!editingSmartTag) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData('text');
+        if (!text) return;
+        
+        try {
+            // Try JSON
+            try {
+                const json = JSON.parse(text);
+                if (Array.isArray(json)) {
+                    setEditingSmartTag(prev => prev ? ({ ...prev, spells: json }) : null);
+                    return;
+                } else if (json.spells && typeof json.spells === 'object') {
+                    const spells = Object.values(json.spells) as string[];
+                    setEditingSmartTag(prev => prev ? ({ ...prev, spells }) : null);
+                    return;
+                }
+            } catch {}
+
+            // Comma separated or space separated IDs
+            const ids = text.split(/[, \n]+/).map(s => s.trim()).filter(s => spellDb[s]);
+            if (ids.length > 0) {
+                setEditingSmartTag(prev => prev ? ({ ...prev, spells: ids }) : null);
+            }
+        } catch (e) { console.error('Paste failed', e); }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [editingSmartTag, spellDb]);
+
   // Drag & Drop
   const [draggedWandId, setDraggedWandId] = useState<string | null>(null);
   const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null);
@@ -879,6 +913,53 @@ export function WandWarehouse({
               )}
             </div>
           </div>
+
+          <div className="p-4 bg-black/40 border-t border-white/10 flex gap-2">
+            <label className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer">
+              <Upload size={14} /> 导入方案
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".json"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const data = JSON.parse(ev.target?.result as string);
+                      if (Array.isArray(data)) {
+                        setSmartTags(prev => {
+                          const existingIds = new Set(prev.map(t => t.id));
+                          const filtered = data.filter(t => t.id && t.name && !existingIds.has(t.id));
+                          alert(`成功导入 ${filtered.length} 个新标签`);
+                          return [...prev, ...filtered];
+                        });
+                      } else {
+                         alert('格式错误：文件内容不是智能标签数组');
+                      }
+                    } catch (err) { alert('导入失败: 格式不正确'); }
+                  };
+                  reader.readAsText(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            <button 
+              onClick={() => {
+                const dataStr = JSON.stringify(smartTags, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `smart_tags_backup.json`;
+                link.click();
+              }}
+              className="flex-1 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-white flex items-center justify-center gap-2 transition-all"
+            >
+              <Download size={14} /> 导出方案
+            </button>
+          </div>
         </div>
       )}
 
@@ -936,35 +1017,46 @@ export function WandWarehouse({
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center justify-between">
-                法术组合
-                <span className="text-zinc-700">{editingSmartTag.spells.length} 个法术</span>
-              </label>
-              <div className="grid grid-cols-6 gap-2 bg-zinc-900/50 p-4 rounded-xl border border-white/5">
-                {editingSmartTag.spells.map((sid, i) => {
-                  const spell = spellDb[sid];
-                  return (
-                    <div key={i} className="group/slot aspect-square relative bg-black/40 border border-white/10 rounded-lg flex items-center justify-center">
-                      {spell ? (
-                        <>
-                          <img src={`/api/icon/${spell.icon}`} className="w-10 h-10 image-pixelated" alt="" />
-                          <button 
-                            onClick={() => {
-                              const next = [...editingSmartTag.spells];
-                              next.splice(i, 1);
-                              setEditingSmartTag({ ...editingSmartTag, spells: next });
-                            }}
-                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity shadow-lg"
-                          >
-                            <X size={12} />
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-zinc-800 text-xl font-thin">+</span>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                   <span>法术组合 (像编辑法杖一样编辑)</span>
+                   <span className="text-zinc-700 font-normal">| 右键清除, 支持 Ctrl+V 粘贴</span>
+                </label>
+              </div>
+
+              <div className="bg-black/40 p-3 rounded-xl border border-white/10 overflow-x-auto custom-scrollbar">
+                 <div className="flex gap-1 min-w-max">
+                    {Array.from({ length: 26 }).map((_, i) => {
+                        const sid = editingSmartTag.spells[i];
+                        const spell = sid ? spellDb[sid] : null;
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    // Left click currently does nothing (could implement selection)
+                                    // User requested "remove confirm" to be gone or behave like wand
+                                }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    const newSpells = [...editingSmartTag.spells];
+                                    while(newSpells.length <= i) newSpells.push("");
+                                    newSpells[i] = "";
+                                    setEditingSmartTag({ ...editingSmartTag, spells: newSpells });
+                                }}
+                                className={cn(
+                                    "w-10 h-10 rounded border flex items-center justify-center relative group transition-all shrink-0",
+                                    spell 
+                                        ? "bg-zinc-800 border-zinc-600 hover:border-amber-500" 
+                                        : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
+                                )}
+                                title={spell?.name || "空槽位 (点击下方列表添加，右键清除)"}
+                            >
+                                {spell && <img src={`/api/icon/${spell.icon}`} className="w-8 h-8 image-pixelated" alt="" />}
+                                <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-zinc-700/50" />
+                            </button>
+                        );
+                    })}
+                 </div>
               </div>
             </div>
 
@@ -992,7 +1084,20 @@ export function WandWarehouse({
                   <button 
                     key={s.id}
                     onClick={() => {
-                      setEditingSmartTag({ ...editingSmartTag, spells: [...editingSmartTag.spells, s.id] });
+                      // Find first empty slot or append
+                      const currentSpells = [...editingSmartTag.spells];
+                      let inserted = false;
+                      for(let i=0; i<26; i++) {
+                          if (!currentSpells[i]) {
+                              currentSpells[i] = s.id;
+                              inserted = true;
+                              break;
+                          }
+                      }
+                      if (!inserted && currentSpells.length < 26) {
+                          currentSpells.push(s.id);
+                      }
+                      setEditingSmartTag({ ...editingSmartTag, spells: currentSpells });
                     }}
                     className="aspect-square bg-black/40 border border-white/5 rounded hover:border-amber-500/50 transition-all flex items-center justify-center group"
                     title={s.name}
@@ -1015,13 +1120,19 @@ export function WandWarehouse({
               onClick={() => {
                 if (!editingSmartTag) return;
                 setSmartTags(prev => {
-                  const idx = prev.findIndex(t => t.id === editingSmartTag.id);
+                  // Filter out empty slots when saving
+                  const cleanedTag = {
+                      ...editingSmartTag,
+                      spells: editingSmartTag.spells.filter(s => s && s.trim() !== "")
+                  };
+                  
+                  const idx = prev.findIndex(t => t.id === cleanedTag.id);
                   if (idx >= 0) {
                     const next = [...prev];
-                    next[idx] = editingSmartTag;
+                    next[idx] = cleanedTag;
                     return next;
                   }
-                  return [...prev, editingSmartTag];
+                  return [...prev, cleanedTag];
                 });
                 setEditingSmartTag(null);
               }}
