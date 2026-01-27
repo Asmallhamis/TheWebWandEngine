@@ -39,6 +39,7 @@
 !/build_portable.bat
 !/README.md
 !/LICENSE
+!/spell_mapping.md
 
 # ==========================================
 # 4. 显式排除的第三方/敏感内容 (多重保险)

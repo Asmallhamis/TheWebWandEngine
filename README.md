@@ -20,6 +20,7 @@
 - **[Component Explorer](https://github.com/dextercd/Noita-Component-Explorer)**: 提供了详尽的组件字段解析参考。
 - **[Spell Lab Shugged](https://github.com/shoozzzh/Spell-Lab-Shugged)**: 法杖逻辑模拟与 UI 交互的先驱。
 - **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 提供了优秀的交互灵感，以及使用了部分Wand Editor的代码。
+- **[KuroLeaf's Noita Aliases](https://noita.wiki.gg/zh/wiki/User:KuroLeaf/aliases.csv)**: 提供了法术别名对照表，极大地帮助了拼音搜索。
 
 本项目遵守 **GPL-3.0** 开源协议。
 
