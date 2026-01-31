@@ -351,16 +351,19 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	end
 	_draw_actions_for_shot(true)
 	--dbg_wand()
-	local delay = root_shot.state.fire_rate_wait
+	local cast_delay = root_shot.state.fire_rate_wait
+	local recharge_time = 0
+	local delay = cast_delay
 
 	-- cursed nolla design.
 	_handle_reload()
 	if M.reload_time then
+		recharge_time = M.reload_time
 		delay = math.max(delay, M.reload_time)
 		M.reload_time = nil
 	end
 	delay = math.max(delay, 1)
-	cur_root.extra = "Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
+	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
 	mana = mana + delay * options.mana_charge / 60
 end
 

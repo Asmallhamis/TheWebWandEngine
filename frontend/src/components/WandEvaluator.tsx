@@ -102,30 +102,6 @@ const areStatesEqual = (a: Record<string, any>[], b: Record<string, any>[]): boo
   return true;
 };
 
-const computeStateDeltas = (states: ShotState[]): ShotState[] => {
-  const sorted = [...states].sort((a, b) => a.id - b.id);
-  return sorted.map((state, i) => {
-    const prevState = i > 0 ? sorted[i - 1] : null;
-    const diffStats: Record<string, number | string> = {};
-    
-    Object.entries(state.stats).forEach(([key, value]) => {
-      if (typeof value === 'number') {
-        const prevValue = prevState ? (prevState.stats[key] as number || 0) : 0;
-        const delta = value - prevValue;
-        // Only show if it's the first shot (initial state) or if it actually changed
-        if (i === 0 || delta !== 0) {
-          diffStats[key] = delta;
-        }
-      } else {
-        if (!prevState || prevState.stats[key] !== value) {
-          diffStats[key] = value;
-        }
-      }
-    });
-    return { ...state, stats: diffStats };
-  });
-};
-
 // 递归渲染射击树
 const ShotTree: React.FC<{ 
   nodes: ShotNode[], 
@@ -248,7 +224,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
           start: castNum,
           end: castNum,
           node,
-          states: computeStateDeltas(data.states.filter(s => s.cast === castNum)),
+          states: data.states.filter(s => s.cast === castNum),
           counts: data.cast_counts?.[castNum.toString()] || {}
         });
       });
@@ -281,7 +257,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
         start: castNum,
         end: castNum,
         node: currentNode,
-        states: computeStateDeltas(currentStates),
+        states: currentStates,
         counts: currentCounts
       });
     }
@@ -391,7 +367,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       Array.from({ length: group.end - group.start + 1 }).map((_, i) => {
                         const cNum = group.start + i;
                         const cNode = data.tree.children?.[cNum - 1];
-                        const cStates = computeStateDeltas(data.states.filter(s => s.cast === cNum));
+                        const cStates = data.states.filter(s => s.cast === cNum);
                         const cCounts = data.cast_counts?.[cNum.toString()] || {};
                         
                         if (!cNode) return null;
@@ -401,7 +377,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             <div className="shrink-0 w-12 pt-4">
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
-                            <CastStatsPanel group={{ counts: cCounts } as any} spellDb={spellDb} />
+                            <CastStatsPanel group={{ counts: cCounts, states: cStates, node: cNode } as any} spellDb={spellDb} />
                             <div className="flex-1 overflow-x-auto pt-4 pb-4 custom-scrollbar-mini">
                               <ShotTree 
                                 nodes={buildShotTree(cNode, cStates)} 
@@ -539,36 +515,86 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> }> = React.memo(({ group, spellDb }) => {
   const { t, i18n } = useTranslation();
   const sortedCastCounts = Object.entries(group.counts || {}).sort(([, a], [, b]) => (b as number) - (a as number));
+  
+  // 获取本轮施法的最终数据（直接解析工具计算好的 extra 字符串，这是最准确的）
+  const extra = group.node?.extra || "";
+  // 使用更健壮的正则，支持不同空格和大小写
+  const cdMatch = extra.match(/CastDelay:\s*(-?[\d\.]+)/i);
+  const rtMatch = extra.match(/Recharge:\s*(-?[\d\.]+)/i);
+  const manaMatch = extra.match(/ΔMana:\s*(-?[\d\.]+)/i);
+  
+  const castDelay = cdMatch ? cdMatch[1] : null;
+  const recharge = rtMatch ? rtMatch[1] : null;
+  const manaDrain = manaMatch ? manaMatch[1] : null;
+
   if (sortedCastCounts.length === 0) return null;
   return (
-    <div className="flex-shrink-0 w-48 space-y-2">
-      <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
-        <div className="w-1 h-1 bg-amber-500/50 rounded-full"></div>
-        {t('evaluator.cast_stats')}
+    <div className="flex-shrink-0 w-48 space-y-4">
+      <div className="space-y-2">
+        <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
+          <div className="w-1 h-1 bg-amber-500/50 rounded-full"></div>
+          {t('evaluator.cast_stats')}
+        </div>
+        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar-mini pr-2">
+          {sortedCastCounts.map(([id, count]) => {
+            const spell = spellDb[id];
+            const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
+            return (
+              <div key={id} className="flex items-center gap-2 bg-zinc-900/60 border border-white/5 pl-1 pr-2 py-1 rounded transition-all">
+                {spell ? (
+                  <img src={getIconUrl(spell.icon, false)} alt={id} className="w-6 h-6 image-pixelated" />
+                ) : (
+                  <div className="w-6 h-6 bg-zinc-800 rounded flex items-center justify-center text-[8px] text-zinc-500 font-mono">?</div>
+                )}
+                <div className="flex-1 flex justify-between items-baseline min-w-0">
+                  <span className="text-[9px] font-bold text-zinc-400 truncate uppercase tracking-tighter mr-2" title={id}>
+                    {displayName}
+                  </span>
+                  <span className="text-[10px] font-black text-amber-500 font-mono">
+                    x{(count as number).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar-mini pr-2">
-        {sortedCastCounts.map(([id, count]) => {
-          const spell = spellDb[id];
-          const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
-          return (
-            <div key={id} className="flex items-center gap-2 bg-zinc-900/60 border border-white/5 pl-1 pr-2 py-1 rounded transition-all">
-              {spell ? (
-                <img src={getIconUrl(spell.icon, false)} alt={id} className="w-6 h-6 image-pixelated" />
-              ) : (
-                <div className="w-6 h-6 bg-zinc-800 rounded flex items-center justify-center text-[8px] text-zinc-500 font-mono">?</div>
-              )}
-              <div className="flex-1 flex justify-between items-baseline min-w-0">
-                <span className="text-[9px] font-bold text-zinc-400 truncate uppercase tracking-tighter mr-2" title={id}>
-                  {displayName}
-                </span>
-                <span className="text-[10px] font-black text-amber-500 font-mono">
-                  x{(count as number).toLocaleString()}
+
+      {/* 最终结算结果：直接搬运自工具的 extra 字段 */}
+      {(castDelay || recharge || manaDrain) && (
+        <div className="pt-3 border-t border-white/5 space-y-2">
+          <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
+            <div className="w-1 h-1 bg-blue-500/50 rounded-full"></div>
+            CAST FINAL SETTLEMENT
+          </div>
+          <div className="grid grid-cols-1 gap-1">
+            {castDelay && (
+              <div className="flex justify-between items-center bg-blue-500/5 px-2 py-1 rounded border border-blue-500/10">
+                <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">Cast Delay</span>
+                <span className="text-[10px] font-mono font-black text-blue-400">
+                  {castDelay}f
                 </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            )}
+            {recharge && Number(recharge) > 0 && (
+              <div className="flex justify-between items-center bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10">
+                <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">Recharge Time</span>
+                <span className="text-[10px] font-mono font-black text-amber-500">
+                  {recharge}f
+                </span>
+              </div>
+            )}
+            {manaDrain && (
+              <div className="flex justify-between items-center bg-purple-500/5 px-2 py-1 rounded border border-purple-500/10 mt-1">
+                <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">Mana Drain</span>
+                <span className="text-[10px] font-mono font-black text-purple-400">
+                  {manaDrain}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 });
@@ -586,10 +612,12 @@ const ShotStateCard: React.FC<{ state: ShotState, isHighlighted?: boolean }> = R
         <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[8px] text-zinc-600 transition-opacity`}>SHOT STATE</span>
       </div>
       <div className="space-y-1.5">
-        {Object.entries(state.stats).map(([key, value]) => {
+        {Object.entries(state.stats)
+          .filter(([key]) => !['reload_time', 'fire_rate_wait'].includes(key))
+          .map(([key, value]) => {
           let color = "text-zinc-300";
           if (typeof value === 'number') {
-            if (['reload_time', 'fire_rate_wait', 'spread_degrees', 'recoil', 'delay'].includes(key)) {
+            if (['spread_degrees', 'recoil', 'delay'].includes(key)) {
               color = value > 0 ? "text-red-400" : value < 0 ? "text-emerald-400" : "text-zinc-300";
             } else if (key.includes('damage') || key === 'speed_multiplier') {
               color = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-zinc-300";
@@ -599,7 +627,7 @@ const ShotStateCard: React.FC<{ state: ShotState, isHighlighted?: boolean }> = R
             <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
               <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
               <span className={color}>
-                {typeof value === 'number' && value > 0 ? `+${value}` : value}
+                {value}
               </span>
             </div>
           );
