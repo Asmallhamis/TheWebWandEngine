@@ -694,6 +694,11 @@ def evaluate_wand():
         "-e", "true" if data.get("initial_if_half", True) else "false", # IF_HALF 初始状态
     ]
 
+    # 是否折叠树节点
+    if not data.get("fold_nodes", False):
+        # wand_eval_tree 默认 fold=True，传入 -f 会将其切换为 False
+        cmd.append("-f")
+
     # 环境模拟 (IF_HP, IF_ENEMY, IF_PROJECTILE)
     mock_lua = []
     if data.get("simulate_low_hp"):
@@ -777,7 +782,9 @@ end
     spell_count = 0
     for i, s in enumerate(spells_data):
         if s: 
-            cmd.append(str(s))
+            # 注入索引信息：格子ID:法术ID (例如 5:SPARK_BOLT)
+            # 配合修改后的 fake_engine.lua，这将强制设置模拟器内部的 deck_index
+            cmd.append(f"{i+1}:{s}")
             spell_count += 1
             slot_key = str(i + 1)
             if slot_key in spell_uses:

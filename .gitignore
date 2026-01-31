@@ -38,6 +38,7 @@
 !/twwe.spec
 !/build_portable.bat
 !/README.md
+!/README_EN.md
 !/LICENSE
 !/spell_mapping.md
 
@@ -53,6 +54,7 @@
 
 # 再次确认允许关键文件（覆盖上一条规则）
 !/README.md
+!/README_EN.md
 !/requirements.txt
 !/build_portable.bat
 !/twwe.spec

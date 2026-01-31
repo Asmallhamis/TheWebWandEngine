@@ -51,36 +51,53 @@ local function fold(node, engine_data)
 		fold(v, engine_data)
 		local cur = make_text(v, engine_data)
 		if last == cur and cur ~= false then
-			index_set[node.children[i].index] = true
+			local idx = node.children[i].index
+			if type(idx) == "table" then
+				for _, idv in ipairs(idx) do index_set[idv] = true end
+			elseif idx then
+				index_set[idx] = true
+			end
 			cur_c = cur_c + 1
 			table.remove(node.children, i)
 		else
 			last = cur
 			if i ~= 1 then
-				if node.children[i - 1].index ~= nil then
-					index_set[node.children[i - 1].index] = true
+				local prev_node = node.children[i - 1]
+				local idx = prev_node.index
+				if type(idx) == "table" then
+					for _, idv in ipairs(idx) do index_set[idv] = true end
+				elseif idx then
+					index_set[idx] = true
 				end
 				local indexes = {}
 				for k, _ in pairs(index_set) do
 					table.insert(indexes, k)
 				end
+				table.sort(indexes)
 				index_set = {}
-				node.children[i - 1].count = cur_c
-				node.children[i - 1].index = indexes
+				prev_node.count = cur_c
+				prev_node.index = indexes
 				cur_c = 1
 			end
 			i = i + 1
 		end
 	end
 	if i ~= 1 then
-		if node.children[i - 1].index then index_set[node.children[i - 1].index] = true end
+		local prev_node = node.children[i - 1]
+		local idx = prev_node.index
+		if type(idx) == "table" then
+			for _, idv in ipairs(idx) do index_set[idv] = true end
+		elseif idx then
+			index_set[idx] = true
+		end
 		local indexes = {}
 		for k, _ in pairs(index_set) do
 			table.insert(indexes, k)
 		end
+		table.sort(indexes)
 		index_set = {}
-		node.children[i - 1].count = cur_c
-		node.children[i - 1].index = indexes
+		prev_node.count = cur_c
+		prev_node.index = indexes
 		cur_c = 1
 	end
 end
@@ -236,14 +253,25 @@ local function handle(
 end
 
 ---@param src node
+---@param engine_data fake_engine
 ---@param indent string?
 ---@return string
-local function render_json(src, indent)
+local function render_json(src, engine_data, indent)
 	indent = indent or ""
 	indent = indent .. "\t"
 	---@cast src node
 	local s = "{\n"
+	
+	local shot_id = nil
+	if engine_data.nodes_to_shot_ref[src] then
+		local num = engine_data.shot_refs_to_nums[engine_data.nodes_to_shot_ref[src]]
+		if num then shot_id = num.id_in_cast end
+	end
+
 	s = s .. indent .. '"name": "' .. src.name .. '",\n'
+	if shot_id then
+		s = s .. indent .. '"shot_id": ' .. shot_id .. ",\n"
+	end
 	src.count = src.count or 1
 	s = s .. indent .. '"count": ' .. src.count .. ",\n"
 	src.extra = src.extra or ""
@@ -256,7 +284,7 @@ local function render_json(src, indent)
 	s = s .. indent .. '"index": [' .. idx_str .. "],\n"
 	s = s .. indent .. '"children": [' .. (#src.children ~= 0 and "\n" or "")
 	for k, v in ipairs(src.children) do
-		s = s .. indent .. "\t" .. render_json(v, indent .. "\t")
+		s = s .. indent .. "\t" .. render_json(v, engine_data, indent .. "\t")
 		if k ~= #src.children then s = s .. "," end
 		s = s .. "\n"
 	end
@@ -279,8 +307,10 @@ local function gather_state_modifications(state, first)
 	diff.action_draw_many_count = nil
 	diff.action_type = nil
 	diff.action_recursive = nil
-	diff.reload_time = nil
-	if not first then diff.fire_rate_wait = nil end
+	-- diff.reload_time = nil
+	if not first then 
+		-- diff.fire_rate_wait = nil 
+	end
 
 	---@param csv string?
 	---@return string[]
@@ -323,7 +353,7 @@ local function gather_state_modifications(state, first)
 end
 
 local function render_combined_json(calls, engine_data, text_formatter)
-	local tree_json = render_json(calls)
+	local tree_json = render_json(calls, engine_data)
 	
 	local shot_nums_to_refs = {}
 	for shot, num in pairs(engine_data.shot_refs_to_nums) do

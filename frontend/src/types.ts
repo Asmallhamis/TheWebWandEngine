@@ -24,6 +24,7 @@ export interface WandData {
   actions_per_round: number;
   spells: Record<string, string>;
   spell_uses: Record<string, number>;
+  marked_slots?: number[];
   always_cast: string[];
 }
 
@@ -77,6 +78,8 @@ export interface AppSettings {
   simulateManyEnemies: boolean;
   simulateManyProjectiles: boolean;
   groupIdenticalCasts: boolean;
+  foldNodes: boolean;
+  showIndices: boolean;
   editorSpellGap: number;
   showStatsInFrames: boolean;
   showLegacyWandButton: boolean;
@@ -92,6 +95,7 @@ export interface EvalNode {
   count: number;
   extra: string;
   index: number[];
+  shot_id?: number;
   children: EvalNode[];
 }
 

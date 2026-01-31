@@ -43,6 +43,35 @@ export function WandEditor({
   isConnected
 }: WandEditorProps) {
   const { t, i18n } = useTranslation();
+  const [isAltPressed, setIsAltPressed] = React.useState(false);
+
+  const absoluteToOrdinal = React.useMemo(() => {
+    const map: Record<number, number> = {};
+    let ordinal = 1;
+    for (let i = 1; i <= data.deck_capacity; i++) {
+      if (data.spells[i.toString()]) {
+        map[i] = ordinal++;
+      }
+    }
+    return map;
+  }, [data.spells, data.deck_capacity]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setIsAltPressed(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setIsAltPressed(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', () => setIsAltPressed(false)); // Reset on loss of focus
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
   const renderTimeInput = (label: string, frames: number, updateKey: keyof WandData) => {
     const primaryValue = settings.showStatsInFrames ? frames : parseFloat((frames / 60).toFixed(3));
     const secondaryValue = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames + 'f';
@@ -61,7 +90,10 @@ export function WandEditor({
   return (
     <div className="p-6 bg-zinc-950/50 border-t border-white/5 space-y-8 select-none">
       <div className="flex items-start justify-between gap-8">
-        <div className="flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl">
+        <div 
+          className="flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl"
+          onMouseUp={() => handleSlotMouseUp(slot, -1000)}
+        >
           {/* Group 1: Shuffle */}
           <div className="px-6 py-2 border-r border-white/5 flex items-center h-16">
             <button 
@@ -99,7 +131,6 @@ export function WandEditor({
         </div>
       </div>
 
-      {/* Always Cast Section */}
       {data.always_cast && data.always_cast.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-3">
@@ -111,21 +142,50 @@ export function WandEditor({
             {data.always_cast.map((sid, i) => {
               const spell = spellDb[sid];
               const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : sid;
+              const acIdx = -(i + 1);
+              const isHovered = hoveredSlot?.wandSlot === slot && hoveredSlot?.idx === acIdx;
+
               return (
-                <div key={i} className="group/ac relative">
-                  <div className="w-12 h-12 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-center relative shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform hover:scale-105">
+                <div 
+                  key={i} 
+                  className="group/ac relative"
+                  onMouseDown={(e) => handleSlotMouseDown(slot, acIdx, e.button === 2)}
+                  onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
+                  onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}
+                  onMouseLeave={handleSlotMouseLeave}
+                  onClick={(e) => {
+                    if (e.altKey) {
+                      const newAC = [...data.always_cast];
+                      newAC.splice(i, 1);
+                      updateWand(slot, { always_cast: newAC }, "删除始终施放法术");
+                      return;
+                    }
+                    openPicker(slot, `ac-${i}`, e);
+                  }}
+                >
+                  <div className={`
+                    w-12 h-12 rounded-lg border flex items-center justify-center relative shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform hover:scale-105
+                    ${isHovered ? 'border-indigo-500 bg-indigo-500/20' : 'border-amber-500/30 bg-amber-500/5'}
+                  `}>
+                    {isHovered && (
+                      <div 
+                        className="absolute top-0 bottom-0 w-1 bg-indigo-400 z-50 animate-pulse rounded-full" 
+                        style={{ [hoveredSlot.isRightHalf ? 'right' : 'left']: `-6px` }}
+                      />
+                    )}
                     {spell ? (
                       <img 
                         src={getIconUrl(spell.icon, isConnected)} 
                         className="w-10 h-10 image-pixelated" 
                         alt="" 
-                        title={`Always Cast: ${displayName}`}
+                        title={`Always Cast: ${displayName}\nID: ${sid}\n(Alt+Click to remove)`}
                       />
                     ) : (
                       <span className="text-amber-500/20 text-xs">?</span>
                     )}
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         const newAC = [...data.always_cast];
                         newAC.splice(i, 1);
                         updateWand(slot, { always_cast: newAC });
@@ -170,6 +230,17 @@ export function WandEditor({
                 <div
                   onMouseDown={(e) => {
                     if (!isLocked) {
+                      if (e.button === 1 && spell) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const marked = data.marked_slots || [];
+                        const slotIdx = i + 1; // Align with 1-based index used by simulator
+                        const newMarked = marked.includes(slotIdx)
+                          ? marked.filter(m => m !== slotIdx)
+                          : [...marked, slotIdx];
+                        updateWand(slot, { marked_slots: newMarked });
+                        return;
+                      }
                       e.preventDefault();
                       handleSlotMouseDown(slot, i + 1, e.button === 2);
                     }
@@ -233,10 +304,15 @@ export function WandEditor({
                                            (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
                                            (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
                         const isGrayscale = (uses === 0) || isTriggered;
+                        const isMarked = (data.marked_slots || []).includes(i + 1);
                         
                         return (
                           <>
                             <img src={getIconUrl(spell.icon, isConnected)} className={`w-11 h-11 image-pixelated transition-transform group-hover/cell:scale-110 ${isGrayscale ? 'grayscale opacity-50' : ''}`} alt="" draggable="false" />
+                            
+                            {isMarked && (
+                              <div className="absolute inset-0 border-2 border-amber-500 rounded-lg shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10 pointer-events-none" />
+                            )}
                             
                             {isTriggered && (
                               <div className="absolute bottom-0 left-0">
@@ -248,15 +324,8 @@ export function WandEditor({
 
                             {uses !== undefined && (settings.showSpellCharges || uses === 0) && uses !== -1 && !isTriggered && (
                               <div 
-                                className={`absolute bottom-0 left-0 px-1.5 py-0.5 bg-black/90 text-[10px] font-mono font-black border-tr border-white/10 rounded-tr pointer-events-auto cursor-ns-resize select-none z-20 shadow-lg ${uses === 0 ? 'text-red-500' : 'text-amber-400'}`}
-                                title="点击或滚动修改次数 (Alt+点击设为0, -1 为无限)"
-                                onWheel={(e) => {
-                                  e.stopPropagation();
-                                  const delta = e.deltaY > 0 ? -1 : 1;
-                                  const newUses = Math.max(-1, (uses ?? 0) + delta);
-                                  const newSpellUses = { ...(data.spell_uses || {}), [idx]: newUses };
-                                  updateWand(slot, { spell_uses: newSpellUses });
-                                }}
+                                className={`absolute bottom-0 left-0 px-1.5 py-0.5 bg-black/90 text-[10px] font-mono font-black border-tr border-white/10 rounded-tr pointer-events-auto cursor-pointer select-none z-20 shadow-lg ${uses === 0 ? 'text-red-500' : 'text-amber-400'}`}
+                                title="点击修改次数 (Alt+点击设为0, 再点击还原)"
                                 onClick={(e) => {
                                    e.stopPropagation();
                                    const newUses = uses === 0 ? (spell.max_uses ?? 10) : 0;
@@ -288,7 +357,14 @@ export function WandEditor({
                   ) : !isLocked && (
                     <span className="text-zinc-800 text-2xl font-thin opacity-50">+</span>
                   )}
-                  {!isLocked && <div className="absolute bottom-1 right-1.5 text-[8px] font-black text-white/5">{i + 1}</div>}
+                  {!isLocked && absoluteToOrdinal[i + 1] && (
+                    <div className={`
+                      absolute bottom-1 right-1 text-[10px] font-black transition-all duration-200 pointer-events-none
+                      ${(isAltPressed || settings.showIndices) ? 'text-cyan-400 scale-110 drop-shadow-[0_0_2px_rgba(0,0,0,0.8)]' : 'text-white/5'}
+                    `}>
+                      {absoluteToOrdinal[i + 1]}
+                    </div>
+                  )}
                 </div>
               </div>
             );

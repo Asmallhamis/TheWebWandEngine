@@ -53,12 +53,13 @@ export async function evaluateWand(
           spells: spells, // 这里是 array
           spell_uses: wand.spell_uses || {},
           always_cast: wand.always_cast || [],
-          number_of_casts: settings.numCasts || 10,
+          number_of_casts: settings.numCasts || 3,
           unlimited_spells: settings.unlimitedSpells,
           initial_if_half: settings.initialIfHalf,
           simulate_low_hp: settings.simulateLowHp,
           simulate_many_enemies: settings.simulateManyEnemies,
-          simulate_many_projectiles: settings.simulateManyProjectiles
+          simulate_many_projectiles: settings.simulateManyProjectiles,
+          fold_nodes: settings.foldNodes
         })
       });
       

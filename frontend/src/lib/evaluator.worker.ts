@@ -178,7 +178,7 @@ self.onmessage = async (e) => {
                 '-mc', String(data.mana_charge_speed || 10),
                 '-rt', String(data.reload_time || 0),
                 '-cd', String(data.fire_rate_wait || 0),
-                '-nc', String(options.numCasts || 10),
+                '-nc', String(options.numCasts || 3),
                 '-u', options.unlimitedSpells ? 'true' : 'false',
                 '-e', options.initialIfHalf ? 'true' : 'false',
             ];
@@ -193,7 +193,8 @@ self.onmessage = async (e) => {
             for (let i = 1; i <= capacity; i++) {
                 const spellId = data.spells[String(i)];
                 if (spellId) {
-                    spellsToAdd.push(spellId);
+                    // Inject index info: SlotID:SpellID (e.g. 5:SPARK_BOLT)
+                    spellsToAdd.push(`${i}:${spellId}`);
                     const uses = data.spell_uses?.[String(i)];
                     if (uses !== undefined && uses !== -1) spellsToAdd.push(String(uses));
                 }

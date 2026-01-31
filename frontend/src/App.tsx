@@ -109,7 +109,7 @@ function App() {
       conflictStrategy: 'ask',
       autoExpandOnPaste: true,
       defaultWandStats: {},
-      numCasts: 10,
+      numCasts: 3,
       autoHideThreshold: 20,
       showSpellCharges: false,
       unlimitedSpells: true,
@@ -118,6 +118,8 @@ function App() {
       simulateManyEnemies: false,
       simulateManyProjectiles: false,
       groupIdenticalCasts: true,
+      foldNodes: false,
+      showIndices: true,
       editorSpellGap: 6,
       showStatsInFrames: true,
       showLegacyWandButton: false,
@@ -558,12 +560,13 @@ function App() {
   const handleSlotMouseDown = (wandSlot: string, idx: number, isRightClick: boolean = false) => {
     if (isRightClick) {
       const wand = activeTab.wands[wandSlot];
-      const sid = wand?.spells[idx.toString()];
+      const sid = idx < 0 ? wand?.always_cast[(-idx) - 1] : wand?.spells[idx.toString()];
       if (sid) {
         setDragSource({ wandSlot, idx, sid });
       }
       return;
     }
+    if (idx < 0) return; // Don't support multi-selection for always cast yet
     setIsSelecting(true);
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
   };
@@ -575,89 +578,106 @@ function App() {
       const targetWandSlot = wandSlot;
       const targetIdx = idx;
 
-      // Calculate insertion index like Paste
-      const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot && 
-                         hoveredSlotRef.current?.idx === targetIdx && 
-                         hoveredSlotRef.current?.isRightHalf;
-      const insertIdx = targetIdx + (isRightHalf ? 1 : 0);
-
       performAction(prevWands => {
         const nextWands = { ...prevWands };
         const sourceWand = { ...nextWands[sourceWandSlot] };
         
         // 1. Get source data and REMOVE from source
-        const sid = sourceWand.spells[sourceIdx.toString()];
-        const uses = sourceWand.spell_uses?.[sourceIdx.toString()];
+        const sid = sourceIdx < 0 ? sourceWand.always_cast[(-sourceIdx) - 1] : sourceWand.spells[sourceIdx.toString()];
+        const uses = sourceIdx < 0 ? undefined : sourceWand.spell_uses?.[sourceIdx.toString()];
         
-        const newSourceSpells = { ...sourceWand.spells };
-        const newSourceUses = { ...(sourceWand.spell_uses || {}) };
-        delete newSourceSpells[sourceIdx.toString()];
-        delete newSourceUses[sourceIdx.toString()];
-        sourceWand.spells = newSourceSpells;
-        sourceWand.spell_uses = newSourceUses;
+        if (sourceIdx < 0) {
+          const newAC = [...(sourceWand.always_cast || [])];
+          newAC.splice((-sourceIdx) - 1, 1);
+          sourceWand.always_cast = newAC;
+        } else {
+          const newSourceSpells = { ...sourceWand.spells };
+          const newSourceUses = { ...(sourceWand.spell_uses || {}) };
+          delete newSourceSpells[sourceIdx.toString()];
+          delete newSourceUses[sourceIdx.toString()];
+          sourceWand.spells = newSourceSpells;
+          sourceWand.spell_uses = newSourceUses;
+        }
         
         // 2. Prepare Target Wand
         const targetWand = sourceWandSlot === targetWandSlot ? sourceWand : { ...nextWands[targetWandSlot] };
         
-        // 3. Get all spells as a sequence
-        const sequence: { sid: string, uses?: number }[] = [];
-        const maxIdx = Math.max(targetWand.deck_capacity, ...Object.keys(targetWand.spells).map(Number));
-        
-        for (let i = 1; i <= maxIdx; i++) {
-          if (sourceWandSlot === targetWandSlot && i === sourceIdx) continue;
-          const s = targetWand.spells[i.toString()];
-          sequence.push({ sid: s || "", uses: targetWand.spell_uses?.[i.toString()] });
-        }
-
-        // 4. Perform Insertion with "Consume Empty Slot" logic
-        let finalInsertIdx = insertIdx;
-        if (sourceWandSlot === targetWandSlot && sourceIdx < insertIdx) {
-          finalInsertIdx--; 
-        }
-
-        // Special: If neighboring slot is empty, consume it instead of shifting
-        const seqIdx = finalInsertIdx - 1;
-        if (sequence[seqIdx] && sequence[seqIdx].sid === "") {
-          sequence.splice(seqIdx, 1);
-        } else if (sequence[seqIdx - 1] && sequence[seqIdx - 1].sid === "") {
-          sequence.splice(seqIdx - 1, 1);
-          finalInsertIdx--;
-        }
-        
-        const head = sequence.slice(0, Math.max(0, finalInsertIdx - 1));
-        const tail = sequence.slice(Math.max(0, finalInsertIdx - 1));
-        const combined = [...head, { sid, uses }, ...tail];
-
-        // 5. Re-map to object
-        const finalSpells: Record<string, string> = {};
-        const finalUses: Record<string, number> = {};
-        combined.forEach((item, i) => {
-          if (item.sid) {
-            finalSpells[(i + 1).toString()] = item.sid;
-            if (item.uses !== undefined) finalUses[(i + 1).toString()] = item.uses;
+        if (targetIdx === -1000 || targetIdx < 0) {
+          // Drop into Always Cast
+          const newAC = [...(targetWand.always_cast || [])];
+          if (targetIdx === -1000) {
+            newAC.push(sid);
+          } else {
+            const acIdx = (-targetIdx) - 1;
+            const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot && 
+                               hoveredSlotRef.current?.idx === targetIdx && 
+                               hoveredSlotRef.current?.isRightHalf;
+            newAC.splice(acIdx + (isRightHalf ? 1 : 0), 0, sid);
           }
-        });
+          targetWand.always_cast = newAC;
+        } else {
+          // Drop into normal deck
+          // Calculate insertion index like Paste
+          const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot && 
+                             hoveredSlotRef.current?.idx === targetIdx && 
+                             hoveredSlotRef.current?.isRightHalf;
+          const insertIdx = targetIdx + (isRightHalf ? 1 : 0);
 
-        targetWand.spells = finalSpells;
-        targetWand.spell_uses = finalUses;
+          // Get all spells as a sequence
+          const sequence: { sid: string, uses?: number }[] = [];
+          const maxIdx = Math.max(targetWand.deck_capacity, ...Object.keys(targetWand.spells).map(Number));
+          
+          for (let i = 1; i <= maxIdx; i++) {
+            if (sourceWandSlot === targetWandSlot && i === sourceIdx) continue;
+            const s = targetWand.spells[i.toString()];
+            sequence.push({ sid: s || "", uses: targetWand.spell_uses?.[i.toString()] });
+          }
 
-        // Auto expand capacity if needed
-        const lastIdx = combined.reduce((acc, val, idx) => val.sid !== "" ? idx + 1 : acc, 0);
-        if (lastIdx > targetWand.deck_capacity) {
-          targetWand.deck_capacity = lastIdx;
+          let finalInsertIdx = insertIdx;
+          if (sourceWandSlot === targetWandSlot && sourceIdx >= 0 && sourceIdx < insertIdx) {
+            finalInsertIdx--; 
+          }
+
+          const seqIdx = finalInsertIdx - 1;
+          if (sequence[seqIdx] && sequence[seqIdx].sid === "") {
+            sequence.splice(seqIdx, 1);
+          } else if (sequence[seqIdx - 1] && sequence[seqIdx - 1].sid === "") {
+            sequence.splice(seqIdx - 1, 1);
+            finalInsertIdx--;
+          }
+          
+          const head = sequence.slice(0, Math.max(0, finalInsertIdx - 1));
+          const tail = sequence.slice(Math.max(0, finalInsertIdx - 1));
+          const combined = [...head, { sid, uses }, ...tail];
+
+          const finalSpells: Record<string, string> = {};
+          const finalUses: Record<string, number> = {};
+          combined.forEach((item, i) => {
+            if (item.sid) {
+              finalSpells[(i + 1).toString()] = item.sid;
+              if (item.uses !== undefined) finalUses[(i + 1).toString()] = item.uses;
+            }
+          });
+
+          targetWand.spells = finalSpells;
+          targetWand.spell_uses = finalUses;
+
+          const lastIdx = combined.reduce((acc, val, idx) => val.sid !== "" ? idx + 1 : acc, 0);
+          if (lastIdx > targetWand.deck_capacity) {
+            targetWand.deck_capacity = lastIdx;
+          }
         }
 
         nextWands[sourceWandSlot] = sourceWand;
         if (sourceWandSlot !== targetWandSlot) nextWands[targetWandSlot] = targetWand;
 
-        // Sync
         if (activeTab.isRealtime) {
           syncWand(sourceWandSlot, sourceWand);
           if (sourceWandSlot !== targetWandSlot) syncWand(targetWandSlot, targetWand);
         }
 
         return nextWands;
-      }, '拖拽移动法术', [dragSource.sid]);
+      }, '移动法术', [dragSource.sid]);
 
       setDragSource(null);
     }
@@ -714,7 +734,10 @@ function App() {
     
     let textToCopy = "";
     // Get sequence including empty slots (empty strings)
-    const sequence = sortedIndices.map(i => wand.spells[i.toString()] || "");
+    const sequence = sortedIndices.map(i => {
+      if (i < 0) return wand.always_cast[(-i) - 1] || "";
+      return wand.spells[i.toString()] || "";
+    });
 
     // If it's a single empty slot being copied, don't do anything unless it's a cut operation?
     // Actually, copying an empty slot might be useful to "paste" an empty space.
@@ -775,7 +798,29 @@ function App() {
 
     if (!targetWandSlot && hoveredSlotRef.current) {
       targetWandSlot = hoveredSlotRef.current.wandSlot;
-      startIdx = hoveredSlotRef.current.idx + (hoveredSlotRef.current.isRightHalf ? 1 : 0);
+      const hIdx = hoveredSlotRef.current.idx;
+      if (hIdx < 0) {
+        // Paste into Always Cast
+        const acIdx = (-hIdx) - 1;
+        const text = (await navigator.clipboard.readText()).trim();
+        const spellsList = text.split(',').map(s => s.trim()).filter(s => !!s);
+        if (spellsList.length > 0) {
+          performAction(prev => {
+            const next = { ...prev };
+            const w = { ...next[targetWandSlot!] };
+            const newAC = [...(w.always_cast || [])];
+            const insertPos = acIdx + (hoveredSlotRef.current!.isRightHalf ? 1 : 0);
+            newAC.splice(insertPos, 0, ...spellsList);
+            w.always_cast = newAC;
+            next[targetWandSlot!] = w;
+            if (activeTab.isRealtime) syncWand(targetWandSlot!, w);
+            return next;
+          }, '粘贴法术到始终施放');
+          return true;
+        }
+        return false;
+      }
+      startIdx = hIdx + (hoveredSlotRef.current.isRightHalf ? 1 : 0);
     } else if (!targetWandSlot && selectionRef.current) {
       targetWandSlot = selectionRef.current.wandSlot;
       startIdx = Math.min(...selectionRef.current.indices);
@@ -983,14 +1028,16 @@ function App() {
 
   const insertEmptySlot = () => {
     let targetWandSlot = hoveredSlotRef.current?.wandSlot;
-    let startIdx = hoveredSlotRef.current ? (hoveredSlotRef.current.idx + (hoveredSlotRef.current.isRightHalf ? 1 : 0)) : null;
+    let startIdx = (hoveredSlotRef.current && hoveredSlotRef.current.idx > 0) 
+      ? (hoveredSlotRef.current.idx + (hoveredSlotRef.current.isRightHalf ? 1 : 0)) 
+      : null;
 
     if (!targetWandSlot && selectionRef.current) {
       targetWandSlot = selectionRef.current.wandSlot;
-      startIdx = Math.min(...selectionRef.current.indices);
+      startIdx = Math.min(...selectionRef.current.indices.filter(i => i > 0));
     }
 
-    if (!targetWandSlot || startIdx === null) return;
+    if (!targetWandSlot || startIdx === null || startIdx <= 0) return;
 
     const wand = activeTab.wands[targetWandSlot];
     if (!wand) return;
@@ -1539,14 +1586,28 @@ function App() {
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
       const wand = prevWands[wandSlot] || { ...DEFAULT_WAND };
-      const newSpells = { ...wand.spells };
-      if (spellId) newSpells[spellIdx] = spellId;
-      else delete newSpells[spellIdx];
+      
+      if (spellIdx.startsWith('ac-')) {
+        const acIdx = parseInt(spellIdx.split('-')[1]);
+        const newAC = [...(wand.always_cast || [])];
+        if (spellId) {
+          if (acIdx >= newAC.length) newAC.push(spellId);
+          else newAC[acIdx] = spellId;
+        } else {
+          newAC.splice(acIdx, 1);
+        }
+        const newWand = { ...wand, always_cast: newAC };
+        if (activeTab.isRealtime) syncWand(wandSlot, newWand);
+        return { ...prevWands, [wandSlot]: newWand };
+      } else {
+        const newSpells = { ...wand.spells };
+        if (spellId) newSpells[spellIdx] = spellId;
+        else delete newSpells[spellIdx];
 
-      const newWand = { ...wand, spells: newSpells };
-      if (activeTab.isRealtime) syncWand(wandSlot, newWand);
-
-      return { ...prevWands, [wandSlot]: newWand };
+        const newWand = { ...wand, spells: newSpells };
+        if (activeTab.isRealtime) syncWand(wandSlot, newWand);
+        return { ...prevWands, [wandSlot]: newWand };
+      }
     }, spellId ? `更改法术` : `清除槽位 ${spellIdx}`, spellId ? [spellId] : []);
     setPickerConfig(null);
   };

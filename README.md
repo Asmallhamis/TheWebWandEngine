@@ -1,5 +1,7 @@
 # The Web Wand Engine (TWWE)
 
+中文 | [English](./README_EN.md)
+
 一个基于 Web 的 Noita 法杖评估与同步工具。本项目旨在提供一个直观的界面，帮助玩家分析法杖逻辑，并通过同步插件实现游戏数据的实时联动。
 
 ## ✨ 功能特性

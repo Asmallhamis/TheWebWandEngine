@@ -887,6 +887,22 @@ export function WandWarehouse({
                       </div>
                       <div className="flex items-center gap-2">
                         <button 
+                          onClick={() => {
+                            const dataStr = JSON.stringify([st], null, 2);
+                            const blob = new Blob([dataStr], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `smart_tag_${st.name}.json`;
+                            link.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                          className="p-2 hover:bg-white/5 rounded text-zinc-500 hover:text-amber-400 transition-colors"
+                          title="导出此标签"
+                        >
+                          <Download size={14} />
+                        </button>
+                        <button 
                           onClick={() => setEditingSmartTag({ ...st })}
                           className="p-2 hover:bg-white/5 rounded text-zinc-500 hover:text-white transition-colors"
                         >
@@ -927,26 +943,42 @@ export function WandWarehouse({
                 type="file" 
                 className="hidden" 
                 accept=".json"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
+                multiple
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || files.length === 0) return;
+                  
+                  const allNewTags: SmartTag[] = [];
+                  for (let i = 0; i < files.length; i++) {
                     try {
-                      const data = JSON.parse(ev.target?.result as string);
-                      if (Array.isArray(data)) {
-                        setSmartTags(prev => {
-                          const existingIds = new Set(prev.map(t => t.id));
-                          const filtered = data.filter(t => t.id && t.name && !existingIds.has(t.id));
-                          alert(`成功导入 ${filtered.length} 个新标签`);
-                          return [...prev, ...filtered];
-                        });
-                      } else {
-                         alert('格式错误：文件内容不是智能标签数组');
+                      const content = await files[i].text();
+                      const data = JSON.parse(content);
+                      const tags = Array.isArray(data) ? data : [data];
+                      allNewTags.push(...tags);
+                    } catch (err) {
+                      console.error('Failed to parse file', files[i].name);
+                    }
+                  }
+
+                  if (allNewTags.length > 0) {
+                    setSmartTags(prev => {
+                      const existingIds = new Set(prev.map(t => t.id));
+                      const toAdd: SmartTag[] = [];
+                      allNewTags.forEach(t => {
+                        if (t.id && t.name && !existingIds.has(t.id)) {
+                          toAdd.push(t);
+                          existingIds.add(t.id);
+                        }
+                      });
+
+                      if (toAdd.length > 0) {
+                        alert(`成功导入 ${toAdd.length} 个新标签`);
+                        return [...prev, ...toAdd];
                       }
-                    } catch (err) { alert('导入失败: 格式不正确'); }
-                  };
-                  reader.readAsText(file);
+                      alert('没有新标签被导入（可能已存在或格式不正确）');
+                      return prev;
+                    });
+                  }
                   e.target.value = '';
                 }}
               />

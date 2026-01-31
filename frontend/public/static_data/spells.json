@@ -760,9 +760,9 @@
     "en_name": "Worm Launcher",
     "pinyin": "ruchongfasheqi",
     "pinyin_initials": "rcfsq",
-    "aliases": "🪱 召唤蠕虫 召唤区 区",
-    "alias_pinyin": "🪱 zhaohuanruchong zhaohuanqu qu",
-    "alias_initials": "🪱 zhrc zhq q",
+    "aliases": "🪱 召唤蠕虫 召唤区 区 蠕虫喷射器",
+    "alias_pinyin": "🪱 zhaohuanruchong zhaohuanqu qu ruchongpensheqi",
+    "alias_initials": "🪱 zhrc zhq q rcpsq",
     "type": 0,
     "max_uses": 10
   },
@@ -1644,9 +1644,9 @@
     "en_name": "Long-distance cast",
     "pinyin": "yuanjulishifang",
     "pinyin_initials": "yjlsf",
-    "aliases": "远程施放 远距离施放 远距离施法 远距离 远程 长距离施法 长距离施放",
-    "alias_pinyin": "yuanchengshifang yuanjulishifang yuanjulishifa yuanjuli yuancheng zhangjulishifa zhangjulishifang",
-    "alias_initials": "ycsf yjlsf yjlsf yjl yc zjlsf zjlsf",
+    "aliases": "远程施放 远距离施放 远距离施法 远距离 远程 长距离施法 长距离施放 LDC",
+    "alias_pinyin": "yuanchengshifang yuanjulishifang yuanjulishifa yuanjuli yuancheng zhangjulishifa zhangjulishifang ldc",
+    "alias_initials": "ycsf yjlsf yjlsf yjl yc zjlsf zjlsf ldc",
     "type": 6,
     "max_uses": null
   },
@@ -5479,9 +5479,9 @@
     "en_name": "Cessation",
     "pinyin": "bufucunzai",
     "pinyin_initials": "bfcz",
-    "aliases": "不复存在 无法选中 不可选中 消失 棍母 虚空",
-    "alias_pinyin": "bufucunzai wufaxuanzhong bukexuanzhong xiaoshi gunmu xukong",
-    "alias_initials": "bfcz wfxz bkxz xs gm xk",
+    "aliases": "不复存在 无法选中 不可选中 消失 棍母 虚空 遁入虚空",
+    "alias_pinyin": "bufucunzai wufaxuanzhong bukexuanzhong xiaoshi gunmu xukong dunruxukong",
+    "alias_initials": "bfcz wfxz bkxz xs gm xk drxk",
     "type": 5,
     "max_uses": 25
   }

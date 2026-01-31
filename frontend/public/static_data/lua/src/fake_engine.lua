@@ -55,6 +55,13 @@ end
 ---@param options options
 ---@param text_formatter text_formatter
 local function easy_add(id, charges, options, text_formatter)
+	local forced_index = nil
+	local colon_pos = id:find(":")
+	if colon_pos then
+		forced_index = tonumber(id:sub(1, colon_pos - 1))
+		id = id:sub(colon_pos + 1)
+	end
+
 	id = id:upper()
 	for _, v in ipairs(actions) do
 		if v.id:upper() == id then
@@ -71,6 +78,9 @@ local function easy_add(id, charges, options, text_formatter)
 			---@cast charges integer
 			_add_card_to_deck(id, 0, charges, true)
 			local card = deck[#deck]
+			if forced_index then
+				card.deck_index = forced_index
+			end
 			---@diagnostic disable-next-line: missing-parameter, assign-type-mismatch, param-type-mismatch
 			card.action = card.action(card)
 			return
@@ -285,7 +295,8 @@ function M.initialise_engine(text_formatter, options)
 				---@diagnostic disable-next-line: return-type-mismatch
 				return new
 			end
-			clone = { deck_index = -1 }
+			-- Always Cast support: fallback to a unique negative index if not provided
+			clone = { deck_index = -999 } 
 			---@diagnostic disable-next-line: redundant-return-value
 			return unpack({ new(...) })
 		end

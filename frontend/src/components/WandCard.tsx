@@ -86,7 +86,7 @@ export function WandCard({
   );
 
   return (
-    <div className={`glass-card group/wand overflow-hidden border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20'}`}>
+    <div className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`}>
       <div
         className="flex items-center px-4 py-2 cursor-pointer gap-4"
         onClick={() => toggleExpand(slot)}
@@ -107,6 +107,7 @@ export function WandCard({
               const isTriggered = (sid === 'IF_HP' && settings.simulateLowHp) || 
                                  (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
                                  (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
+              const isMarked = (data.marked_slots || []).includes(parseInt(idx));
               const isGrayscale = (uses === 0) || isTriggered;
               const shouldShowCharge = (uses === 0 || settings.showSpellCharges) && !isTriggered;
               
@@ -117,7 +118,7 @@ export function WandCard({
                 <div key={idx} className="relative shrink-0">
                   <img
                     src={getIconUrl(spell.icon, isConnected)}
-                    className={`w-7 h-7 image-pixelated border border-white/10 rounded bg-black/20 ${isGrayscale ? 'grayscale opacity-50' : ''}`}
+                    className={`w-7 h-7 image-pixelated border rounded bg-black/20 transition-all ${isMarked ? 'border-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110 z-10' : 'border-white/10'} ${isGrayscale ? 'grayscale opacity-50' : ''}`}
                     alt={displayName}
                     title={`${idx}: ${displayName}${uses !== undefined ? ` (${t('evaluator.cast_stats')} x${uses})` : ''}`}
                   />
@@ -240,7 +241,14 @@ export function WandCard({
           />
           {evalData && (
             <div className="px-4 pb-4">
-               <WandEvaluator data={evalData} spellDb={spellDb} settings={settings} />
+               <WandEvaluator 
+                 data={evalData} 
+                 spellDb={spellDb} 
+                 settings={settings} 
+                 markedSlots={data.marked_slots} 
+                 wandSpells={data.spells} 
+                 deckCapacity={data.deck_capacity} 
+               />
             </div>
           )}
         </>
