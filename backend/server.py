@@ -111,7 +111,7 @@ def load_translations():
     trans_files = [
         os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common.csv"),
         os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common_dev.csv"),
-        os.path.join(BASE_DIR, "2026-01-24 01-51-03.txt") # User provided translation file
+        os.path.join(BASE_DIR, "spell_mapping.md") # 支持新的 md 格式
     ]
     
     translations = {}
@@ -120,6 +120,21 @@ def load_translations():
             continue
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                if file_path.endswith(".md"):
+                    # 处理 Markdown 表格格式 (| 分隔)
+                    for line in f:
+                        if "|" not in line or "SPELL ID" in line or "---" in line:
+                            continue
+                        parts = [p.strip() for p in line.split("|")]
+                        if len(parts) >= 4:
+                            key = parts[0].lstrip('$')
+                            translations[key] = {
+                                "en": key, # md 暂时没存英文名，用 ID 占位
+                                "zh": parts[2] or parts[1], # 优先选汉化 mod 名，没有则选官方中文
+                                "aliases": parts[3] # 存入别名
+                            }
+                    continue
+
                 import csv
                 # Noita CSVs often have junk or extra commas, we use a simple reader
                 reader = csv.reader(f)

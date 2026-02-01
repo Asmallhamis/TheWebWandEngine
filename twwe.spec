@@ -16,7 +16,7 @@ a = Analysis(
         # 嵌入翻译数据
         ('noitadata/data/translations/common.csv', 'noitadata_internal/data/translations'),
         ('noitadata/data/translations/common_dev.csv', 'noitadata_internal/data/translations'),
-        ('2026-01-24 01-51-03.txt', '.'),
+        ('spell_mapping.md', '.'),
         # 嵌入 Lua 引擎和评估脚本
         ('bin', 'bin'),
         ('wand_eval_tree', 'wand_eval_tree')

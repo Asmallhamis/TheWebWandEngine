@@ -37,6 +37,9 @@
 !/requirements.txt
 !/twwe.spec
 !/build_portable.bat
+!/prepare_static_assets.py
+!/build_gh_pages.bat
+!/verify_static_site.bat
 !/README.md
 !/README_EN.md
 !/LICENSE
@@ -58,3 +61,7 @@
 !/requirements.txt
 !/build_portable.bat
 !/twwe.spec
+!/prepare_static_assets.py
+!/build_gh_pages.bat
+!/verify_static_site.bat
+!/spell_mapping.md
