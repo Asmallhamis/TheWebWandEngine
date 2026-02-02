@@ -78,7 +78,8 @@ def error(text, code=1):
 
 def run(cmd, cwd=None, env=None):
     info(f"{msg('cmd')} {' '.join(cmd)}")
-    subprocess.run(cmd, cwd=cwd, env=env, check=True)
+    # 在 Windows 下运行 npm 等脚本需要 shell=True
+    subprocess.run(cmd, cwd=cwd, env=env, check=True, shell=IS_WINDOWS)
 
 # ============================================================
 # OS detection
@@ -156,3 +157,7 @@ info("\n==========================================")
 info(msg("success"))
 info(msg("output_win") if IS_WINDOWS else msg("output_unix"))
 info("==========================================\n")
+
+# 防止 Windows 下运行完直接闪退
+if IS_WINDOWS:
+    input("\nBuild finished. Press Enter to exit... (打包完成，按回车键退出...)")

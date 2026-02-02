@@ -63,6 +63,7 @@ npm run dev
 
 ### 4. 打包与发布
 - **本地打包**: 运行 `build_portable.bat` 生成单文件 EXE。
+- **跨平台打包**: 运行 `python build_portable.py` (推荐)。
 - **发布到 Release**: 确保安装了 [GitHub CLI](https://cli.github.com/)，然后运行 `publish.bat` 即可一键完成：打包、Git 提交、打标签、上传到 GitHub Release。
 
 ---
