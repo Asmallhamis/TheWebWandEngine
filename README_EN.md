@@ -62,8 +62,13 @@ npm run dev
 ```
 
 ### 4. Build & Release
-- **Local Build**: Run `build_portable.bat` to generate a single-file EXE.
-- **Publish to Release**: Ensure [GitHub CLI](https://cli.github.com/) is installed, then run `publish.bat` to automate: building, Git committing, tagging, and uploading to GitHub Release.
+- **Local Build**: 
+  - Run `python -m venv .venv`
+  - Run `.venv\Scripts\activate` on Windows | `source .venv/bin/activate` on Linux
+  - Run `python build_portable.py` to generate a single executable - `dist/TheWebWandEngine`.
+- **Publish to Release**:
+  - Ensure [GitHub CLI](https://cli.github.com/) is installed
+  - Run `publish.bat` to automate: building, Git committing, tagging, and uploading to GitHub Release.
 
 ---
 *Disclaimer: This project is not officially affiliated with Nolla Games. Please respect the original game's copyright.*
