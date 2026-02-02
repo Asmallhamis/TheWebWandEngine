@@ -165,11 +165,22 @@ function M.make_fake_api(options)
 		local success, res = pcall(function()
 			if M.vfs[filename] then return M.vfs[filename] end
 			if filename:sub(1, 4) == "mods" then
-				return assert(assert(io.open(M.noita_path .. filename)):read("*a"))
+				local f = io.open(M.noita_path .. filename)
+				if not f then f = io.open(filename) end -- 如果游戏目录没有，尝试从本地加载补丁
+				return assert(assert(f):read("*a"))
 			end
 			for _, mod in ipairs(options.mods) do
-				local data_filed = io.open(M.noita_path .. "mods/" .. mod .. "/" .. filename)
-				if data_filed then M.vfs[filename] = data_filed:read("*a") end
+				local full_path = M.noita_path .. "mods/" .. mod .. "/" .. filename
+				local data_filed = io.open(full_path)
+				if not data_filed then 
+					-- 尝试从本地加载
+					data_filed = io.open("mods/" .. mod .. "/" .. filename)
+				end
+				if data_filed then 
+					M.vfs[filename] = data_filed:read("*a")
+					data_filed:close()
+					return M.vfs[filename]
+				end
 			end
 			-- recheck for mod /data/
 			if M.vfs[filename] then return M.vfs[filename] end
@@ -351,16 +362,19 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	end
 	_draw_actions_for_shot(true)
 	--dbg_wand()
-	local delay = root_shot.state.fire_rate_wait
+	local cast_delay = root_shot.state.fire_rate_wait
+	local recharge_time = 0
+	local delay = cast_delay
 
 	-- cursed nolla design.
 	_handle_reload()
 	if M.reload_time then
+		recharge_time = M.reload_time
 		delay = math.max(delay, M.reload_time)
 		M.reload_time = nil
 	end
 	delay = math.max(delay, 1)
-	cur_root.extra = "Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
+	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
 	mana = mana + delay * options.mana_charge / 60
 end
 

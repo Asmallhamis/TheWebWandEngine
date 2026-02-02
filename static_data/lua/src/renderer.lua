@@ -256,42 +256,44 @@ end
 ---@param engine_data fake_engine
 ---@param indent string?
 ---@return string
-local function render_json(src, engine_data, indent)
-	indent = indent or ""
-	indent = indent .. "\t"
-	---@cast src node
-	local s = "{\n"
-	
+local function render_json(src, engine_data, out)
 	local shot_id = nil
 	if engine_data.nodes_to_shot_ref[src] then
 		local num = engine_data.shot_refs_to_nums[engine_data.nodes_to_shot_ref[src]]
 		if num then shot_id = num.id_in_cast end
 	end
 
-	s = s .. indent .. '"name": "' .. src.name .. '",\n'
+	table.insert(out, "{\"name\":\"")
+	table.insert(out, src.name)
+	table.insert(out, "\"")
+
 	if shot_id then
-		s = s .. indent .. '"shot_id": ' .. shot_id .. ",\n"
+		table.insert(out, ",\"shot_id\":")
+		table.insert(out, tostring(shot_id))
 	end
+
 	src.count = src.count or 1
-	s = s .. indent .. '"count": ' .. src.count .. ",\n"
-	src.extra = src.extra or ""
-	s = s .. indent .. '"extra": "' .. src.extra .. '",\n'
+	table.insert(out, ",\"count\":")
+	table.insert(out, tostring(src.count))
+
+	if src.extra and src.extra ~= "" then
+		table.insert(out, ",\"extra\":\"")
+		table.insert(out, src.extra)
+		table.insert(out, "\"")
+	end
+
 	src.index = src.index or {}
 	local idx = src.index
-	if type(idx) == "number" then src.index = { idx } end
-	---@diagnostic disable-next-line: param-type-mismatch
-	local idx_str = table.concat(src.index, ", ")
-	s = s .. indent .. '"index": [' .. idx_str .. "],\n"
-	s = s .. indent .. '"children": [' .. (#src.children ~= 0 and "\n" or "")
-	for k, v in ipairs(src.children) do
-		s = s .. indent .. "\t" .. render_json(v, engine_data, indent .. "\t")
-		if k ~= #src.children then s = s .. "," end
-		s = s .. "\n"
-	end
-	s = s .. (#src.children ~= 0 and indent or "") .. "]\n"
-	s = s .. indent:sub(2) .. "}"
+	if type(idx) == "number" then idx = { idx } end
+	table.insert(out, ",\"index\":[")
+	table.insert(out, table.concat(idx, ","))
+	table.insert(out, "],\"children\":[")
 
-	return s
+	for k, v in ipairs(src.children) do
+		render_json(v, engine_data, out)
+		if k ~= #src.children then table.insert(out, ",") end
+	end
+	table.insert(out, "]}")
 end
 
 local function gather_state_modifications(state, first)
@@ -353,53 +355,81 @@ local function gather_state_modifications(state, first)
 end
 
 local function render_combined_json(calls, engine_data, text_formatter)
-	local tree_json = render_json(calls, engine_data)
-	
+	local out = {}
+	table.insert(out, "{\"tree\":")
+	render_json(calls, engine_data, out)
+
 	local shot_nums_to_refs = {}
 	for shot, num in pairs(engine_data.shot_refs_to_nums) do
 		shot_nums_to_refs[num.disp] = shot
 	end
-	
-	local states_json = "["
+
+	table.insert(out, ",\"states\":[")
 	for num, shot in ipairs(shot_nums_to_refs) do
 		local shot_info = engine_data.shot_refs_to_nums[shot]
 		local diff = gather_state_modifications(shot.state, shot_info.id_in_cast == 1)
-		states_json = states_json .. "{\"id\": " .. shot_info.id_in_cast .. ", \"cast\": " .. shot_info.cast .. ", \"stats\": {"
+		table.insert(out, "{\"id\":")
+		table.insert(out, tostring(shot_info.id_in_cast))
+		table.insert(out, ",\"cast\":")
+		table.insert(out, tostring(shot_info.cast))
+		table.insert(out, ",\"stats\":{")
 		for i, v in ipairs(diff) do
-			states_json = states_json .. "\"" .. v[1] .. "\": " .. (tonumber(v[2]) or ("\"" .. v[2] .. "\""))
-			if i ~= #diff then states_json = states_json .. ", " end
+			table.insert(out, "\"")
+			table.insert(out, v[1])
+			table.insert(out, "\":")
+			table.insert(out, (tonumber(v[2]) and v[2] or ("\"" .. v[2] .. "\"")))
+			if i ~= #diff then table.insert(out, ",") end
 		end
-		states_json = states_json .. "}}"
-		if num ~= #shot_nums_to_refs then states_json = states_json .. ", " end
+		table.insert(out, "}}")
+		if num ~= #shot_nums_to_refs then table.insert(out, ",") end
 	end
-	states_json = states_json .. "]"
+	table.insert(out, "],\"counts\":{")
 
-	local counts_json = "{"
 	local first = true
-	for k, v in pairs(engine_data.counts) do
-		if not first then counts_json = counts_json .. ", " end
-		counts_json = counts_json .. "\"" .. k .. "\": " .. v
+	local count_keys = {}
+	for k, _ in pairs(engine_data.counts) do table.insert(count_keys, k) end
+	table.sort(count_keys)
+	for _, k in ipairs(count_keys) do
+		local v = engine_data.counts[k]
+		if not first then table.insert(out, ",") end
+		table.insert(out, "\"")
+		table.insert(out, k)
+		table.insert(out, "\":")
+		table.insert(out, tostring(v))
 		first = false
 	end
-	counts_json = counts_json .. "}"
+	table.insert(out, "},\"cast_counts\":{")
 
-	local cast_counts_json = "{"
 	local first_cast = true
-	for cast_num, counts in pairs(engine_data.cast_counts) do
-		if not first_cast then cast_counts_json = cast_counts_json .. ", " end
-		cast_counts_json = cast_counts_json .. "\"" .. cast_num .. "\": {"
+	local cast_nums = {}
+	for k, _ in pairs(engine_data.cast_counts) do table.insert(cast_nums, k) end
+	table.sort(cast_nums)
+
+	for _, cast_num in ipairs(cast_nums) do
+		local counts = engine_data.cast_counts[cast_num]
+		if not first_cast then table.insert(out, ",") end
+		table.insert(out, "\"")
+		table.insert(out, tostring(cast_num))
+		table.insert(out, "\":{")
 		local first_spell = true
-		for spell_id, count in pairs(counts) do
-			if not first_spell then cast_counts_json = cast_counts_json .. ", " end
-			cast_counts_json = cast_counts_json .. "\"" .. spell_id .. "\": " .. count
+		local spell_ids = {}
+		for k, _ in pairs(counts) do table.insert(spell_ids, k) end
+		table.sort(spell_ids)
+		for _, spell_id in ipairs(spell_ids) do
+			local count = counts[spell_id]
+			if not first_spell then table.insert(out, ",") end
+			table.insert(out, "\"")
+			table.insert(out, spell_id)
+			table.insert(out, "\":")
+			table.insert(out, tostring(count))
 			first_spell = false
 		end
-		cast_counts_json = cast_counts_json .. "}"
+		table.insert(out, "}")
 		first_cast = false
 	end
-	cast_counts_json = cast_counts_json .. "}"
-	
-	return "{\"tree\": " .. tree_json .. ", \"states\": " .. states_json .. ", \"counts\": " .. counts_json .. ", \"cast_counts\": " .. cast_counts_json .. "}"
+	table.insert(out, "}}")
+
+	return table.concat(out)
 end
 
 ---@param calls node
