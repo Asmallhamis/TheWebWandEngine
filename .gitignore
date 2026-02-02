@@ -43,6 +43,7 @@
 # ==========================================
 !/requirements.txt
 !/twwe.spec
+!/build_portable.py
 !/build_portable.bat
 !/prepare_static_assets.py
 !/build_gh_pages.bat
@@ -69,6 +70,7 @@
 !/README.md
 !/README_EN.md
 !/requirements.txt
+!/build_portable.py
 !/build_portable.bat
 !/twwe.spec
 !/prepare_static_assets.py
