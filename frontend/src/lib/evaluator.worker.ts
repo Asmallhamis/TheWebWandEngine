@@ -118,7 +118,7 @@ local searchers = package.searchers or package.loaders
 table.insert(searchers, 1, vfs_searcher)
 `;
 
-async function getNewLuaEngine() {
+async function getNewLuaEngine(customVFS?: Record<string, string>) {
     await loadBundle();
     const engine = await factory.createEngine();
     
@@ -127,6 +127,11 @@ async function getNewLuaEngine() {
         // Normalize path
         const cleanPath = path.replace(/^\.\//, '').replace(/\\/g, '/');
         
+        // 0. Try Custom/Dynamic VFS (for mocks)
+        if (customVFS && customVFS[cleanPath]) {
+            return customVFS[cleanPath];
+        }
+
         // 1. Try Cache
         if (VFS_CACHE && VFS_CACHE[cleanPath]) {
             return VFS_CACHE[cleanPath];
@@ -166,7 +171,42 @@ self.onmessage = async (e: MessageEvent) => {
     
     if (type === 'EVALUATE') {
         try {
-            lua = await getNewLuaEngine();
+            // 构造环境模拟逻辑 (和后端 server.py 保持一致)
+            const mockLuaLines = [
+                "-- Environment simulation for IF_HP, IF_ENEMY, IF_PROJECTILE",
+                "local _old_EntityGetWithTag = EntityGetWithTag",
+                "function EntityGetWithTag(tag)",
+                "    if tag == 'player_unit' and _TWWE_LOW_HP then return { 12345 } end",
+                "    return _old_EntityGetWithTag(tag)",
+                "end",
+                "local _old_GetUpdatedEntityID = GetUpdatedEntityID",
+                "function GetUpdatedEntityID()",
+                "    if _TWWE_LOW_HP or _TWWE_MANY_ENEMIES or _TWWE_MANY_PROJECTILES then return 12345 end",
+                "    return _old_GetUpdatedEntityID()",
+                "end",
+                "function EntityGetFirstComponent(ent, type, tag)",
+                "    if ent == 12345 and type == 'DamageModelComponent' and _TWWE_LOW_HP then return 67890 end",
+                "    return nil",
+                "end",
+                "function ComponentGetValue2(comp, field)",
+                "    if comp == 67890 then",
+                "        if field == 'hp' then return 0.1 end",
+                "        if field == 'max_hp' then return 1.0 end",
+                "    end",
+                "    return 0",
+                "end"
+            ];
+
+            if (options.simulateLowHp) mockLuaLines.unshift("_TWWE_LOW_HP = true");
+            if (options.simulateManyEnemies) mockLuaLines.unshift("_TWWE_MANY_ENEMIES = true");
+            if (options.simulateManyProjectiles) mockLuaLines.unshift("_TWWE_MANY_PROJECTILES = true");
+
+            // 注入动态 VFS
+            const customVFS = {
+                'mods/twwe_mock/init.lua': mockLuaLines.join('\n')
+            };
+
+            lua = await getNewLuaEngine(customVFS);
             
             const formatLuaArg = (val: any) => {
                 try {
@@ -191,7 +231,12 @@ self.onmessage = async (e: MessageEvent) => {
                 '-nc', formatLuaArg(options.numCasts || 3),
                 '-u', options.unlimitedSpells ? 'true' : 'false',
                 '-e', options.initialIfHalf ? 'true' : 'false',
+                '-md', 'twwe_mock', // 启用 Mock Mod
             ];
+
+            if (options.foldNodes === false) {
+                luaArgs.push('-f');
+            }
 
             if (data.always_cast && data.always_cast.length > 0) {
                 const acs = data.always_cast.filter((ac: string) => !!ac);
