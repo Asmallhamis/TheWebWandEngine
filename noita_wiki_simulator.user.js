@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Noita Wiki to Wand Simulator (Compatible)
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @description  Adds a "Open in Simulator" link to all wand templates on Noita Wiki (wiki.gg)
 // @author       Antigravity
 // @match        https://noita.wiki.gg/wiki/*
+// @match        https://noita.wiki.gg/zh/wiki/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wiki.gg
 // @grant        none
 // ==/UserScript==
@@ -48,6 +49,20 @@
     }
 
     function injectLinks() {
+        // --- 1. Chinese Wiki Specific: wand-sim-link ---
+        // These are the "法杖模拟器" links often found on the Chinese Wiki
+        const zhSimLinks = document.querySelectorAll('.wand-sim-link a:not([data-wand-sim-injected])');
+        zhSimLinks.forEach(a => {
+            const originalUrl = a.href;
+            if (originalUrl.includes('spells=')) {
+                const simBtn = createSimButton(originalUrl);
+                simBtn.style.marginLeft = '4px';
+                a.parentNode.appendChild(simBtn);
+                a.setAttribute('data-wand-sim-injected', 'true');
+            }
+        });
+
+        // --- 2. English Wiki & Standard Templates ---
         // High priority: actual text hidden in <pre class="w2copy">
         const preElements = document.querySelectorAll('pre.w2copy');
 

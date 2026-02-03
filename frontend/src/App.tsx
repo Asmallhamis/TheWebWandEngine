@@ -275,27 +275,31 @@ function App() {
 
   const spellNameToId = useMemo(() => {
     const map: Record<string, string> = {};
+    const normalize = (s: string) => s.toLowerCase()
+      .replace(/\[\[|\]\]/g, '') // 移除 [[ ]]
+      .split('|')[0] // 处理 [[ID|显示名]]
+      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '') // 保留字母、数字、中文
+      .trim();
+
     Object.entries(spellDb).forEach(([id, info]) => {
-      // 1. Normalize ID (e.g. "LIGHT_BULLET" -> "lightbullet")
-      const idNorm = id.toLowerCase().replace(/[^a-z0-9]/g, '');
-      map[idNorm] = id;
-
-      // 2. Normalize Localized Name (e.g. "二重咒语" -> "二重咒语")
-      if (info.name) {
-        const nameNorm = info.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (nameNorm) map[nameNorm] = id;
-      }
-
-      // 3. Normalize English Name (e.g. "Double Spell" -> "doublespell")
-      if (info.en_name) {
-        const enNorm = info.en_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (enNorm) map[enNorm] = id;
-      }
-
-      // 4. Heuristics for internal IDs with underscores
+      // 1. 原始 ID (如 "LIGHT_BULLET")
+      map[normalize(id)] = id;
       if (id.includes('_')) {
-        const idSimple = id.toLowerCase().replace(/_/g, '');
-        map[idSimple] = id;
+        map[id.toLowerCase().replace(/_/g, '')] = id;
+      }
+
+      // 2. 本地化名称 (如 "火花弹")
+      if (info.name) map[normalize(info.name)] = id;
+
+      // 3. 英文名称 (如 "Spark Bolt")
+      if (info.en_name) map[normalize(info.en_name)] = id;
+
+      // 4. 别名 (来自 spell_mapping.md)
+      if (info.aliases) {
+        info.aliases.split(',').forEach(alias => {
+          const aNorm = normalize(alias);
+          if (aNorm) map[aNorm] = id;
+        });
       }
     });
 
@@ -860,12 +864,41 @@ function App() {
   };
 
   const importFromText = useCallback(async (text: string, forceTarget?: { slot: string, idx: number }) => {
+    // 兼容外部模拟器 URL 粘贴
+    if (text.includes('?spells=') || text.includes('&spells=')) {
+      const url = new URL(text.startsWith('http') ? text : `http://x.com/${text}`);
+      const spellsStr = url.searchParams.get('spells');
+      if (spellsStr) {
+        const ids = spellsStr.split(',').filter(s => !!s);
+        const targetSlot = forceTarget?.slot || (hoveredSlotRef.current?.wandSlot) || (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
+        const nextWand = {
+          ...DEFAULT_WAND,
+          mana_max: parseFloat(url.searchParams.get('mana_max') || '400'),
+          mana_charge_speed: parseFloat(url.searchParams.get('mana_charge_speed') || '10'),
+          reload_time: parseInt(url.searchParams.get('reload_time') || '0'),
+          fire_rate_wait: parseInt(url.searchParams.get('cast_delay') || '0'),
+          deck_capacity: parseInt(url.searchParams.get('deck_capacity') || '10'),
+          actions_per_round: parseInt(url.searchParams.get('actions_per_round') || '1'),
+          shuffle_deck_when_empty: url.searchParams.get('shuffle_deck_when_empty') === 'true',
+          spells: ids.reduce((acc, id, i) => ({ ...acc, [(i + 1).toString()]: id }), {})
+        };
+        performAction(prev => ({ ...prev, [targetSlot]: nextWand }), t('app.notification.import_from_url'));
+        return true;
+      }
+    }
+
     const isWand2Data = text.includes('{{Wand2');
     const isWikiWand = text.includes('{{Wand') && !isWand2Data;
     const isWandData = isWand2Data || isWikiWand;
     const isSpellSeq = text.includes(',') || Object.keys(spellDb).some(id => text.includes(id));
 
     if (!isWandData && !isSpellSeq) return false;
+
+    const normalize = (s: string) => s.toLowerCase()
+      .replace(/\[\[|\]\]/g, '')
+      .split('|')[0]
+      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
+      .trim();
 
     // Determine where to paste
     let targetWandSlot = forceTarget?.slot;
@@ -877,7 +910,10 @@ function App() {
       if (hIdx < 0) {
         // Paste into Always Cast
         const acIdx = (-hIdx) - 1;
-        const spellsList = text.split(',').map(s => s.trim()).filter(s => !!s);
+        const spellsList = text.split(',').map(s => s.trim()).filter(s => !!s).map(s => {
+          const norm = normalize(s);
+          return spellNameToId[norm] || s.toUpperCase();
+        });
         if (spellsList.length > 0) {
           performAction(prev => {
             const next = { ...prev };
@@ -920,7 +956,10 @@ function App() {
           const spellsStr = getVal('spells');
           const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
           spellsList.forEach((sid, i) => {
-            if (sid) newSpells[(i + 1).toString()] = sid;
+            if (sid) {
+              const norm = normalize(sid);
+              newSpells[(i + 1).toString()] = spellNameToId[norm] || sid.toUpperCase();
+            }
           });
           deckCapacity = parseInt(getVal('capacity') || '0') || DEFAULT_WAND.deck_capacity;
 
@@ -928,31 +967,36 @@ function App() {
           if (acStr) {
             acStr.split(',').forEach(s => {
               const sid = s.trim();
-              if (sid) alwaysCasts.push(sid);
+              if (sid) {
+                const norm = normalize(sid);
+                alwaysCasts.push(spellNameToId[norm] || sid.toUpperCase());
+              }
             });
           }
         } else {
-          // Wiki Wand
+          // Wiki Wand (Legacy)
           deckCapacity = parseInt(getVal('capacity') || '0') || DEFAULT_WAND.deck_capacity;
           for (let i = 1; i <= Math.max(deckCapacity, 100); i++) {
             const name = getVal(`spell${i}`);
             if (name) {
-              const norm = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const norm = normalize(name);
               const id = spellNameToId[norm];
               if (id) newSpells[i.toString()] = id;
             }
           }
           const acName = getVal('alwaysCasts') || getVal('always_cast');
           if (acName) {
-            const norm = acName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const id = spellNameToId[norm];
-            if (id) alwaysCasts.push(id);
+            acName.split(',').forEach(s => {
+              const norm = normalize(s.trim());
+              const id = spellNameToId[norm];
+              if (id) alwaysCasts.push(id);
+            });
           }
         }
 
         const newWand: WandData = {
           ...DEFAULT_WAND,
-          shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true',
+          shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true' || getVal('shuffle') === '是',
           actions_per_round: parseInt(getVal('spellsCast') || (isWand2Data ? '1' : '')) || parseInt(getVal('spellsPerCast') || '1') || DEFAULT_WAND.actions_per_round,
           mana_max: parseFloat(getVal('manaMax') || '0') || DEFAULT_WAND.mana_max,
           mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || DEFAULT_WAND.mana_charge_speed,
@@ -1002,7 +1046,10 @@ function App() {
         const spellsStr = getVal('spells');
         const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
         spellsList.forEach((sid, i) => {
-          if (sid) newSpells[(i + 1).toString()] = sid;
+          if (sid) {
+            const norm = normalize(sid);
+            newSpells[(i + 1).toString()] = spellNameToId[norm] || sid.toUpperCase();
+          }
         });
         deckCapacity = parseInt(getVal('capacity') || '0') || deckCapacity;
 
@@ -1010,30 +1057,35 @@ function App() {
         if (acStr) {
           acStr.split(',').forEach(s => {
             const sid = s.trim();
-            if (sid) alwaysCasts.push(sid);
+            if (sid) {
+              const norm = normalize(sid);
+              alwaysCasts.push(spellNameToId[norm] || sid.toUpperCase());
+            }
           });
         }
       } else {
-        // Wiki Wand
+        // Wiki Wand (Legacy)
         deckCapacity = parseInt(getVal('capacity') || '0') || deckCapacity;
         for (let i = 1; i <= Math.max(deckCapacity, 100); i++) {
           const val = getVal(`spell${i}`);
           if (val) {
-            const norm = val.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const norm = normalize(val);
             const id = spellNameToId[norm];
             if (id) newSpells[i.toString()] = id;
           }
         }
         const acName = getVal('alwaysCasts') || getVal('always_cast');
         if (acName) {
-          const norm = acName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const id = spellNameToId[norm];
-          if (id) alwaysCasts.push(id);
+          acName.split(',').forEach(s => {
+            const norm = normalize(s.trim());
+            const id = spellNameToId[norm];
+            if (id) alwaysCasts.push(id);
+          });
         }
       }
 
       const updates: Partial<WandData> = {
-        shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true',
+        shuffle_deck_when_empty: getVal('shuffle')?.toLowerCase() === 'yes' || getVal('shuffle') === 'true' || getVal('shuffle') === '是',
         actions_per_round: parseInt(getVal('spellsCast') || (isWand2Data ? '1' : '')) || parseInt(getVal('spellsPerCast') || '1') || wand.actions_per_round,
         mana_max: parseFloat(getVal('manaMax') || '0') || wand.mana_max,
         mana_charge_speed: parseFloat(getVal('manaCharge') || '0') || wand.mana_charge_speed,
@@ -1048,7 +1100,10 @@ function App() {
       updateWand(targetWandSlot, { ...updates, spells: newSpells }, t('app.notification.paste_wand_data'), Object.values(newSpells));
       return true;
     } else {
-      const newSpellsList = text.split(',').map(s => s.trim());
+      const newSpellsList = text.split(',').map(s => s.trim()).map(s => {
+        const norm = normalize(s);
+        return spellNameToId[norm] || s.toUpperCase();
+      });
       const existingSpells: (string | null)[] = [];
       const maxIdx = Math.max(wand.deck_capacity, ...Object.keys(wand.spells).map(Number));
       for (let i = 1; i <= maxIdx; i++) {
