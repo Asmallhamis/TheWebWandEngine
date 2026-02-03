@@ -12,7 +12,7 @@ A web-based Noita wand evaluation and synchronization tool. This project aims to
 *   **Seamless Connection**: The plugin interacts with the backend via high-performance Socket communication, supporting real-time acquisition of all in-game wands and spell data.
 
 ### 2. Local Wand Warehouse
-*   **Persistent Storage**: Built-in powerful local warehouse system allows you to permanently store various wand designs in the browser (localStorage).
+*   **Persistent Storage**: Built-in powerful local warehouse system allows you to store various wand designs in the browser (localStorage). Also supports **one-click export/import backup**, ensuring data can be recovered even after browser cache cleanup.
 *   **Directory Tree Management**: Supports creating multi-level folders and easily organizing your wand collection via drag-and-drop.
 *   **Smart Tags & Search**: Automatically generates indexing information for wands in the warehouse, supporting filtering by name and Pinyin.
 
