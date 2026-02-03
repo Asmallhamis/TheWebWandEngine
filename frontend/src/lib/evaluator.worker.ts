@@ -256,6 +256,8 @@ self.onmessage = async (e: MessageEvent) => {
                 '-mc', formatLuaArg(data.mana_charge_speed || 10),
                 '-rt', formatLuaArg(data.reload_time || 0),
                 '-cd', formatLuaArg(data.fire_rate_wait || 0),
+                '-sm', formatLuaArg(data.speed_multiplier || 1.0),
+                '-sd', formatLuaArg(data.spread_degrees || 0.0),
                 '-nc', formatLuaArg(options.numCasts || 3),
                 '-u', options.unlimitedSpells ? 'true' : 'false',
                 '-e', options.initialIfHalf ? 'true' : 'false',

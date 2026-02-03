@@ -842,6 +842,8 @@ def evaluate_wand():
         "-mc", format_lua_arg(data.get("mana_charge_speed", 10)),
         "-rt", format_lua_arg(data.get("reload_time", 0)),
         "-cd", format_lua_arg(data.get("fire_rate_wait", 0)),
+        "-sm", format_lua_arg(data.get("speed_multiplier", 1.0)),
+        "-sd", format_lua_arg(data.get("spread_degrees", 0.0)),
         "-nc", format_lua_arg(data.get("number_of_casts", 10)), # 默认模拟 10 轮
         "-u", "true" if data.get("unlimited_spells", True) else "false", # 无限法术天赋
         "-e", "true" if data.get("initial_if_half", True) else "false", # IF_HALF 初始状态
