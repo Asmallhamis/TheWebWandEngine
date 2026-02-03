@@ -29,7 +29,7 @@ This project is licensed under the **GPL-3.0** License.
 ## 🚀 Quick Start
 
 ### 1. Download & Install (Recommended)
-Download the latest portable version from [Releases](https://github.com/NathanSnail/TWWE/releases):
+Download the latest portable version from [Releases](https://github.com/Asmallhamis/TheWebWandEngine/releases/latest):
 Simply run `TheWebWandEngine.exe` to start.
 
 ### 2. In-game Synchronization

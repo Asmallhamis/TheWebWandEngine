@@ -29,7 +29,7 @@
 ## 🚀 快速开始
 
 ### 1. 下载与安装 (推荐)
-直接从 [Releases](https://github.com/NathanSnail/TWWE/releases) 下载最新的绿色便携版：
+直接从 [Releases](https://github.com/Asmallhamis/TheWebWandEngine/releases/latest) 下载最新的绿色便携版：
 运行 `TheWebWandEngine.exe` 即可启动。
 
 ### 2. 游戏内同步
