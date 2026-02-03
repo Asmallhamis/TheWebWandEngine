@@ -40,7 +40,7 @@ A web-based Noita wand evaluation and synchronization tool. This project aims to
     *   **Arrow Mode**: **Default Mode** (Selection Mode). Supports clicking or dragging the mouse for **box selection** to quickly select multiple spells.
     *   **Hand Mode**: Grabbing Mode. Supports clicking or dragging a single spell.
     *   `Middle Click`: Mark/unmark a spell slot (used for highlighting or specific debugging).
-    *   `Alt + Left Click`: Quickly toggle spell remaining uses (0 or Full); if it's a conditional spell (e.g., low health trigger), it directly toggles the corresponding simulation environment switch.
+    *   `Alt + Left Click`: Quickly toggle spell remaining uses (0 or Full); if it's one of IF_HP,IF_PROJECTILE,IF_ENEM, it directly toggles the corresponding simulation environment switch.
 
 ### 6. Dual-Engine Evaluation
 *   **Local High-Performance Mode**: Calls a highly optimized local `wand_eval_tree` process, supporting complex spell calculations with millions of recursions, simulating real firing logic with extreme performance.
