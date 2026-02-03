@@ -407,9 +407,13 @@ local function reset_wand(options, text_formatter, spells)
 
 	ConfigGun_ReadToLua(options.spells_per_cast, false, options.reload_time, 66)
 	_set_gun()
-	local data = require("src.data")
+	local data_module = require("src.data")
+	local data = {}
+	for k, v in pairs(data_module) do data[k] = v end
 	local arg_list = require("src.arg_list")
 	data.fire_rate_wait = options.cast_delay
+	data.speed_multiplier = options.speed_multiplier
+	data.spread_degrees = options.spread_degrees
 	local read_to_lua_info = {}
 	for _, v in ipairs(arg_list) do
 		table.insert(read_to_lua_info, data[v])
