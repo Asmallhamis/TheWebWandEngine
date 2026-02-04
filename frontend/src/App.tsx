@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 
 // --- Internal ---
+import { checkPinyinFuzzy } from './lib/searchUtils';
 import { SpellInfo, WandData, HistoryItem, Tab, AppSettings, EvalResponse, WarehouseWand, SmartTag, WarehouseFolder } from './types';
 import { DEFAULT_WAND, DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from './constants';
 import { Header } from './components/Header';
@@ -632,8 +633,10 @@ function App() {
       else if (en.startsWith(query)) score += 60;
       else if (!isEnglish && init.startsWith(query)) score += 55;
       else if (!isEnglish && py.startsWith(query)) score += 50;
+      else if (!isEnglish && checkPinyinFuzzy(query, py, init)) score += 48;
       else if (!isEnglish && ainit.startsWith(query)) score += 45;
       else if (!isEnglish && apy.startsWith(query)) score += 40;
+      else if (!isEnglish && checkPinyinFuzzy(query, apy, ainit)) score += 38;
 
       // Includes
       else if (id.includes(query)) score += 30;
@@ -656,15 +659,19 @@ function App() {
   // --- Selection & Clipboard Logic ---
   const handleSlotMouseDown = (wandSlot: string, idx: number, isRightClick: boolean = false) => {
     const isHandMode = settings.editorDragMode === 'hand';
+    
+    // 1. 处理拖拽开启逻辑 (右键点击 或 拖动模式下的左键)
     if (isRightClick || (isHandMode && !isRightClick)) {
       const wand = activeTab.wands[wandSlot];
       const sid = idx < 0 ? wand?.always_cast[(-idx) - 1] : wand?.spells[idx.toString()];
       if (sid) {
         setDragSource({ wandSlot, idx, sid });
       }
-      if (isHandMode && !isRightClick) return;
     }
-    if (isHandMode) return;
+
+    // 2. 拦截：如果是右键，或者处于拖动模式，不应触发选中逻辑
+    if (isRightClick || isHandMode) return;
+
     if (idx < 0) return; // Don't support multi-selection for always cast yet
     setIsSelecting(true);
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
@@ -1911,22 +1918,34 @@ function App() {
     }
   };
 
-  const openPicker = (wandSlot: string, spellIdx: string, e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const openPicker = (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => {
+    let x, y, initialSearch = '';
+    
+    // Check if it's a real MouseEvent by checking if it has a target and it's not our manual object
+    if (e && 'currentTarget' in e && e.currentTarget) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      x = rect.left;
+      y = rect.bottom + 8;
+    } else {
+      const manual = e as { x: number, y: number, initialSearch?: string };
+      x = manual.x;
+      y = manual.y;
+      initialSearch = manual.initialSearch || '';
+    }
+
     setPickerConfig({
       wandSlot,
       spellIdx,
-      x: rect.left,
-      y: rect.bottom + 8
+      x,
+      y
     });
-    setPickerSearch('');
+    setPickerSearch(initialSearch);
     setPickerExpandedGroups(new Set());
   };
 
-  const pickSpell = (spellId: string | null) => {
+  const pickSpell = (spellId: string | null, isKeyboard: boolean = false) => {
     if (!pickerConfig) return;
     const { wandSlot, spellIdx } = pickerConfig;
-    console.log(`[Picker] Picking ${spellId} for wand ${wandSlot} index ${spellIdx}`);
 
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
@@ -1954,7 +1973,22 @@ function App() {
         return { ...prevWands, [wandSlot]: newWand };
       }
     }, spellId ? t('app.notification.change_spell') : t('app.notification.clear_slot', { idx: spellIdx }), spellId ? [spellId] : []);
+    
     setPickerConfig(null);
+
+    if (isKeyboard && spellId && !spellIdx.startsWith('ac-')) {
+      // 键盘选词成功：自动跳到下一格
+      const currentIdx = parseInt(spellIdx);
+      const wand = activeTab.wands[wandSlot];
+      if (wand && currentIdx < wand.deck_capacity) {
+        setSelection({ wandSlot, indices: [currentIdx + 1], startIdx: currentIdx + 1 });
+      } else {
+        setSelection(null);
+      }
+    } else if (!isKeyboard) {
+      // 鼠标点击或取消：直接清空焦点，避免干扰后续全局按键
+      setSelection(null);
+    }
   };
 
   const exportAllData = () => {

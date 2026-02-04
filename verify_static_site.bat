@@ -9,40 +9,18 @@ call npm install
 
 echo [3/4] 正在构建生产环境版本 (静态模式)...
 
-:: --- 白名单保护逻辑开始 ---
-set "DIST_DIR=dist"
-set "TEMP_DIR=dist_backup"
-set "WHITELIST=.git auto_push.bat README.md LICENSE .gitignore CNAME"
-
-if exist %DIST_DIR% (
-    echo 正在备份白名单文件...
-    if not exist %TEMP_DIR% mkdir %TEMP_DIR%
-    for %%f in (%WHITELIST%) do (
-        if exist "%DIST_DIR%\%%f" (
-            echo   备份: %%f
-            move /y "%DIST_DIR%\%%f" "%TEMP_DIR%\" >nul
-        )
-    )
-)
-:: --- 白名单保护逻辑结束 ---
-
 set VITE_STATIC_MODE=true
 call npm run build
 
-:: --- 白名单恢复逻辑开始 ---
-if exist %TEMP_DIR% (
-    echo 正在还原白名单文件...
-    for %%f in (%WHITELIST%) do (
-        if exist "%TEMP_DIR%\%%f" (
-            echo   还原: %%f
-            move /y "%TEMP_DIR%\%%f" "%DIST_DIR%\" >nul
-        )
-    )
-    rmdir /s /q %TEMP_DIR%
-)
-:: --- 白名单恢复逻辑结束 ---
+echo [4/4] 正在同步到 ghpages 目录...
+:: 使用 robocopy 同步，并排除白名单文件/目录
+:: /MIR 镜像目录树（等同于 /E 加上 /PURGE）
+:: /XF 排除文件
+:: /XD 排除目录
+robocopy dist ..\ghpages /MIR /XF auto_push.bat README.md LICENSE .gitignore CNAME /XD .git
 
-echo [4/4] 启动本地静态服务器进行验证...
+echo.
+echo [5/5] 启动本地静态服务器进行验证...
 echo.
 echo ======================================================
 echo [验证说明]
@@ -53,5 +31,5 @@ echo 4. 按 Ctrl+C 并输入 Y 来停止测试。
 echo ======================================================
 echo.
 
-cd dist
+cd ..\ghpages
 python -m http.server 15042

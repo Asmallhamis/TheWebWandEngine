@@ -33,6 +33,7 @@ import {
   SortAsc,
   Calendar
 } from 'lucide-react';
+import { checkPinyinFuzzy } from '../lib/searchUtils';
 import { WandData, WarehouseWand, SpellInfo, SmartTag, WarehouseFolder as FolderType, AppSettings } from '../types';
 import { WarehouseFolder } from './WarehouseFolder';
 import { WarehouseWandCard } from './WarehouseWandCard';
@@ -400,10 +401,19 @@ export function WandWarehouse({
                 const s = spellDb[sid];
                 if (!s) return false;
                 const sName = isEnglish && s.en_name ? s.en_name : s.name;
-                return sName.toLowerCase().includes(q);
+                const matchesName = sName.toLowerCase().includes(q);
+                if (matchesName) return true;
+                if (!isEnglish) {
+                    if ((s.pinyin || "").toLowerCase().includes(q)) return true;
+                    if (checkPinyinFuzzy(q, (s.pinyin || "").toLowerCase(), (s.pinyin_initials || "").toLowerCase())) return true;
+                    if ((s.aliases || "").toLowerCase().includes(q)) return true;
+                    if (checkPinyinFuzzy(q, (s.alias_pinyin || "").toLowerCase(), (s.alias_initials || "").toLowerCase())) return true;
+                }
+                return false;
             });
             return w.name.toLowerCase().includes(q) || 
                    (!isEnglish && (w.pinyin || "").toLowerCase().includes(q)) ||
+                   (!isEnglish && checkPinyinFuzzy(q, (w.pinyin || "").toLowerCase(), (w.pinyin_initials || "").toLowerCase())) ||
                    w.tags.some(t => t.toLowerCase().includes(q)) ||
                    wSmartTagNames.some(t => t.toLowerCase().includes(q)) ||
                    matchesSpellSearch;

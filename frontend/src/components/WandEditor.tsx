@@ -23,6 +23,7 @@ interface WandEditorProps {
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   requestEvaluation: (wand: WandData, force?: boolean) => void;
+  onMoveSelection?: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   settings: AppSettings;
   isConnected: boolean;
 }
@@ -44,6 +45,7 @@ export function WandEditor({
   setSelection,
   setSettings,
   requestEvaluation,
+  onMoveSelection,
   settings,
   isConnected
 }: WandEditorProps) {
@@ -51,6 +53,98 @@ export function WandEditor({
   const [isAltPressed, setIsAltPressed] = React.useState(false);
   const wandRef = React.useRef<HTMLDivElement>(null);
   const spellsRef = React.useRef<HTMLDivElement>(null);
+
+  // 计算当前一行能放多少个格子
+  const getCols = () => {
+    if (!spellsRef.current) return 10;
+    const grid = spellsRef.current.querySelector('.grid');
+    if (!grid) return 10;
+    const style = getComputedStyle(grid);
+    return style.gridTemplateColumns.split(' ').filter(s => s !== '').length || 10;
+  };
+
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 如果正在输入框里，不处理导航
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // 必须有选中项且选中了当前法杖
+      if (!selection || selection.wandSlot !== slot || selection.indices.length !== 1) return;
+
+      const currentIdx = selection.indices[0];
+      const maxCap = data.deck_capacity;
+      const cols = getCols();
+
+      // 1. 方向键和 Tab 导航
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const next = e.shiftKey 
+          ? (currentIdx <= 1 ? maxCap : currentIdx - 1)
+          : (currentIdx >= maxCap ? 1 : currentIdx + 1);
+        setSelection({ ...selection, indices: [next], startIdx: next });
+        return;
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = currentIdx >= maxCap ? 1 : currentIdx + 1;
+        setSelection({ ...selection, indices: [next], startIdx: next });
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const next = currentIdx <= 1 ? maxCap : currentIdx - 1;
+        setSelection({ ...selection, indices: [next], startIdx: next });
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = Math.min(maxCap, currentIdx + cols);
+        if (next !== currentIdx) setSelection({ ...selection, indices: [next], startIdx: next });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const next = Math.max(1, currentIdx - cols);
+        if (next !== currentIdx) setSelection({ ...selection, indices: [next], startIdx: next });
+      }
+
+      // 2. 字母/数字触发搜索 (IME 风格)
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
+        e.preventDefault();
+        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
+        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
+        openPicker(slot, currentIdx.toString(), { 
+          clientX: 0, clientY: 0, // 告知 App.tsx 这是一个非鼠标触发
+          x: rect.left, 
+          y: rect.bottom + 8, 
+          initialSearch: e.key 
+        } as any);
+      }
+
+      // 3. Enter/Space 触发空搜索
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
+        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
+        openPicker(slot, currentIdx.toString(), { 
+          clientX: 0, clientY: 0,
+          x: rect.left, 
+          y: rect.bottom + 8, 
+          initialSearch: '' 
+        } as any);
+      }
+
+      // 4. 删除键
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const sid = data.spells[currentIdx.toString()];
+        if (sid) {
+          const newSpells = { ...data.spells };
+          const newSpellUses = { ...(data.spell_uses || {}) };
+          delete newSpells[currentIdx.toString()];
+          delete newSpellUses[currentIdx.toString()];
+          updateWand(slot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [selection, slot, data.deck_capacity, data.spells, data.spell_uses]);
 
   const absoluteToOrdinal = React.useMemo(() => {
     const map: Record<number, number> = {};
@@ -78,6 +172,75 @@ export function WandEditor({
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
+
+  // 处理格子的键盘导航和输入触发
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 如果正在输入框里（比如搜索框），不触发格子导航
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      const isSelected = selection?.wandSlot === slot;
+      if (!isSelected || selection.indices.length !== 1) return;
+
+      const currentIdx = selection.indices[0];
+      const maxCap = data.deck_capacity;
+      const rowCount = Math.floor((spellsRef.current?.offsetWidth || 600) / (56 + (settings.editorSpellGap || 0)));
+
+      // 1. 方向键和 Tab 导航
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        onMoveSelection?.(e.shiftKey ? 'prev' : 'next');
+        return;
+      }
+
+      if (e.key === 'ArrowRight') {
+        onMoveSelection?.('right');
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        onMoveSelection?.('left');
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        onMoveSelection?.('down');
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        onMoveSelection?.('up');
+        return;
+      }
+
+      // 2. 字母/数字触发搜索 (IME 风格)
+      // 排除掉控制键
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // 如果是数字且当前格子有法术，可能是想直接用数字选词，但在格子界面我们倾向于开启搜索
+        // 除非是按了空格/回车（开启空的搜索框）
+        e.preventDefault();
+        openPicker(slot, currentIdx.toString(), { 
+          clientX: 0, clientY: 0, // 坐标由 Picker 自己计算偏移
+          initialSearch: e.key === ' ' ? '' : e.key 
+        } as any);
+      }
+      
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        openPicker(slot, currentIdx.toString(), { clientX: 0, clientY: 0 } as any);
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const newSpells = { ...(data.spells || {}) };
+        const newSpellUses = { ...(data.spell_uses || {}) };
+        delete newSpells[currentIdx];
+        delete newSpellUses[currentIdx];
+        updateWand(slot, { spells: newSpells, spell_uses: newSpellUses });
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [selection, slot, data.deck_capacity, settings.editorSpellGap, onMoveSelection, openPicker]);
 
   const renderTimeInput = (label: string, frames: number, updateKey: keyof WandData) => {
     const primaryValue = settings.showStatsInFrames ? frames : parseFloat((frames / 60).toFixed(3));
@@ -634,6 +797,7 @@ export function WandEditor({
                       handleSlotMouseDown(slot, i + 1, e.button === 2);
                     }
                   }}
+                  data-slot-idx={idx}
                   onMouseUp={(e) => {
                     if (!isLocked) {
                       handleSlotMouseUp(slot, i + 1);
@@ -676,12 +840,12 @@ export function WandEditor({
                   className={`
                       w-full h-full rounded-lg border flex items-center justify-center relative group/cell transition-all active:scale-95
                       ${isLocked ? 'bg-black/40 border-transparent opacity-10' : `bg-zinc-800/80 border-white/5 shadow-inner hover:bg-zinc-700/80 ${settings.editorDragMode === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-                      ${isSelected ? 'ring-2 ring-indigo-500 ring-inset bg-indigo-500/20 border-indigo-400/50 z-10' : ''}
+                      ${isSelected ? 'ring-2 ring-indigo-500 ring-inset bg-indigo-500/40 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] z-10 scale-[1.02]' : ''}
                       ${isHovered && dragSource && settings.useNoitaSwapLogic ? 'border-indigo-500 bg-indigo-500/30 scale-105 z-20' : 'hover:border-indigo-500/50'}
                     `}
                 >
-                  {isHovered && dragSource && (
-                    settings.useNoitaSwapLogic ? (
+                  {isHovered && (
+                    (dragSource && settings.useNoitaSwapLogic) ? (
                       <div className="absolute inset-0 border-2 border-indigo-400 rounded-lg animate-pulse pointer-events-none" />
                     ) : (
                       <div 

@@ -139,9 +139,7 @@ def prepare_assets():
             py_full, py_init = get_pinyin(zh_name)
             
             # Merge from mapping
-            aliases = ""
-            alias_py = ""
-            alias_init = ""
+            aliases_list = []
             if spell_id in mapping:
                 m = mapping[spell_id]
                 # If common.csv didn't have a good name, use mapping
@@ -149,9 +147,22 @@ def prepare_assets():
                     zh_name = m["mod"] or m["official"] or zh_name
                     py_full, py_init = get_pinyin(zh_name)
                 
-                aliases = m["aliases"]
-                if aliases:
-                    alias_py, alias_init = get_pinyin(aliases)
+                # Add "汉化mod" to aliases if it's different from the display name
+                if m["mod"] and m["mod"] != zh_name:
+                    aliases_list.append(m["mod"])
+                
+                # Add "民间别名"
+                if m["aliases"]:
+                    # Split by space and add individual aliases if they are not already the name
+                    for a in m["aliases"].split():
+                        if a != zh_name and a not in aliases_list:
+                            aliases_list.append(a)
+
+            aliases = " ".join(aliases_list)
+            alias_py = ""
+            alias_init = ""
+            if aliases:
+                alias_py, alias_init = get_pinyin(aliases)
 
             icon_path = sprite_match.group(1).lstrip("/")
             src_icon = Path(NOITA_DATA_PATH) / icon_path
