@@ -187,7 +187,8 @@ function App() {
       useNoitaSwapLogic: false,
       spellTypes: DEFAULT_SPELL_TYPES,
       spellGroups: DEFAULT_SPELL_GROUPS,
-      warehouseFolderHeight: 200
+      warehouseFolderHeight: 200,
+      wikiLanguage: 'en'
     };
     if (saved) {
       try {

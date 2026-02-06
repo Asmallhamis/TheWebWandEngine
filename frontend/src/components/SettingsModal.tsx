@@ -215,6 +215,23 @@ export function SettingsModal({
                 {isMatch(t('settings.language')) && (
                   <LanguageSwitcher />
                 )}
+                {isMatch(t('settings.wiki_language')) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.wiki_language')}</label>
+                    <div className="flex gap-2">
+                      {['en', 'zh'].map(lang => (
+                        <button
+                          key={lang}
+                          onClick={() => setSettings(s => ({ ...s, wikiLanguage: lang as 'en' | 'zh' }))}
+                          className={`px-4 py-1.5 rounded text-[11px] font-bold transition-all ${settings.wikiLanguage === lang ? 'bg-indigo-500 text-white' : 'bg-black/40 text-zinc-500 border border-white/5 hover:bg-white/5'}`}
+                        >
+                          {lang === 'en' ? 'English' : '简体中文'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-[9px] text-zinc-600 italic">{t('settings.wiki_language_desc')}</div>
+                  </div>
+                )}
               </div>
             )}
 

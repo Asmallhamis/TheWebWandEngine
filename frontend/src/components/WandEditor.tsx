@@ -54,6 +54,16 @@ export function WandEditor({
   const wandRef = React.useRef<HTMLDivElement>(null);
   const spellsRef = React.useRef<HTMLDivElement>(null);
 
+  const openWiki = (sid: string) => {
+    const spell = spellDb[sid];
+    if (!spell) return;
+    const lang = settings.wikiLanguage || 'en';
+    const baseUrl = lang === 'zh' ? 'https://noita.wiki.gg/zh/wiki/' : 'https://noita.wiki.gg/wiki/';
+    const name = spell.en_name || spell.name;
+    const wikiPath = name.replace(/ /g, '_');
+    window.open(`${baseUrl}${wikiPath}`, '_blank');
+  };
+
   // 计算当前一行能放多少个格子
   const getCols = () => {
     if (!spellsRef.current) return 10;
@@ -701,7 +711,15 @@ export function WandEditor({
                 <div 
                   key={i} 
                   className="group/ac relative"
-                  onMouseDown={(e) => handleSlotMouseDown(slot, acIdx, e.button === 2)}
+                  onMouseDown={(e) => {
+                    if (e.ctrlKey && e.button === 1 && sid) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openWiki(sid);
+                      return;
+                    }
+                    handleSlotMouseDown(slot, acIdx, e.button === 2);
+                  }}
                   onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
                   onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}
                   onMouseLeave={handleSlotMouseLeave}
@@ -782,6 +800,12 @@ export function WandEditor({
                 <div
                   onMouseDown={(e) => {
                     if (!isLocked) {
+                      if (e.ctrlKey && e.button === 1 && sid) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openWiki(sid);
+                        return;
+                      }
                       if (e.button === 1 && spell) {
                         e.preventDefault();
                         e.stopPropagation();

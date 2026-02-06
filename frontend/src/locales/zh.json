@@ -204,6 +204,9 @@
       "utility_multicast_other": "实用+多重+其他",
       "static_material_passive": "静态+材料+被动"
     }
+    ,
+    "wiki_language": "Wiki 语言",
+    "wiki_language_desc": "选择 Ctrl+鼠标中键 点击法术时打开的 Wiki 语言版本 (Noita Wiki)."
   },
   "warehouse": {
     "title": "魔杖仓库",

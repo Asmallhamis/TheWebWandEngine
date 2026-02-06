@@ -94,6 +94,7 @@ export interface AppSettings {
   spellTypes: SpellTypeConfig[];
   spellGroups: SpellGroupConfig[];
   warehouseFolderHeight: number;
+  wikiLanguage: 'en' | 'zh';
 }
 
 export interface EvalNode {

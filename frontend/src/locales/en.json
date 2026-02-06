@@ -204,6 +204,9 @@
       "utility_multicast_other": "Utility + Multicast + Other",
       "static_material_passive": "Static + Material + Passive"
     }
+    ,
+    "wiki_language": "Wiki Language",
+    "wiki_language_desc": "Choose the Wiki language version to open when Ctrl + Middle Clicking a spell."
   },
   "warehouse": {
     "title": "Wand Warehouse",
