@@ -355,7 +355,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       // 预览模式或单轮：展示射击树
                       <div className="flex items-start gap-8">
                         <CastStatsPanel group={group} spellDb={spellDb} />
-                        <div className="flex-1 overflow-x-auto pt-4 pb-4 custom-scrollbar-mini">
+                        <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
                           <ShotTree 
                             nodes={buildShotTree(group.node, group.states)} 
                             hoveredShotId={hoveredShotId} 
@@ -380,7 +380,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
                             <CastStatsPanel group={{ counts: cCounts, states: cStates, node: cNode } as any} spellDb={spellDb} />
-                            <div className="flex-1 overflow-x-auto pt-4 pb-4 custom-scrollbar-mini">
+                            <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
                               <ShotTree 
                                 nodes={buildShotTree(cNode, cStates)} 
                                 hoveredShotId={hoveredShotId} 
@@ -454,7 +454,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       // 预览模式或单轮：显示统计 + 树
                       <div className="flex items-start gap-8">
                         <CastStatsPanel group={group} spellDb={spellDb} />
-                        <div className="flex-1 overflow-x-auto pt-4 pb-4 custom-scrollbar">
+                        <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                           <div className="w-fit">
                             <TreeNode 
                               node={group.node} 
@@ -484,7 +484,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
                             <CastStatsPanel group={{ counts: cCounts } as any} spellDb={spellDb} />
-                            <div className="flex-1 overflow-x-auto pt-4 pb-4 custom-scrollbar">
+                            <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                               <div className="w-fit">
                                 <TreeNode 
                                   node={cNode} 
@@ -712,7 +712,7 @@ const TreeNode: React.FC<{
 
             {/* 浮动标签（Extra Info） */}
             {node.extra && (
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-800 text-[9px] font-bold px-2 py-1 rounded border border-white/10 text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 shadow-2xl uppercase tracking-tighter">
+              <div className="absolute -top-12 left-0 w-max max-w-[200px] whitespace-normal break-words bg-zinc-950/95 text-[9px] font-bold px-2 py-1.5 rounded border border-white/20 text-zinc-100 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] uppercase tracking-tighter leading-tight">
                 {node.extra}
               </div>
             )}
