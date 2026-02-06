@@ -34,6 +34,16 @@ if not bit then
     }
 end
 
+-- math.randomseed 兼容性垫片 (解决 Lua 5.3+ 不接受浮点数 seed 的问题)
+local _old_randomseed = math.randomseed
+math.randomseed = function(seed)
+    local n = tonumber(seed)
+    if n then
+        -- 使用 math.floor 强制转换为整数 subtype
+        _old_randomseed(math.floor(n))
+    end
+end
+
 -- 核心文件读取逻辑 (私有变量，防止被 shadow)
 local _REAL_BRIDGE_GET_CONTENT = function(filename)
     if not filename then return nil end
