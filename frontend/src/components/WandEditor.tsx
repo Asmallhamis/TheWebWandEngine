@@ -59,9 +59,7 @@ export function WandEditor({
     if (!spell) return;
     const lang = settings.wikiLanguage || 'en';
     const baseUrl = lang === 'zh' ? 'https://noita.wiki.gg/zh/wiki/' : 'https://noita.wiki.gg/wiki/';
-    const name = spell.en_name || spell.name;
-    const wikiPath = name.replace(/ /g, '_');
-    window.open(`${baseUrl}${wikiPath}`, '_blank');
+    window.open(`${baseUrl}${sid.toUpperCase()}`, '_blank');
   };
 
   // 计算当前一行能放多少个格子
