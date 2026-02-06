@@ -35,6 +35,7 @@ local option_list = {
 	fM = "fuzz_maximise",
 	fb = "fuzz_begin",
 	fe = "fuzz_end",
+	se = "seed",
 }
 
 -- we duplicate the type to have an inexact variant
@@ -82,6 +83,7 @@ local defaults = {
 	fuzz_maximise = nil,
 	fuzz_begin = nil,
 	fuzz_end = nil,
+	seed = nil,
 }
 
 for k, v in pairs(user_config) do
@@ -297,6 +299,7 @@ local help_order = {
 	"fuzz_maximise",
 	"fuzz_begin",
 	"fuzz_end",
+	"seed",
 }
 
 local help_defs = {
@@ -334,6 +337,7 @@ local help_defs = {
 	fuzz_maximise = "whenever a solution with more of this spell in the output counts is found set the new constraint for this spell to be more than it",
 	fuzz_begin = "spells to add to the start of a fuzzed wand, note these don't take from fuzz_size",
 	fuzz_end = "spells to add to the end of a fuzzed wand, note these don't take from fuzz_size",
+	seed = "the seed to use for the RNG, if not specified entropy is used",
 }
 
 local help_text = [[
@@ -431,6 +435,7 @@ local complex_option_fns = {
 	fuzz_maximise = identity,
 	fuzz_begin = spell_parse,
 	fuzz_end = spell_parse,
+	seed = integer("seed"),
 	help = function()
 		error("do help!")
 	end,
@@ -504,6 +509,7 @@ local M = {}
 ---@field fuzz_maximise string[]?
 ---@field fuzz_begin spell[]?
 ---@field fuzz_end spell[]?
+---@field seed integer?
 
 ---@param args string[]
 ---@return options
