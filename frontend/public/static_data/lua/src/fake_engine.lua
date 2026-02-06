@@ -142,9 +142,28 @@ function M.make_fake_api(options)
 
 	regenerate_translations(options)
 
-	local frame = entropy.get_entropy()
-	prng.set_seed(frame)
+	local frame = (options.seed ~= nil) and options.seed or entropy.get_entropy()
+
+	-- Deterministic PRNG implementation to ensure same results across LuaJIT (Desktop) and Lua 5.4 (WASM)
+	-- This overrides the built-in math.random to use a custom pure-Lua PRNG.
+	math.randomseed = function(seed)
+		local n = tonumber(seed) or 0
+		-- Ensure we pass a 53-bit integer to our prng
+		prng.set_seed(math.floor(math.abs(n)))
+	end
+
+	math.random = function(m, n)
+		local res = prng.get_random_32() / 4294967296
+		if not m then return res end
+		if not n then
+			n = m
+			m = 1
+		end
+		return math.floor(res * (n - m + 1)) + m
+	end
+
 	math.randomseed(frame)
+
 	function Random(a, b)
 		if not a and not b then return math.random() end
 		if not b then
@@ -200,7 +219,11 @@ function M.make_fake_api(options)
 	end
 
 	function SetRandomSeed(x, y)
-		math.randomseed(x * 591.321 + y * 8541.123 + 124.545)
+		-- Robust mixing to ensure cross-platform consistency.
+		-- We avoid float math during mixing to ensure Desktop and WASM results are 100% identical.
+		-- The constants are multiplied by 1000 compared to the original approximation.
+		local s = math.floor(x * 591) + math.floor(y * 8541) + math.floor(frame) + 124545
+		math.randomseed(s)
 	end
 
 	function GameGetFrameNum()

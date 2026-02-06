@@ -172,6 +172,7 @@ function App() {
       simulateLowHp: false,
       simulateManyEnemies: false,
       simulateManyProjectiles: false,
+      evaluationSeed: '',
       groupIdenticalCasts: true,
       foldNodes: true,
       showIndices: true,
@@ -540,6 +541,8 @@ function App() {
     settings.simulateLowHp,
     settings.simulateManyEnemies,
     settings.simulateManyProjectiles,
+    settings.evaluationSeed,
+    settings.foldNodes,
     isConnected
   ]);
 
@@ -559,7 +562,9 @@ function App() {
         ifHalf: settings.initialIfHalf,
         lowHp: settings.simulateLowHp,
         manyEnemies: settings.simulateManyEnemies,
-        manyProjectiles: settings.simulateManyProjectiles
+        manyProjectiles: settings.simulateManyProjectiles,
+        seed: settings.evaluationSeed,
+        fold: settings.foldNodes
       });
 
       if (lastEvaluatedWandsRef.current[key] === wandStateString) return;

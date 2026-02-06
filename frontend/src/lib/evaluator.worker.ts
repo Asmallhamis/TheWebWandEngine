@@ -260,12 +260,12 @@ self.onmessage = async (e: MessageEvent) => {
                 '-dp', './',
                 '-mp', './',
                 '-j', 'true',
-                '-sc', formatLuaArg(data.actions_per_round || 1),
-                '-ma', formatLuaArg(data.mana_max || 100),
-                '-mx', formatLuaArg(data.mana_max || 100),
-                '-mc', formatLuaArg(data.mana_charge_speed || 10),
-                '-rt', formatLuaArg(data.reload_time || 0),
-                '-cd', formatLuaArg(data.fire_rate_wait || 0),
+                '-sc', formatLuaArg(data.actions_per_round !== undefined ? data.actions_per_round : 1),
+                '-ma', formatLuaArg(data.mana_max !== undefined ? data.mana_max : 100),
+                '-mx', formatLuaArg(data.mana_max !== undefined ? data.mana_max : 100),
+                '-mc', formatLuaArg(data.mana_charge_speed !== undefined ? data.mana_charge_speed : 10),
+                '-rt', formatLuaArg(data.reload_time !== undefined ? data.reload_time : 0),
+                '-cd', formatLuaArg(data.fire_rate_wait !== undefined ? data.fire_rate_wait : 0),
                 '-sm', formatLuaArg(data.speed_multiplier || 1.0),
                 '-sd', formatLuaArg(data.spread_degrees || 0.0),
                 '-nc', formatLuaArg(options.numCasts || 3),
@@ -273,6 +273,10 @@ self.onmessage = async (e: MessageEvent) => {
                 '-e', options.initialIfHalf ? 'true' : 'false',
                 '-md', 'twwe_mock', // 启用 Mock Mod
             ];
+
+            if (options.evaluationSeed !== undefined && options.evaluationSeed !== null && options.evaluationSeed !== "") {
+                luaArgs.push('-se', formatLuaArg(options.evaluationSeed));
+            }
 
             if (options.foldNodes === false) {
                 luaArgs.push('-f');

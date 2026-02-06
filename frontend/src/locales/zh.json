@@ -107,7 +107,9 @@
     "stage": "第 {{id}} 阶",
     "force_analyze": "强制重新分析",
     "force_analyze_desc": "重新启动评估引擎并分析当前法杖 (解决卡顿或同步错位)",
-    "analyzing": "正在分析法杖..."
+    "analyzing": "正在分析法杖...",
+    "evaluation_seed": "随机种子 (Seed)",
+    "evaluation_seed_desc": "手动指定一个数值来固定随机结果。留空则每次点击都会重新随机。"
   },
   "settings": {
     "title": "Settings",

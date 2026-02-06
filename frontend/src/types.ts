@@ -74,6 +74,7 @@ export interface AppSettings {
   showSpellCharges: boolean;
   unlimitedSpells: boolean;
   initialIfHalf: boolean;
+  evaluationSeed?: number | string;
   simulateLowHp: boolean;
   simulateManyEnemies: boolean;
   simulateManyProjectiles: boolean;

@@ -107,7 +107,9 @@
     "stage": "Stage {{id}}",
     "force_analyze": "Force Analyze",
     "force_analyze_desc": "Restart engine and re-evaluate current wand (Fixes lag or sync issues)",
-    "analyzing": "Analyzing Wand..."
+    "analyzing": "Analyzing Wand...",
+    "evaluation_seed": "Random Seed",
+    "evaluation_seed_desc": "Manually specify a value to fix random results. Leave blank for default."
   },
   "settings": {
     "title": "Settings",

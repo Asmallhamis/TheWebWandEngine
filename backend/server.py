@@ -849,6 +849,17 @@ def evaluate_wand():
         "-e", "true" if data.get("initial_if_half", True) else "false", # IF_HALF 初始状态
     ]
 
+    # Always Cast 支持
+    always_casts = data.get("always_cast", [])
+    if always_casts:
+        cmd.append("-ac")
+        cmd.extend([str(ac) for ac in always_casts if ac])
+
+    # RNG 种子支持
+    evaluation_seed = data.get("evaluation_seed")
+    if evaluation_seed is not None and evaluation_seed != "":
+        cmd.extend(["-se", format_lua_arg(evaluation_seed)])
+
     # 是否折叠树节点
     # 注意：wand_eval_tree 命令行中，默认 fold=true，传入 -f 会强制将其设为 false。
     # 所以当用户【不想要】折叠时，才添加 -f。

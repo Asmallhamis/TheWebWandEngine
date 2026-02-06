@@ -679,14 +679,29 @@ export function WandEditor({
               <span className="hidden sm:inline">{t('settings.export_wand_and_spells')}</span>
             </button>
           </div>
-          <button 
-            onClick={() => requestEvaluation(data, true)}
-            className="flex items-center gap-2 px-3 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-            title={t('evaluator.force_analyze_desc')}
-          >
-            <RefreshCw size={12} className="opacity-70" />
-            {t('evaluator.force_analyze')}
-          </button>
+          <div className="flex flex-col gap-1.5">
+            <button 
+              onClick={() => requestEvaluation(data, true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+              title={t('evaluator.force_analyze_desc')}
+            >
+              <RefreshCw size={12} className="opacity-70" />
+              {t('evaluator.force_analyze')}
+            </button>
+            <div className="flex items-center gap-2 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden focus-within:border-indigo-500/50 transition-colors" title={t('evaluator.evaluation_seed_desc')}>
+              <span className="text-[9px] text-zinc-500 font-black uppercase shrink-0">Seed</span>
+              <input 
+                type="text"
+                value={settings.evaluationSeed || ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  setSettings(s => ({ ...s, evaluationSeed: val }));
+                }}
+                className="bg-transparent border-none outline-none text-[10px] text-zinc-300 w-16 font-mono"
+                placeholder="Auto"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
