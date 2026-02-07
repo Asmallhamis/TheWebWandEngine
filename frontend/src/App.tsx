@@ -286,24 +286,31 @@ function App() {
 
     Object.entries(spellDb).forEach(([id, info]) => {
       // 1. 原始 ID (如 "LIGHT_BULLET")
-      map[normalize(id)] = id;
+      const idNorm = normalize(id);
+      if (idNorm) map[idNorm] = id;
+
       if (id.includes('_')) {
-        map[id.toLowerCase().replace(/_/g, '')] = id;
+        const idClean = id.toLowerCase().replace(/_/g, '');
+        if (idClean) map[idClean] = id;
       }
 
       // 2. 本地化名称 (如 "火花弹")
-      if (info.name) map[normalize(info.name)] = id;
+      if (info.name) {
+        const nameNorm = normalize(info.name);
+        if (nameNorm) map[nameNorm] = id;
+      }
 
       // 3. 英文名称 (如 "Spark Bolt")
-      if (info.en_name) map[normalize(info.en_name)] = id;
+      if (info.en_name) {
+        const enNorm = normalize(info.en_name);
+        if (enNorm) map[enNorm] = id;
+      }
 
       // 4. 别名 (来自 spell_mapping.md)
-      if (info.aliases) {
-        info.aliases.split(',').forEach(alias => {
-          const aNorm = normalize(alias);
-          if (aNorm) map[aNorm] = id;
-        });
-      }
+      info.aliases?.split(',').forEach(alias => {
+        const aNorm = normalize(alias);
+        if (aNorm) map[aNorm] = id;
+      });
     });
 
     return map;
