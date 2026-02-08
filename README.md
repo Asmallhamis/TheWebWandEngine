@@ -46,6 +46,47 @@
 *   **本地高性能模式**: 调用高度优化的本地 `wand_eval_tree` 进程，支持数百万级递归的超复杂法术计算，模拟真实开火逻辑，性能极强。
 *   **静态兼容模式 (WASM)**: 前端集成 Lua WASM 引擎，用于脱离后端环境（如 GitHub Pages）时的基础评估，性能适合轻量验证。
 
+## 🏗️ 架构说明
+
+TWWE 采用模块化解耦架构，确保前端 UI、后端服务与游戏逻辑之间的高效协作。
+
+```text
+TheWebWandEngine/
+├── backend/                # Python 后端模块
+│   ├── server.py           # Flask 服务核心，处理 API 与 Socket 桥接
+│   ├── import_helper.lua   # 辅助 Lua 脚本，用于解析游戏数据
+│   └── requirements.txt    # Python 依赖清单
+├── frontend/               # React 前端模块 (Vite + TS + Tailwind)
+│   ├── src/
+│   │   ├── components/     # UI 组件 (原子化设计)
+│   │   │   ├── OverlayManager.tsx  # 全局弹窗/模态框统一管理器
+│   │   │   └── WandWorkspace.tsx   # 法杖编辑区核心画布
+│   │   ├── hooks/          # 领域逻辑层 (Custom Hooks)
+│   │   │   ├── useGameSync.ts      # 游戏实时同步逻辑
+│   │   │   ├── useInteraction.ts   # 复杂的拖拽与多选逻辑
+│   │   │   └── useGlobalEvents.ts  # 全局快捷键与生命周期管理
+│   │   ├── lib/            # 工具库、搜索算法与模拟器适配器
+│   │   └── types.ts        # 全局 TypeScript 类型定义
+│   └── vite.config.js      # 前端构建配置
+├── wand_sync/              # Noita 游戏插件 (Mod)
+│   ├── init.lua            # Mod 入口，实现与后端的 Socket 通信
+│   └── mod.xml             # Mod 元数据
+├── wand_eval_tree/         # 核心评估引擎 (Lua)
+│   ├── src/                # 递归计算与法杖逻辑模拟核心
+│   └── main.lua            # 引擎入口
+├── bin/                    # 运行时二进制文件 (如 LuaJIT)
+└── build_portable.py       # 自动化打包与发布脚本
+```
+
+### 🔄 工作流简述
+1.  **数据流**: 游戏通过 `wand_sync` Mod 将魔杖数据通过 Socket 发送给 `backend`。
+2.  **状态管理**: `backend` 缓存并转发数据，`frontend` 通过 `useGameSync` Hook 实时监听并响应。
+3.  **计算逻辑**: 当魔杖改变时，前端通过 `useWandEvaluator` 调用 Web Worker (WASM) 或后端 `wand_eval_tree` 进行递归模拟。
+4.  **UI 渲染**: 采用 React 的声明式渲染，结合 Tailwind CSS 提供像素级的流畅交互。
+
+---
+
+
 ## 🚀 快速开始
 
 ### 1. 在线使用

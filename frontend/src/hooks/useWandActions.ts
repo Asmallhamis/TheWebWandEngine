@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tab, WandData, AppSettings, SpellInfo } from '../types';
+import { Tab, WandData, AppSettings, SpellInfo, AppNotification } from '../types';
 import { DEFAULT_WAND } from '../constants';
 
 export const useWandActions = (params: {
@@ -14,7 +14,7 @@ export const useWandActions = (params: {
   performAction: any,
   syncWand: any,
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>,
-  setNotification: (n: any) => void,
+  setNotification: (n: AppNotification | null) => void,
   lastLocalUpdateRef: React.MutableRefObject<number>,
   setSelection: (s: any) => void,
   setPickerConfig: (c: any) => void,

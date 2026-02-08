@@ -1,12 +1,12 @@
 import React from 'react';
 import { Zap, Info } from 'lucide-react';
-import { Tab } from '../types';
+import { Tab, AppNotification } from '../types';
 
 interface FooterProps {
   isConnected: boolean;
   activeTab: Tab;
   tabsCount: number;
-  notification: { msg: string; type: 'info' | 'success' } | null;
+  notification: AppNotification | null;
 }
 
 export function Footer({ isConnected, activeTab, tabsCount, notification }: FooterProps) {
@@ -30,9 +30,11 @@ export function Footer({ isConnected, activeTab, tabsCount, notification }: Foot
       {/* Floating Notification */}
       {notification && (
         <div className="fixed bottom-12 right-6 z-[500] animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className={`px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 ${
-            notification.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
-          }`}>
+          <div className={`px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 ${notification.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : notification.type === 'error'
+                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}>
             {notification.type === 'success' ? <Zap size={16} /> : <Info size={16} />}
             <span className="text-xs font-black uppercase tracking-wider">{notification.msg}</span>
           </div>

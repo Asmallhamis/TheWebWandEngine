@@ -7,7 +7,7 @@ interface UseGameSyncProps {
   settings: AppSettings;
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
   performAction: (action: (prevWands: Record<string, WandData>) => Record<string, WandData>, actionName?: string, icons?: string[], saveHistory?: boolean) => void;
-  setNotification: (n: { msg: string; type: 'info' | 'success' } | null) => void;
+  setNotification: (n: { msg: string; type: 'info' | 'success' | 'error' } | null) => void;
   setConflict: (c: { tabId: string; gameWands: Record<string, WandData> } | null) => void;
   t: any;
   lastLocalUpdateRef: React.MutableRefObject<number>;

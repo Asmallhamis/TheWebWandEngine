@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { SpellInfo, WandData, Tab, AppSettings, HistoryItem, WarehouseWand } from '../types';
+import { SpellInfo, WandData, Tab, AppSettings, HistoryItem, WarehouseWand, AppNotification } from '../types';
 import { DEFAULT_WAND } from '../constants';
 
 export const readMetadataFromPng = async (file: File): Promise<string | null> => {
@@ -65,7 +65,7 @@ interface UseWandImportProps {
   syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => Promise<void>;
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
   setActiveTabId: (id: string) => void;
-  setNotification: (n: { msg: string; type: 'info' | 'success' } | null) => void;
+  setNotification: (n: AppNotification | null) => void;
   hoveredSlotRef: React.MutableRefObject<{ wandSlot: string, idx: number, isRightHalf: boolean } | null>;
   selectionRef: React.MutableRefObject<{ wandSlot: string, indices: number[], startIdx: number } | null>;
 }

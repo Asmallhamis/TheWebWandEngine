@@ -19,7 +19,7 @@ interface WandEditorProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   requestEvaluation: (wand: WandData, force?: boolean) => void;

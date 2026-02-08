@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { WarehouseWand, WarehouseFolder, SmartTag, WandData } from '../types';
+import { WarehouseWand, WarehouseFolder, SmartTag, WandData, AppNotification } from '../types';
 
-export const useWarehouse = (setNotification: (n: any) => void) => {
+export const useWarehouse = (setNotification: (n: AppNotification | null) => void) => {
   const { t } = useTranslation();
   
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);

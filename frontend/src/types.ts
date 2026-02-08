@@ -146,3 +146,39 @@ export interface SmartTag {
   spells: string[];
   mode: 'strict' | 'contains';
 }
+
+export interface PickerConfig {
+  wandSlot: string;
+  spellIdx: string;
+  x: number;
+  y: number;
+  isAlwaysCast?: boolean;
+}
+
+export interface Conflict {
+  tabId: string;
+  gameWands: Record<string, WandData>;
+}
+
+export interface AppNotification {
+  msg: string;
+  type: 'info' | 'success' | 'error';
+}
+
+export interface DragSource {
+  wandSlot: string;
+  idx: number;
+  sid: string;
+}
+
+export interface MousePos {
+  x: number;
+  y: number;
+}
+
+export type SpellDb = Record<string, SpellInfo>;
+
+export interface SpellStats {
+  overall: SpellInfo[];
+  categories: SpellInfo[][];
+}
