@@ -136,7 +136,7 @@ export function SpellPicker({
                 }
 
                 // 处理 1-9 数字键：直接选词
-                if (e.key >= '1' && e.key <= '9' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                if (e.code.startsWith('Digit') && e.key >= '1' && e.key <= '9' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
                   const idx = parseInt(e.key) - 1;
                   if (flatSpells[idx]) {
                     e.preventDefault();
