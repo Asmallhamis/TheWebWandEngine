@@ -46,6 +46,7 @@ export const useWandEvaluator = (
     settings.simulateManyProjectiles,
     settings.evaluationSeed,
     settings.foldNodes,
+    settings.stopAtRecharge,
     isConnected
   ]);
 
@@ -66,7 +67,8 @@ export const useWandEvaluator = (
         manyEnemies: settings.simulateManyEnemies,
         manyProjectiles: settings.simulateManyProjectiles,
         seed: settings.evaluationSeed,
-        fold: settings.foldNodes
+        fold: settings.foldNodes,
+        stopAtRecharge: settings.stopAtRecharge
       });
 
       if (lastEvaluatedWandsRef.current[key] === wandStateString) return;

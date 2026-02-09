@@ -19,7 +19,7 @@ export const useSettings = () => {
         'from-purple-500/10 to-purple-600/20',
         'from-orange-500/10 to-orange-600/20'
       ],
-      wrapLimit: 20,
+      wrapLimit: 21,
       hideLabels: false,
       conflictStrategy: 'ask',
       autoExpandOnPaste: true,
