@@ -36,6 +36,7 @@ local option_list = {
 	fb = "fuzz_begin",
 	fe = "fuzz_end",
 	se = "seed",
+	sr = "stop_on_recharge",
 }
 
 -- we duplicate the type to have an inexact variant
@@ -84,6 +85,7 @@ local defaults = {
 	fuzz_begin = nil,
 	fuzz_end = nil,
 	seed = nil,
+	stop_on_recharge = false,
 }
 
 for k, v in pairs(user_config) do
@@ -338,6 +340,7 @@ local help_defs = {
 	fuzz_begin = "spells to add to the start of a fuzzed wand, note these don't take from fuzz_size",
 	fuzz_end = "spells to add to the end of a fuzzed wand, note these don't take from fuzz_size",
 	seed = "the seed to use for the RNG, if not specified entropy is used",
+	stop_on_recharge = "stop evaluating after the first cast that results in a recharge",
 }
 
 local help_text = [[

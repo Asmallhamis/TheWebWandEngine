@@ -96,6 +96,7 @@ export interface AppSettings {
   spellGroups: SpellGroupConfig[];
   warehouseFolderHeight: number;
   wikiLanguage: 'en' | 'zh';
+  stopAtRecharge: boolean;
 }
 
 export interface EvalNode {

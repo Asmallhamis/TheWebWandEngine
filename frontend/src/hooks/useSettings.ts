@@ -49,7 +49,8 @@ export const useSettings = () => {
       spellTypes: DEFAULT_SPELL_TYPES,
       spellGroups: DEFAULT_SPELL_GROUPS,
       warehouseFolderHeight: 200,
-      wikiLanguage: 'en'
+      wikiLanguage: 'en',
+      stopAtRecharge: true
     };
     if (saved) {
       try {

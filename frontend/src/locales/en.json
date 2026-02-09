@@ -154,6 +154,8 @@
     "show_spell_charges_desc": "Show usage counts in the editor. Set to 0 to always show. (Note: Evaluation does not deduct charges; it only considers unlimited or 0 charges)",
     "num_casts": "Evaluation Casts",
     "num_casts_desc": "Simulates multiple clicks; mana consumption may cause different results per round.",
+    "stop_at_recharge": "Stop at Recharge",
+    "stop_at_recharge_desc": "Simulation will automatically stop when the wand starts recharging. 'Evaluation Casts' will act as the maximum limit.",
     "auto_hide_threshold": "Tree Auto-hide Threshold",
     "auto_hide_threshold_desc": "If the complexity of the first Cast exceeds this node count, subsequent Casts will be folded by default.",
     "group_identical_casts": "Group Identical Casts",

@@ -274,6 +274,10 @@ self.onmessage = async (e: MessageEvent) => {
                 '-md', 'twwe_mock', // 启用 Mock Mod
             ];
 
+            if (options.stopAtRecharge) {
+                luaArgs.push('-sr', 'true');
+            }
+
             if (options.evaluationSeed !== undefined && options.evaluationSeed !== null && options.evaluationSeed !== "") {
                 luaArgs.push('-se', formatLuaArg(options.evaluationSeed));
             }

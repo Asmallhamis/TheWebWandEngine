@@ -849,6 +849,11 @@ def evaluate_wand():
         "-e", "true" if data.get("initial_if_half", True) else "false", # IF_HALF 初始状态
     ]
 
+    # 进充能停止支持
+    if data.get("stop_at_recharge"):
+        cmd.append("-sr")
+        cmd.append("true")
+
     # Always Cast 支持
     always_casts = data.get("always_cast", [])
     if always_casts:

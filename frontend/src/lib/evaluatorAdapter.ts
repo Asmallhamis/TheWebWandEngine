@@ -67,7 +67,8 @@ export async function evaluateWand(
           simulate_many_enemies: settings.simulateManyEnemies,
           simulate_many_projectiles: settings.simulateManyProjectiles,
           fold_nodes: settings.foldNodes,
-          evaluation_seed: settings.evaluationSeed
+          evaluation_seed: settings.evaluationSeed,
+          stop_at_recharge: settings.stopAtRecharge
         })
       });
       
