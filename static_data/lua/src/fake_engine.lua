@@ -391,7 +391,9 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 
 	-- cursed nolla design.
 	_handle_reload()
-	if M.reload_time then
+	local did_recharge = false
+	if M.reload_time ~= nil then
+		did_recharge = true
 		recharge_time = M.reload_time
 		delay = math.max(delay, M.reload_time)
 		M.reload_time = nil
@@ -399,6 +401,7 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	delay = math.max(delay, 1)
 	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
 	mana = mana + delay * options.mana_charge / 60
+	return did_recharge
 end
 
 ---@param options options
@@ -567,8 +570,10 @@ function M.evaluate(options, text_formatter)
 	end
 
 	local read_to_lua_info = reset_wand(options, text_formatter, options.spells)
+	local stopped = false
 	for i = 1, options.number_of_casts do
-		eval_wand(options, text_formatter, read_to_lua_info, i)
+		local did_recharge = eval_wand(options, text_formatter, read_to_lua_info, i)
+		if options.stop_on_recharge and did_recharge then break end
 	end
 end
 
