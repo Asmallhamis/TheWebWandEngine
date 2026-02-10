@@ -91,6 +91,8 @@ export function WandWarehouse({
   const [editingSmartTag, setEditingSmartTag] = useState<SmartTag | null>(null);
   const [spellSearchQuery, setSpellSearchQuery] = useState('');
 
+  const [selectedWandIds, setSelectedWandIds] = useState<Set<string>>(new Set());
+
   // Paste Support for Smart Tag Editor
   useEffect(() => {
     if (!editingSmartTag) return;
@@ -136,6 +138,7 @@ export function WandWarehouse({
   // Reset display limit when folder or search changes
   useEffect(() => {
     setDisplayLimit(50);
+    setSelectedWandIds(new Set());
   }, [selectedFolderId, searchQuery, selectedTags, sortBy]);
 
   // Handle scroll to load more
@@ -149,10 +152,21 @@ export function WandWarehouse({
 
   // --- Handlers ---
   const deleteWand = useCallback((id: string) => {
-    if (confirm(t('warehouse.delete_wand_confirm'))) {
-      setWands(prev => prev.filter(w => w.id !== id));
+    const toDelete = selectedWandIds.has(id) ? Array.from(selectedWandIds) : [id];
+    const message = toDelete.length > 1 
+      ? t('warehouse.delete_multiple_confirm', { count: toDelete.length }) 
+      : t('warehouse.delete_wand_confirm');
+
+    if (confirm(message)) {
+      const deleteSet = new Set(toDelete);
+      setWands(prev => prev.filter(w => !deleteSet.has(w.id)));
+      setSelectedWandIds(prev => {
+        const next = new Set(prev);
+        toDelete.forEach(tid => next.delete(tid));
+        return next;
+      });
     }
-  }, [setWands, t]);
+  }, [setWands, t, selectedWandIds]);
 
   const updateWand = useCallback((id: string, updates: Partial<WarehouseWand>) => {
     setWands(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
@@ -207,13 +221,42 @@ export function WandWarehouse({
     }
   }, [folders.length, setFolders, t]);
 
+  const handleWandClick = useCallback((e: React.MouseEvent, wandId: string) => {
+    e.stopPropagation();
+    if (e.ctrlKey || e.metaKey) {
+      setSelectedWandIds(prev => {
+        const next = new Set(prev);
+        if (next.has(wandId)) {
+          next.delete(wandId);
+        } else {
+          next.add(wandId);
+        }
+        return next;
+      });
+    } else {
+      setSelectedWandIds(new Set([wandId]));
+    }
+  }, []);
+
   const deleteFolder = useCallback((id: string) => {
     if (confirm(t('warehouse.delete_folder_confirm'))) {
-      setFolders(prev => prev.filter(f => f.id !== id));
-      setWands(prev => prev.map(w => w.folderId === id ? { ...w, folderId: null } : w));
-      if (selectedFolderId === id) setSelectedFolderId('root');
+      const getChildFolderIds = (currentFolders: FolderType[], folderId: string): string[] => {
+        const children = currentFolders.filter(f => f.parentId === folderId);
+        let ids = children.map(f => f.id);
+        children.forEach(c => {
+          ids = [...ids, ...getChildFolderIds(currentFolders, c.id)];
+        });
+        return ids;
+      };
+
+      const folderIdsToDelete = [id, ...getChildFolderIds(folders, id)];
+      const folderIdsSet = new Set(folderIdsToDelete);
+
+      setFolders(prev => prev.filter(f => !folderIdsSet.has(f.id)));
+      setWands(prev => prev.filter(w => !w.folderId || !folderIdsSet.has(w.folderId)));
+      if (selectedFolderId && folderIdsSet.has(selectedFolderId)) setSelectedFolderId('root');
     }
-  }, [setFolders, setWands, selectedFolderId, t]);
+  }, [folders, setFolders, setWands, selectedFolderId, t]);
 
   const renameFolder = useCallback((id: string) => {
     const folder = folders.find(f => f.id === id);
@@ -224,9 +267,36 @@ export function WandWarehouse({
     }
   }, [folders, setFolders, t]);
 
+  const exportFolder = useCallback((folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return;
+
+    const getChildFolderIds = (currentFolders: FolderType[], id: string): string[] => {
+      const children = currentFolders.filter(f => f.parentId === id);
+      return [id, ...children.flatMap(c => getChildFolderIds(currentFolders, c.id))];
+    };
+
+    const folderIds = getChildFolderIds(folders, folderId);
+    const folderIdsSet = new Set(folderIds);
+
+    const exportedFolders = folders.filter(f => folderIdsSet.has(f.id));
+    const exportedWands = wands.filter(w => w.folderId && folderIdsSet.has(w.folderId));
+
+    const dataStr = JSON.stringify({ wands: exportedWands, folders: exportedFolders }, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `wand_warehouse_folder_${folder.name}_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [folders, wands]);
+
   // Drag & Drop Handlers
   const handleDragStart = useCallback((e: React.DragEvent, type: 'wand' | 'folder', id: string) => {
     if (type === 'wand') {
+      const ids = selectedWandIds.has(id) ? Array.from(selectedWandIds) : [id];
+      e.dataTransfer.setData('wandIds', JSON.stringify(ids));
       setDraggedWandId(id);
       setDraggedFolderId(null);
     } else {
@@ -236,7 +306,7 @@ export function WandWarehouse({
     e.dataTransfer.setData('type', type);
     e.dataTransfer.setData('id', id);
     e.dataTransfer.effectAllowed = 'move';
-  }, []);
+  }, [selectedWandIds]);
 
   const handleDragOver = useCallback((e: React.DragEvent, targetType: 'wand' | 'folder' | 'root', targetId: string | null | 'root') => {
     e.preventDefault();
@@ -269,15 +339,17 @@ export function WandWarehouse({
 
     if (!id || !type) return;
 
+    const wandIdsJson = e.dataTransfer.getData('wandIds');
+    const wandIds = wandIdsJson ? JSON.parse(wandIdsJson) : [id];
+
     if (type === 'wand') {
       if (targetType === 'folder' || targetType === 'root') {
         const targetFolderId = targetType === 'root' ? null : targetId;
         setWands(prev => {
-          const others = prev.filter(w => w.id !== id);
-          const movingWand = prev.find(w => w.id === id);
-          if (!movingWand) return prev;
-          
-          return [...others, { ...movingWand, folderId: targetFolderId as any }];
+          const idSet = new Set(wandIds);
+          const others = prev.filter(w => !idSet.has(w.id));
+          const movingWands = prev.filter(w => idSet.has(w.id)).map(w => ({ ...w, folderId: targetFolderId as any }));
+          return [...others, ...movingWands];
         });
         if (targetFolderId) {
              setFolders(prev => prev.map(f => f.id === targetFolderId ? { ...f, isOpen: true } : f));
@@ -286,18 +358,20 @@ export function WandWarehouse({
         if (id === targetId) return;
         
         setWands(prev => {
-          const movingWand = prev.find(w => w.id === id);
-          if (!movingWand) return prev;
+          const idSet = new Set(wandIds);
+          const movingWands = prev.filter(w => idSet.has(w.id));
+          if (movingWands.length === 0) return prev;
           
           const targetWand = prev.find(w => w.id === targetId);
           if (!targetWand) return prev;
 
-          const others = prev.filter(w => w.id !== id);
+          const others = prev.filter(w => !idSet.has(w.id));
           let targetIdx = others.findIndex(w => w.id === targetId);
           if (dragOverPos === 'bottom') targetIdx++;
           
           const newWands = [...others];
-          newWands.splice(targetIdx, 0, { ...movingWand, folderId: targetWand.folderId });
+          const updatedMovingWands = movingWands.map(w => ({ ...w, folderId: targetWand.folderId }));
+          newWands.splice(targetIdx, 0, ...updatedMovingWands);
           
           return newWands.map((w, i) => ({ ...w, order: i }));
         });
@@ -666,6 +740,7 @@ export function WandWarehouse({
                  e.preventDefault();
                  setContextMenu({ x: e.clientX, y: e.clientY, folderId: selectedFolderId || 'root' });
                }}
+               onClick={() => setSelectedWandIds(new Set())}
             >
                {displayWands.length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-4 opacity-50">
@@ -700,7 +775,10 @@ export function WandWarehouse({
                              setDragOverWandId(null);
                              setDragOverPos(null);
                           }}
-                          onDrop={(e, id) => handleDrop(e, 'wand', id)} isConnected={isConnected} />
+                          onDrop={(e, id) => handleDrop(e, 'wand', id)} 
+                          isConnected={isConnected}
+                          isSelected={selectedWandIds.has(wand.id)}
+                          onClick={(e) => handleWandClick(e, wand.id)} />
                     ))}
                  </div>
                )}
@@ -831,6 +909,13 @@ export function WandWarehouse({
           </button>
           {contextMenu.folderId !== 'root' && (
             <>
+              <button 
+                onClick={() => exportFolder(contextMenu.folderId as string)}
+                className="w-full px-4 py-2 text-left text-[11px] font-bold text-zinc-300 hover:bg-purple-600 hover:text-white flex items-center gap-2 transition-colors"
+              >
+                <Download size={14} /> {t('warehouse.export_folder')}
+              </button>
+              <div className="h-px bg-white/5 my-1" />
               <button 
                 onClick={() => renameFolder(contextMenu.folderId as string)}
                 className="w-full px-4 py-2 text-left text-[11px] font-bold text-zinc-300 hover:bg-purple-600 hover:text-white flex items-center gap-2 transition-colors"

@@ -37,6 +37,8 @@ interface WarehouseWandCardProps {
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, id: string) => void;
+  isSelected?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
   isConnected: boolean;
 }
 
@@ -58,6 +60,8 @@ export const WarehouseWandCard = React.memo(({
   onDragOver,
   onDragLeave,
   onDrop,
+  isSelected,
+  onClick,
   isConnected
 }: WarehouseWandCardProps) => {
   const { t, i18n } = useTranslation();
@@ -81,13 +85,15 @@ export const WarehouseWandCard = React.memo(({
         "group relative bg-zinc-900 border border-white/5 hover:border-purple-500/50 rounded-lg transition-all hover:bg-zinc-800 shadow-md overflow-visible select-none",
         viewMode === 'list' ? "flex items-center gap-3 p-2 h-16" : "flex flex-col p-2 gap-2 h-40", // Fixed height for Grid
         draggedWandId === wand.id && "opacity-30 grayscale",
-        dragOverWandId === wand.id && "ring-2 ring-purple-500 z-10 scale-[1.02]"
+        dragOverWandId === wand.id && "ring-2 ring-purple-500 z-10 scale-[1.02]",
+        isSelected && "ring-2 ring-purple-500 bg-purple-500/10 border-purple-500/50"
       )}
       draggable
       onDragStart={(e) => onDragStart(e, wand.id)}
       onDragOver={(e) => onDragOver(e, wand.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, wand.id)}
+      onClick={onClick}
     >
       {/* Visual Indicators for Drag Drop */}
       {dragOverWandId === wand.id && dragOverPos === 'top' && (
@@ -190,13 +196,13 @@ export const WarehouseWandCard = React.memo(({
       
       {/* Actions (Hover only) */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900/90 rounded-lg border border-white/10 p-0.5 backdrop-blur-sm z-20">
-        <button onClick={() => onImport(wand)} className="p-1.5 hover:bg-purple-500 hover:text-white text-zinc-400 rounded transition-colors" title={t('nav.import')}>
+        <button onClick={(e) => { e.stopPropagation(); onImport(wand); }} className="p-1.5 hover:bg-purple-500 hover:text-white text-zinc-400 rounded transition-colors" title={t('nav.import')}>
           <ArrowUpRight size={12} />
         </button>
-        <button onClick={() => onRename(wand)} className="p-1.5 hover:bg-white/20 hover:text-white text-zinc-400 rounded transition-colors" title={t('tabs.rename')}>
+        <button onClick={(e) => { e.stopPropagation(); onRename(wand); }} className="p-1.5 hover:bg-white/20 hover:text-white text-zinc-400 rounded transition-colors" title={t('tabs.rename')}>
           <ArrowUpRight size={12} />
         </button>
-        <button onClick={() => onDelete(wand.id)} className="p-1.5 hover:bg-red-500 hover:text-white text-zinc-400 rounded transition-colors" title={t('warehouse.delete')}>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(wand.id); }} className="p-1.5 hover:bg-red-500 hover:text-white text-zinc-400 rounded transition-colors" title={t('warehouse.delete')}>
           <Trash2 size={12} />
         </button>
       </div>

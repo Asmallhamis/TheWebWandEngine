@@ -537,15 +537,15 @@ def import_spell_lab():
             if res: all_wands_data.extend(res)
 
     if not all_wands_data:
-        return jsonify({"success": False, "error": "No Spell Lab data found"}), 404
+        return jsonify({"success": False, "error": "No Spell Lab Shugged data found"}), 404
 
     try:
         wands = []
         folders = []
-        root_folder_id = "from_spell_lab"
+        root_folder_id = "from_spell_lab_shugged"
         folders.append({
             "id": root_folder_id,
-            "name": "来自 Spell Lab",
+            "name": "来自 Spell Lab Shugged",
             "order": 1,
             "isOpen": True,
             "parentId": None

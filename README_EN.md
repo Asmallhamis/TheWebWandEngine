@@ -17,7 +17,7 @@ A web-based Noita wand evaluation and synchronization tool. This project aims to
 *   **Smart Tags & Search**: Automatically generates indexing information for wands in the warehouse, supporting filtering by name and Pinyin.
 
 ### 3. Multi-mod Ecosystem Compatibility
-*   **Deep Integration**: Supports one-click import of stored wands from `Wand Editor` and `Spell Lab` (and its fork `Shugged`) save settings.
+*   **Deep Integration**: Supports one-click import of stored wands from `Wand Editor` and `Spell Lab Shugged` save settings.
 *   **Real-time Mod Spell Fetching**: Synchronizes all mod spell data loaded at game runtime via Socket, ensuring absolute accuracy of spell icons and attributes.
 *   **Simulator Injection**: The backend supports injecting mod `ModLuaFileAppend` logic into the local evaluation engine, achieving precise attribute simulation and recursive calculation for mod spells.
 
