@@ -122,6 +122,30 @@ end
 local function serialize_wand(w)
     local ab = EntityGetFirstComponentIncludingDisabled(w, "AbilityComponent")
     if not ab then return nil end
+
+    local appearance = {}
+    local sprite_file = ComponentGetValue2(ab, "sprite_file")
+    appearance.sprite = sprite_file
+
+    local item_comp = EntityGetFirstComponentIncludingDisabled(w, "ItemComponent")
+    if item_comp then
+        appearance.name = ComponentGetValue2(item_comp, "item_name")
+    end
+
+    -- 尝试获取 SpriteComponent (tag="item") 上的 image_file (PNG 路径)
+    -- 这比 AbilityComponent.sprite_file (XML) 更适合直接在前端显示
+    local all_sprites = EntityGetComponentIncludingDisabled(w, "SpriteComponent") or {}
+    for _, sc in ipairs(all_sprites) do
+        local tags = ComponentGetTags(sc)
+        if tags and string.find(tags, "item") then
+            local img = ComponentGetValue2(sc, "image_file")
+            if img and img ~= "" then
+                appearance.item_sprite = img
+            end
+            break
+        end
+    end
+
     local data = {
         mana_max = ComponentGetValue2(ab, "mana_max"),
         mana_charge_speed = ComponentGetValue2(ab, "mana_charge_speed"),
@@ -134,6 +158,8 @@ local function serialize_wand(w)
         actions_per_round = ComponentObjectGetValue2(ab, "gun_config", "actions_per_round") or 1,
         spells = {}, always_cast = {}
     }
+    data.appearance = appearance
+
     for _, c in ipairs(EntityGetAllChildren(w) or {}) do
         local ac = EntityGetFirstComponentIncludingDisabled(c, "ItemActionComponent")
         local ic = EntityGetFirstComponentIncludingDisabled(c, "ItemComponent")
@@ -158,6 +184,28 @@ local function ApplyFullWand(w, data)
     if data.spread_degrees then ComponentObjectSetValue2(ab, "gunaction_config", "spread_degrees", tonumber(data.spread_degrees)) end
     if data.speed_multiplier then ComponentObjectSetValue2(ab, "gunaction_config", "speed_multiplier", tonumber(data.speed_multiplier)) end
     if data.actions_per_round then ComponentObjectSetValue2(ab, "gun_config", "actions_per_round", tonumber(data.actions_per_round)) end
+    
+    if data.appearance then
+        local app = data.appearance
+        if app.sprite then
+            ComponentSetValue2(ab, "sprite_file", app.sprite)
+        end
+        if app.name then
+            local ic = EntityGetFirstComponentIncludingDisabled(w, "ItemComponent")
+            if ic then
+                ComponentSetValue2(ic, "item_name", app.name)
+                ComponentSetValue2(ic, "always_use_item_name_in_ui", true)
+            end
+        end
+        if app.item_sprite then
+            local sc = EntityGetFirstComponentIncludingDisabled(w, "SpriteComponent", "item")
+            if sc then
+                ComponentSetValue2(sc, "image_file", app.item_sprite)
+            end
+        end
+        EntityRefreshSprite(w, EntityGetFirstComponentIncludingDisabled(w, "SpriteComponent", "item"))
+    end
+
     if data.spells or data.always_cast then
         for _, c in ipairs(EntityGetAllChildren(w) or {}) do if EntityHasTag(c, "card_action") then EntityKill(c) end end
         if data.always_cast then

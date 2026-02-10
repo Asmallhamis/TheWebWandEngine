@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Noita Wiki to Wand Simulator (Compatible)
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Adds a "Open in Simulator" link to all wand templates on Noita Wiki (wiki.gg)
 // @author       Antigravity
 // @match        https://noita.wiki.gg/wiki/*
@@ -51,14 +51,14 @@
     function injectLinks() {
         // --- 1. Chinese Wiki Specific: wand-sim-link ---
         // These are the "法杖模拟器" links often found on the Chinese Wiki
-        const zhSimLinks = document.querySelectorAll('.wand-sim-link a:not([data-wand-sim-injected])');
+        const zhSimLinks = document.querySelectorAll('.wand-sim-link a:not([data-twwe-injected])');
         zhSimLinks.forEach(a => {
             const originalUrl = a.href;
             if (originalUrl.includes('spells=')) {
                 const simBtn = createSimButton(originalUrl);
                 simBtn.style.marginLeft = '4px';
                 a.parentNode.appendChild(simBtn);
-                a.setAttribute('data-wand-sim-injected', 'true');
+                a.setAttribute('data-twwe-injected', 'true');
             }
         });
 
@@ -69,7 +69,7 @@
         preElements.forEach(pre => {
             // Find the logical container (standard card or mini variant)
             const container = pre.closest('.wand2-card, .wand2-mini, .wand2-inner') || pre.parentNode;
-            if (container.dataset.wandSimInjected) return;
+            if (container.getAttribute('data-twwe-injected')) return;
 
             const wandData = pre.textContent.trim();
             if (wandData.includes('{{Wand2') || wandData.includes('{{Wand')) {
@@ -83,14 +83,14 @@
                     container.appendChild(simBtn);
                 }
 
-                container.dataset.wandSimInjected = "true";
+                container.setAttribute('data-twwe-injected', 'true');
             }
         });
 
         // Search for data-template attributes (often on the main div)
         const templateDivs = document.querySelectorAll('[data-template*="{{Wand"]');
         templateDivs.forEach(div => {
-            if (div.dataset.wandSimInjected) return;
+            if (div.getAttribute('data-twwe-injected')) return;
 
             const wandData = div.getAttribute('data-template');
             if (wandData) {
@@ -101,12 +101,12 @@
                 } else {
                     div.appendChild(simBtn);
                 }
-                div.dataset.wandSimInjected = "true";
+                div.setAttribute('data-twwe-injected', 'true');
             }
         });
 
         // Final fallback: standard copy buttons with data-text
-        const fallbackBtns = document.querySelectorAll('.copy-to-clipboard-button:not([data-wand-sim-injected])');
+        const fallbackBtns = document.querySelectorAll('.copy-to-clipboard-button:not([data-twwe-injected])');
         fallbackBtns.forEach(btn => {
             if (btn.nextSibling && btn.nextSibling.className === 'simulator-link-container') return;
 
@@ -114,7 +114,7 @@
             if (wandData && (wandData.includes('{{Wand2') || wandData.includes('{{Wand'))) {
                 const simBtn = createSimButton(wandData);
                 btn.parentNode.insertBefore(simBtn, btn.nextSibling);
-                btn.setAttribute('data-wand-sim-injected', 'true');
+                btn.setAttribute('data-twwe-injected', 'true');
             }
         });
     }

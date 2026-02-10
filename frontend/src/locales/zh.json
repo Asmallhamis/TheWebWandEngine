@@ -298,7 +298,8 @@
     "spells_per_cast": "施法数量 (Spells/Cast)",
     "speed": "射击速度 (Speed)",
     "always_cast_slots": "始终施放槽位 (Always Cast Slots)",
-    "modify_uses_tip": "点击修改次数 (Alt+点击设为0, 再点击还原)"
+    "modify_uses_tip": "点击修改次数 (Alt+点击设为0, 再点击还原)",
+    "enter_sprite_path": "输入魔杖贴图路径 (data/ui_gfx/items/...)"
   },
   "conflict": {
     "title": "检测到同步冲突",

@@ -10,7 +10,7 @@ import {
   Zap
 } from 'lucide-react';
 import { WarehouseWand, SpellInfo, SmartTag } from '../types';
-import { getIconUrl } from '../lib/evaluatorAdapter';
+import { getIconUrl, getWandSpriteUrl } from '../lib/evaluatorAdapter';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useTranslation } from 'react-i18next';
@@ -103,6 +103,14 @@ export const WarehouseWandCard = React.memo(({
         viewMode === 'list' ? "w-64 h-full shrink-0" : "w-full flex-1 min-h-[80px]" // Increased height for grid
       )}>
         {/* Simple Wand Graphic Placeholder or Spells */}
+        {(() => {
+          const spriteUrl = getWandSpriteUrl(wand.appearance, isConnected);
+          return spriteUrl ? (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-20 transition-opacity duration-200 pointer-events-none">
+            <img src={spriteUrl} className="w-full h-full object-contain image-pixelated p-2" alt="" />
+          </div>
+        ) : null;
+        })()}
         <div className="absolute inset-0 flex flex-wrap content-start p-1 gap-0.5 overflow-hidden">
           {spellsList.map((spell, i) => (
             <div key={i} className="w-5 h-5 shrink-0 flex items-center justify-center relative">

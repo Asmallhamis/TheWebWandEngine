@@ -465,6 +465,11 @@ def import_wand_editor():
                 wand_name = w.get("item_name") or "未命名魔杖"
                 py_full, py_init = get_pinyin_data(wand_name)
 
+                appearance = {
+                    "sprite": w.get("sprite_file"),
+                    "name": wand_name
+                }
+
                 new_wand = {
                     "id": f"we_{page_idx}_{wand_idx}_{os.urandom(4).hex()}",
                     "name": wand_name,
@@ -482,6 +487,7 @@ def import_wand_editor():
                     "spells": spells,
                     "spell_uses": spell_uses,
                     "always_cast": always_cast,
+                    "appearance": appearance,
                     "tags": ["WandEditor"],
                     "createdAt": int(time.time() * 1000),
                     "folderId": page_folder_id,
@@ -568,6 +574,13 @@ def import_spell_lab():
             wand_name = w.get("name") or stats.get("ui_name") or "SpellLab Wand"
             py_full, py_init = get_pinyin_data(wand_name)
             
+            appearance = {}
+            if w.get("sprite"):
+                appearance["sprite"] = w["sprite"].get("file")
+                appearance["item_sprite"] = w["sprite"].get("file")
+            elif stats.get("sprite_file"):
+                appearance["sprite"] = stats.get("sprite_file")
+
             new_wand = {
                 "id": f"sl_{idx}_{os.urandom(4).hex()}",
                 "name": wand_name,
@@ -585,6 +598,7 @@ def import_spell_lab():
                 "spells": spells,
                 "spell_uses": spell_uses,
                 "always_cast": always_cast,
+                "appearance": appearance,
                 "tags": ["SpellLab"],
                 "createdAt": int(time.time() * 1000),
                 "folderId": root_folder_id,
@@ -693,25 +707,52 @@ def sync_wand():
 def get_icon(icon_path):
     icon_path = icon_path.lstrip("/")
     
-    # 1. 优先从 vanilla 解压目录查找
-    local_path = os.path.join(EXTRACTED_DATA_ROOT, icon_path).replace("\\", "/")
-    if os.path.exists(local_path):
-        return send_file(local_path, max_age=31536000)
-    
-    # 2. 从游戏安装目录查找 (针对安装了某些覆盖型 Mod 的情况)
-    root = get_game_root()
-    if root:
-        # 直接路径查找
-        path = os.path.join(root, icon_path).replace("\\", "/")
-        if os.path.exists(path):
-            return send_file(path, max_age=31536000)
-            
-        # 3. 模拟 Noita VFS：在所有活动 Mod 的文件夹下查找该路径
-        # 例如 data/ui_gfx/... 实际上可能在 mods/deep_end/data/ui_gfx/...
-        for mod_id in _ACTIVE_MODS_CACHE:
-            mod_path = os.path.join(root, "mods", mod_id, icon_path).replace("\\", "/")
-            if os.path.exists(mod_path):
-                return send_file(mod_path, max_age=31536000)
+    # Noita 的 sprite_file 通常是 .xml (如 data/items_gfx/handgun.xml)
+    # XML 内部 <Sprite filename="data/items_gfx/handgun.png"> 才是真正的图片
+    # 此函数自动解析 XML -> PNG 的映射
+    def resolve_sprite_xml(xml_file_path):
+        """从 Noita sprite XML 文件中提取 PNG 路径"""
+        try:
+            import xml.etree.ElementTree as ET
+            tree = ET.parse(xml_file_path)
+            root_el = tree.getroot()
+            png_path = root_el.get("filename")
+            if png_path:
+                return png_path.lstrip("/")
+        except Exception as e:
+            print(f"Failed to parse sprite XML {xml_file_path}: {e}")
+        return None
+
+    def find_file(rel_path):
+        """在所有已知路径中查找文件，返回绝对路径或 None"""
+        # 1. vanilla 解压目录
+        p = os.path.join(EXTRACTED_DATA_ROOT, rel_path).replace("\\", "/")
+        if os.path.exists(p):
+            return p
+        # 2. 游戏安装目录
+        root = get_game_root()
+        if root:
+            p = os.path.join(root, rel_path).replace("\\", "/")
+            if os.path.exists(p):
+                return p
+            # 3. 活动 Mod 目录
+            for mod_id in _ACTIVE_MODS_CACHE:
+                p = os.path.join(root, "mods", mod_id, rel_path).replace("\\", "/")
+                if os.path.exists(p):
+                    return p
+        return None
+
+    found = find_file(icon_path)
+    if found:
+        # 如果找到的是 XML sprite 文件，解析出 PNG 路径
+        if found.lower().endswith(".xml"):
+            png_rel = resolve_sprite_xml(found)
+            if png_rel:
+                png_found = find_file(png_rel)
+                if png_found:
+                    return send_file(png_found, max_age=31536000)
+        else:
+            return send_file(found, max_age=31536000)
 
     print(f"Icon not found in vanilla or any active mods: {icon_path}")
     return "Not Found", 404
@@ -766,6 +807,44 @@ def parse_wiki_wand(text):
             data["shuffle_deck_when_empty"] = (shuffle.lower() == "yes" or shuffle == "1" or shuffle.lower() == "true")
 
         spells = get_val("spells")
+        if spells:
+            pass
+
+        # Appearance support - 在 spells 解析之外处理，确保始终生效
+        wand_pic = get_val("wandPic") or get_val("wand_file")
+        if wand_pic:
+            # Wiki 名称到文件路径的映射表 (兼容 Component Explorer 格式)
+            UNIQUE_WIKI_TO_PATH = {
+                "Huilu (Wand).png":          {"sprite": "data/items_gfx/flute.xml",            "item_sprite": "data/items_gfx/flute.png"},
+                "Wand kantele.png":          {"sprite": "data/items_gfx/kantele.xml",           "item_sprite": "data/items_gfx/kantele.png"},
+                "Wand bomb wand.png":        {"sprite": "data/items_gfx/bomb_wand.xml",         "item_sprite": "data/items_gfx/bomb_wand.png"},
+                "Wand handgun.png":          {"sprite": "data/items_gfx/handgun.xml",            "item_sprite": "data/items_gfx/handgun.png"},
+                "Wand scepter 01.png":       {"sprite": "data/items_gfx/wands/custom/scepter_01.xml", "item_sprite": "data/items_gfx/wands/custom/scepter_01.png"},
+                "Wand experimental wand 1.png": {"sprite": "data/entities/items/wands/experimental/experimental_wand_1_sprite.xml", "item_sprite": "data/entities/items/wands/experimental/experimental_wand_1.png"},
+                "Wand experimental wand 2.png": {"sprite": "data/entities/items/wands/experimental/experimental_wand_2_sprite.xml", "item_sprite": "data/entities/items/wands/experimental/experimental_wand_2.png"},
+                "Actual wand honest.png":    {"sprite": "data/items_gfx/wands/custom/actual_wand.xml", "item_sprite": "data/items_gfx/wands/custom/actual_wand_honest.png"},
+                "Wand wand good 1.png":      {"sprite": "data/items_gfx/wands/custom/good_01.xml", "item_sprite": "data/items_gfx/wands/custom/good_01.png"},
+                "Wand wand good 2.png":      {"sprite": "data/items_gfx/wands/custom/good_02.xml", "item_sprite": "data/items_gfx/wands/custom/good_02.png"},
+                "Wand wand good 3.png":      {"sprite": "data/items_gfx/wands/custom/good_03.xml", "item_sprite": "data/items_gfx/wands/custom/good_03.png"},
+                "Wand skull 01.png":         {"item_sprite": "data/items_gfx/wands/custom/skull_01.png"},
+                "Wand wood 01.png":          {"item_sprite": "data/items_gfx/wands/custom/wood_01.png"},
+                "Wand plant 01.png":         {"item_sprite": "data/items_gfx/wands/custom/plant_01.png"},
+                "Wand plant 02.png":         {"item_sprite": "data/items_gfx/wands/custom/plant_02.png"},
+                "Wand vasta.png":            {"item_sprite": "data/items_gfx/wands/custom/vasta.png"},
+                "Wand vihta.png":            {"item_sprite": "data/items_gfx/wands/custom/vihta.png"},
+            }
+            
+            if wand_pic in UNIQUE_WIKI_TO_PATH:
+                data["appearance"] = UNIQUE_WIKI_TO_PATH[wand_pic]
+            elif wand_pic.startswith("data/") or wand_pic.startswith("mods/"):
+                # 直接是文件路径
+                data["appearance"] = {"sprite": wand_pic, "item_sprite": wand_pic.replace(".xml", ".png")}
+            else:
+                # 尝试作为 procedural wand 解析: "Wand 0001.png" -> "data/items_gfx/wands/wand_0001.png"
+                filename = wand_pic.strip().replace(" ", "_")
+                filename = filename[0].lower() + filename[1:] if filename else filename
+                data["appearance"] = {"item_sprite": f"data/items_gfx/wands/{filename}"}
+        
         if spells:
             # 移除 [[...]] 链接
             spells = re.sub(r'\[\[([^|\]]+\|)?([^\]]+)\]\]', r'\2', spells)

@@ -189,7 +189,48 @@ def prepare_assets():
     with open(FRONTEND_PUBLIC / "spells.json", "w", encoding="utf-8") as f:
         json.dump(spell_db, f, ensure_ascii=False, indent=2)
 
-    # 3. 全量收集 Noita 核心 Lua 脚本
+    # 3. 提取法杖外观图片 (仓库卡片 & Wand2 模板需要)
+    print("正在提取法杖外观图片...")
+    wand_sprite_sources = [
+        # procedural wands (wand_0000.png ~ wand_1025.png 等)
+        "data/items_gfx/wands",
+        # experimental wands
+        "data/entities/items/wands/experimental",
+    ]
+    for rel_dir in wand_sprite_sources:
+        src_dir = Path(NOITA_DATA_PATH) / rel_dir
+        if src_dir.exists():
+            dst_dir = icon_dir / rel_dir
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            count = 0
+            for f in src_dir.rglob("*.png"):
+                rel = f.relative_to(Path(NOITA_DATA_PATH) / rel_dir)
+                dst = dst_dir / rel
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dst)
+                count += 1
+            print(f"  {rel_dir}: 已复制 {count} 张图片")
+        else:
+            print(f"  警告: 找不到 {src_dir}")
+    
+    # unique wands (散落在 items_gfx 根目录的特殊法杖图片)
+    unique_wand_pngs = [
+        "data/items_gfx/handgun.png",
+        "data/items_gfx/bomb_wand.png",
+        "data/items_gfx/flute.png",
+        "data/items_gfx/kantele.png",
+    ]
+    for rel_path in unique_wand_pngs:
+        src = Path(NOITA_DATA_PATH) / rel_path
+        if src.exists():
+            dst = icon_dir / rel_path
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        else:
+            print(f"  警告: 找不到 unique wand 图片 {src}")
+    print(f"  unique wands: 已复制 {sum(1 for p in unique_wand_pngs if (Path(NOITA_DATA_PATH) / p).exists())} 张图片")
+
+    # 4. 全量收集 Noita 核心 Lua 脚本
     print("正在全量收集 Noita 核心 Lua 脚本...")
     folders_needed = [
         "data/scripts/gun",
@@ -204,7 +245,7 @@ def prepare_assets():
         else:
             print(f"  警告: 找不到目录 {src_dir}")
 
-    # 4. 补全翻译文件和缺失的 Generated 脚本
+    # 5. 补全翻译文件和缺失的 Generated 脚本
     print("正在补全翻译和生成脚本...")
     additional_needed = [
         "data/translations/common.csv",
@@ -227,7 +268,7 @@ def prepare_assets():
         elif "common.csv" in rel_path:
             print(f"  错误: 找不到核心翻译文件 {src}")
 
-    # 5. 复制评估引擎脚本 (wand_eval_tree)
+    # 6. 复制评估引擎脚本 (wand_eval_tree)
     if WAND_EVAL_SRC.exists():
         print(f"正在复制评估引擎脚本...")
         for d in ["src", "extra", "meta"]:
@@ -243,7 +284,7 @@ def prepare_assets():
                 with open(lua_dir / f, "w", encoding="utf-8") as file:
                     file.write("return {}\n")
 
-    # 6. 生成 Lua 文件 Bundle (优化加载速度)
+    # 7. 生成 Lua 文件 Bundle (优化加载速度)
     print("正在打包 Lua 脚本...")
     lua_bundle = {}
     

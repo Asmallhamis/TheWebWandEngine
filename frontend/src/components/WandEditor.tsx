@@ -3,7 +3,7 @@ import { X, RefreshCw, Image as ImageIcon, Camera } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { WandData, SpellInfo, AppSettings } from '../types';
 import { PropInput } from './Common';
-import { getIconUrl } from '../lib/evaluatorAdapter';
+import { getIconUrl, getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
 
 interface WandEditorProps {
@@ -267,21 +267,27 @@ export function WandEditor({
 
   const getWand2Text = () => {
     const sequence = Array.from({ length: data.deck_capacity }).map((_, i) => data.spells[(i + 1).toString()] || "");
-    return `{{Wand2
-| wandCard     = Yes
-| wandPic      = 
-| spellsCast   = ${data.actions_per_round}
-| shuffle      = ${data.shuffle_deck_when_empty ? 'Yes' : 'No'}
-| castDelay    = ${(data.fire_rate_wait / 60).toFixed(2)}
-| rechargeTime = ${(data.reload_time / 60).toFixed(2)}
-| manaMax      = ${data.mana_max.toFixed(2)}
-| manaCharge   = ${data.mana_charge_speed.toFixed(2)}
-| capacity     = ${data.deck_capacity}
-| spread       = ${data.spread_degrees}
-| speed        = ${data.speed_multiplier.toFixed(2)}
-| spells       = ${sequence.join(',')}
-| alwaysCasts  = ${data.always_cast.join(',')}
-}}`;
+    const wikiPic = spritePathToWikiName(data.appearance);
+    
+    // 构建参数列表，兼容 CE 风格：只输出有意义的字段
+    let lines = ['{{Wand2'];
+    lines.push('| wandCard     = Yes');
+    if (wikiPic) lines.push(`| wandPic      = ${wikiPic}`);
+    if (data.shuffle_deck_when_empty) lines.push('| shuffle      = Yes');
+    if (data.actions_per_round !== 1) lines.push(`| spellsCast   = ${data.actions_per_round}`);
+    lines.push(`| castDelay    = ${(data.fire_rate_wait / 60).toFixed(2)}`);
+    lines.push(`| rechargeTime = ${(data.reload_time / 60).toFixed(2)}`);
+    lines.push(`| manaMax      = ${data.mana_max.toFixed(2)}`);
+    lines.push(`| manaCharge   = ${data.mana_charge_speed.toFixed(2)}`);
+    lines.push(`| capacity     = ${data.deck_capacity}`);
+    lines.push(`| spread       = ${data.spread_degrees}`);
+    lines.push(`| speed        = ${data.speed_multiplier.toFixed(2)}`);
+    if (data.always_cast && data.always_cast.length > 0) {
+      lines.push(`| alwaysCasts  = ${data.always_cast.join(',')}`);
+    }
+    lines.push(`| spells       = ${sequence.join(',')}`);
+    lines.push('}}');
+    return lines.join('\n');
   };
 
   const embedMetadata = async (blob: Blob, text: string): Promise<Blob> => {
@@ -628,6 +634,37 @@ export function WandEditor({
           className="flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl min-w-[600px] wand-attributes-box"
           onMouseUp={() => handleSlotMouseUp(slot, -1000)}
         >
+          {/* Wand Appearance Section */}
+          <div className="px-6 py-2 border-r border-white/5 flex flex-col items-center justify-center gap-2 h-16 min-w-[80px]">
+            {(() => {
+              const wandSpriteUrl = getWandSpriteUrl(data.appearance, isConnected);
+              return wandSpriteUrl ? (
+              <div className="relative group/wand-sprite">
+                <img 
+                  src={wandSpriteUrl} 
+                  className="w-12 h-10 object-contain image-pixelated cursor-pointer hover:scale-110 transition-transform" 
+                  alt="Wand Sprite" 
+                  onClick={() => {
+                    const currentPath = data.appearance?.item_sprite || data.appearance?.sprite || '';
+                    const newSprite = prompt(t('editor.enter_sprite_path') || 'Enter sprite path:', currentPath);
+                    if (newSprite !== null) updateWand(slot, { appearance: { ...data.appearance, sprite: newSprite } });
+                  }}
+                />
+              </div>
+            ) : (
+              <button 
+                onClick={() => {
+                  const newSprite = prompt(t('editor.enter_sprite_path') || 'Enter sprite path:');
+                  if (newSprite) updateWand(slot, { appearance: { sprite: newSprite } });
+                }}
+                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                <ImageIcon size={20} />
+              </button>
+            );
+            })()}
+          </div>
+
           {/* Group 1: Shuffle */}
           <div className="px-6 py-2 border-r border-white/5 flex items-center h-16">
             <button 

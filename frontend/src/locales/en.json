@@ -298,7 +298,8 @@
     "spells_per_cast": "Spells/Cast",
     "speed": "Speed",
     "always_cast_slots": "Always Cast Slots",
-    "modify_uses_tip": "Click to modify charges (Alt+Click to set to 0, click again to restore)"
+    "modify_uses_tip": "Click to modify charges (Alt+Click to set to 0, click again to restore)",
+    "enter_sprite_path": "Enter wand sprite path (data/ui_gfx/items/...)"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

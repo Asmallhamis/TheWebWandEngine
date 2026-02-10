@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tab, WandData, AppSettings, AppNotification, DragSource, MousePos } from '../types';
 
@@ -330,17 +330,24 @@ export const useGlobalEvents = ({
     pasteFromClipboard, readMetadataFromPng, insertEmptySlot, updateWand, t
   ]);
 
+  const initialImportDone = useRef(false);
+
   useEffect(() => {
+    if (initialImportDone.current) return;
+    
     const params = new URLSearchParams(window.location.search);
     let wandData = params.get('wand') || params.get('data');
     if (wandData) {
+      initialImportDone.current = true;
+      
+      // 立即清理 URL 参数，防止任何后续的 re-render 重新触发
+      window.history.replaceState({}, '', window.location.pathname);
+
       if (!wandData.startsWith('{{') && !wandData.includes(',')) {
         try { wandData = atob(wandData); } catch (e) {}
       }
-      setTimeout(() => {
-        importFromText(wandData!);
-      }, 100);
+      importFromText(wandData!);
     }
-  }, [importFromText]);
+  }, []); // 只在组件挂载时运行一次
 
 };

@@ -4,7 +4,7 @@ import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, WarehouseWand } fr
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
-import { getIconUrl } from '../lib/evaluatorAdapter';
+import { getIconUrl, getWandSpriteUrl } from '../lib/evaluatorAdapter';
 import { Library } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -96,8 +96,15 @@ export function WandCard({
         onClick={() => toggleExpand(slot)}
       >
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center border border-white/5">
-            <Wand2 size={16} className={`${activeTab.isRealtime ? 'text-indigo-400' : 'text-amber-400'}`} />
+          <div className="w-12 h-10 rounded bg-zinc-800 flex items-center justify-center border border-white/5 relative overflow-hidden">
+            {(() => {
+              const spriteUrl = getWandSpriteUrl(data.appearance, isConnected);
+              return spriteUrl ? (
+              <img src={spriteUrl} className="w-full h-full object-contain image-pixelated p-1" alt="" />
+            ) : (
+              <Wand2 size={16} className={`${activeTab.isRealtime ? 'text-indigo-400' : 'text-amber-400'}`} />
+            );
+            })()}
           </div>
           <div className="text-[10px] font-black w-6 text-center">{slot}</div>
         </div>

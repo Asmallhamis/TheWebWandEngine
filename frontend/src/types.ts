@@ -26,6 +26,11 @@ export interface WandData {
   spell_uses: Record<string, number>;
   marked_slots?: number[];
   always_cast: string[];
+  appearance?: {
+    sprite?: string;
+    name?: string;
+    item_sprite?: string;
+  };
 }
 
 export interface HistoryItem {

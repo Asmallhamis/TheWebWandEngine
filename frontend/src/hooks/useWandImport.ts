@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { SpellInfo, WandData, Tab, AppSettings, HistoryItem, WarehouseWand, AppNotification } from '../types';
 import { DEFAULT_WAND } from '../constants';
+import { spritePathToWikiName, wikiNameToSpritePath } from '../lib/evaluatorAdapter';
 
 export const readMetadataFromPng = async (file: File): Promise<string | null> => {
   return new Promise((resolve) => {
@@ -87,6 +88,31 @@ export const useWandImport = ({
   selectionRef
 }: UseWandImportProps) => {
 
+  const areWandsIdentical = useCallback((w1: WandData, w2: WandData) => {
+    const normalizeWand = (w: WandData) => ({
+      mana_max: Math.round(w.mana_max),
+      mana_charge_speed: Math.round(w.mana_charge_speed),
+      reload_time: w.reload_time,
+      fire_rate_wait: w.fire_rate_wait,
+      deck_capacity: w.deck_capacity,
+      actions_per_round: w.actions_per_round,
+      shuffle_deck_when_empty: w.shuffle_deck_when_empty,
+      spread_degrees: Math.round((w.spread_degrees || 0) * 100) / 100,
+      speed_multiplier: Math.round((w.speed_multiplier || 1) * 100) / 100,
+      // 只比较非空法术
+      spells: Object.fromEntries(Object.entries(w.spells).filter(([_, id]) => !!id)),
+      always_cast: w.always_cast || [],
+      appearance: w.appearance ? {
+        sprite: w.appearance.sprite,
+        item_sprite: w.appearance.item_sprite
+      } : undefined
+    });
+
+    const s1 = JSON.stringify(normalizeWand(w1));
+    const s2 = JSON.stringify(normalizeWand(w2));
+    return s1 === s2;
+  }, []);
+
   const importFromText = useCallback(async (text: string, forceTarget?: { slot: string, idx: number }) => {
     // 兼容外部模拟器 URL 粘贴
     if (text.includes('?spells=') || text.includes('&spells=')) {
@@ -163,8 +189,6 @@ export const useWandImport = ({
     if (!targetWandSlot || !startIdx) {
       // If no target slot but it's Wand data, create a new wand instead of failing
       if (isWandData) {
-        const nextSlot = (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
-
         const getVal = (key: string) => {
           const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
           const match = text.match(regex);
@@ -230,9 +254,47 @@ export const useWandImport = ({
           spread_degrees: parseFloat(getVal('spread') || '0') || DEFAULT_WAND.spread_degrees,
           speed_multiplier: parseFloat(getVal('speed') || '1') || DEFAULT_WAND.speed_multiplier,
           spells: newSpells,
-          always_cast: alwaysCasts
+          always_cast: alwaysCasts,
+          appearance: (() => {
+            const pic = getVal('wandPic') || getVal('wand_file');
+            if (!pic) return undefined;
+            // 尝试将 wiki 名称 (如 "Wand handgun.png") 解析为实际路径
+            const resolved = wikiNameToSpritePath(pic);
+            return resolved || { sprite: pic };
+          })()
         };
 
+        // 重复检测：如果当前标签页已存在完全一致的法杖，则移动到顶部
+        const existingSlot = Object.keys(activeTab.wands).find(slot => 
+          areWandsIdentical(activeTab.wands[slot], newWand)
+        );
+
+        if (existingSlot) {
+          performAction(prevWands => {
+            const nextWands: Record<string, WandData> = {};
+            const wandsList = Object.entries(prevWands).sort(([a], [b]) => Number(a) - Number(b));
+            
+            // 移动到顶部 (Slot 1)
+            nextWands["1"] = prevWands[existingSlot];
+            
+            let nextSlotNum = 2;
+            for (const [slot, wand] of wandsList) {
+              if (slot === existingSlot) continue;
+              nextWands[nextSlotNum.toString()] = wand;
+              nextSlotNum++;
+            }
+            return nextWands;
+          }, t('app.notification.move_existing_wand_to_top'));
+          
+          setNotification({ msg: t('app.notification.wand_already_exists_moving_to_top'), type: 'info' });
+          setActiveTabId(activeTabId); // Trigger refresh if needed
+          
+          // 滚动到顶部
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return true;
+        }
+
+        const nextSlot = (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
         performAction(prevWands => ({
           ...prevWands,
           [nextSlot]: newWand
@@ -318,7 +380,14 @@ export const useWandImport = ({
         deck_capacity: deckCapacity,
         spread_degrees: parseFloat(getVal('spread') || '0') || wand.spread_degrees,
         speed_multiplier: parseFloat(getVal('speed') || '1') || wand.speed_multiplier,
-        always_cast: alwaysCasts
+        always_cast: alwaysCasts,
+        appearance: (() => {
+          const pic = getVal('wandPic') || getVal('wand_file');
+          if (!pic) return wand.appearance;
+          // 尝试将 wiki 名称 (如 "Wand handgun.png") 解析为实际路径
+          const resolved = wikiNameToSpritePath(pic);
+          return resolved || { sprite: pic };
+        })()
       };
 
       updateWand(targetWandSlot, { ...updates, spells: newSpells }, t('app.notification.paste_wand_data'), Object.values(newSpells));
@@ -399,21 +468,26 @@ export const useWandImport = ({
     if (sequence.length === 1 && !sequence[0] && !isCut) return;
 
     if (sortedIndices.length >= wand.deck_capacity && sortedIndices.length > 1) {
-      // Full wand format
-      textToCopy = `{{Wand2
-| wandCard     = Yes
-| wandPic      = 
-| spellsCast   = ${wand.actions_per_round}
-| shuffle      = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
-| castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}
-| rechargeTime = ${(wand.reload_time / 60).toFixed(2)}
-| manaMax      = ${wand.mana_max.toFixed(2)}
-| manaCharge   = ${wand.mana_charge_speed.toFixed(2)}
-| capacity     = ${wand.deck_capacity}
-| spread       = ${wand.spread_degrees}
-| speed        = ${wand.speed_multiplier.toFixed(2)}
-| spells       = ${sequence.join(',')}
-}}`;
+      // Full wand format (兼容 CE 的 Wand2 模板风格)
+      const wikiPic = spritePathToWikiName(wand.appearance);
+      let lines = ['{{Wand2'];
+      lines.push('| wandCard     = Yes');
+      if (wikiPic) lines.push(`| wandPic      = ${wikiPic}`);
+      if (wand.shuffle_deck_when_empty) lines.push('| shuffle      = Yes');
+      if (wand.actions_per_round !== 1) lines.push(`| spellsCast   = ${wand.actions_per_round}`);
+      lines.push(`| castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}`);
+      lines.push(`| rechargeTime = ${(wand.reload_time / 60).toFixed(2)}`);
+      lines.push(`| manaMax      = ${wand.mana_max.toFixed(2)}`);
+      lines.push(`| manaCharge   = ${wand.mana_charge_speed.toFixed(2)}`);
+      lines.push(`| capacity     = ${wand.deck_capacity}`);
+      lines.push(`| spread       = ${wand.spread_degrees}`);
+      lines.push(`| speed        = ${wand.speed_multiplier.toFixed(2)}`);
+      if (wand.always_cast && wand.always_cast.length > 0) {
+        lines.push(`| alwaysCasts  = ${wand.always_cast.join(',')}`);
+      }
+      lines.push(`| spells       = ${sequence.join(',')}`);
+      lines.push('}}');
+      textToCopy = lines.join('\n');
     } else {
       // Spell sequence format (Preserve empty slots as ,,)
       textToCopy = sequence.join(',');
