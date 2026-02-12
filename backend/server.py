@@ -390,7 +390,11 @@ def run_lua_helper(mode, data_string):
         tmp_path = tmp.name
     
     try:
-        helper_path = os.path.join(os.path.dirname(__file__), "import_helper.lua")
+        helper_candidates = [
+            os.path.join(BASE_DIR, "backend", "import_helper.lua"),
+            os.path.join(os.path.dirname(__file__), "import_helper.lua"),
+        ]
+        helper_path = next((p for p in helper_candidates if os.path.exists(p)), helper_candidates[-1])
         result = subprocess.run([LUAJIT_PATH, helper_path, mode, tmp_path], capture_output=True, text=True, encoding="utf-8")
         if os.path.exists(tmp_path): os.unlink(tmp_path)
         

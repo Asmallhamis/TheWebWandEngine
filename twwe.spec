@@ -9,6 +9,7 @@ a = Analysis(
     datas=[
         # 嵌入前端网页
         ('frontend/dist', 'frontend/dist'),
+        ('backend/import_helper.lua', 'backend'),
         # 嵌入核心数据 (Lua定义)
         ('noitadata/data/scripts', 'noitadata_internal/data/scripts'),
         # 嵌入核心数据 (图标 - 整个目录)
