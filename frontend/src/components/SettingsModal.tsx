@@ -337,7 +337,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.hide_labels')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-zinc-500/10 rounded-lg text-zinc-400">
                         <Layers size={16} />
                       </div>
@@ -348,7 +348,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, hideLabels: !s.hideLabels }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -356,7 +356,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.show_drag_mode_toggle')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
                         <Hand size={16} />
                       </div>
@@ -367,7 +367,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, showDragModeToggle: !s.showDragModeToggle }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.showDragModeToggle ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showDragModeToggle ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showDragModeToggle ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -375,7 +375,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.use_noita_swap_logic')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <RefreshCw size={16} />
                       </div>
@@ -386,7 +386,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, useNoitaSwapLogic: !s.useNoitaSwapLogic }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.useNoitaSwapLogic ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.useNoitaSwapLogic ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.useNoitaSwapLogic ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -400,7 +400,7 @@ export function SettingsModal({
               <div className="space-y-6">
                 {isMatch(t('settings.show_stats_in_frames')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
                         <Activity size={16} />
                       </div>
@@ -411,7 +411,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, showStatsInFrames: !s.showStatsInFrames }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.showStatsInFrames ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showStatsInFrames ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showStatsInFrames ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -419,7 +419,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.show_legacy_wand_button')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <Wand2 size={16} />
                       </div>
@@ -430,7 +430,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, showLegacyWandButton: !s.showLegacyWandButton }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.showLegacyWandButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showLegacyWandButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showLegacyWandButton ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -438,7 +438,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.delete_empty_slots')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-red-500/10 rounded-lg text-red-400">
                         <Trash2 size={16} />
                       </div>
@@ -449,7 +449,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, deleteEmptySlots: !s.deleteEmptySlots }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.deleteEmptySlots ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.deleteEmptySlots ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.deleteEmptySlots ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -496,7 +496,7 @@ export function SettingsModal({
               <div className="space-y-6">
                 {isMatch(t('settings.unlimited_spells')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
                         <Star size={16} />
                       </div>
@@ -507,7 +507,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, unlimitedSpells: !s.unlimitedSpells }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.unlimitedSpells ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.unlimitedSpells ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.unlimitedSpells ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -515,7 +515,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.initial_if_half')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <Activity size={16} />
                       </div>
@@ -526,7 +526,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, initialIfHalf: !s.initialIfHalf }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.initialIfHalf ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.initialIfHalf ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.initialIfHalf ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -541,9 +541,9 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateLowHp: !s.simulateLowHp }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateLowHp ? 'bg-red-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateLowHp ? 'bg-red-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateLowHp ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateLowHp ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
@@ -555,9 +555,9 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateManyEnemies: !s.simulateManyEnemies }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyEnemies ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateManyEnemies ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyEnemies ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyEnemies ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
@@ -569,16 +569,16 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateManyProjectiles: !s.simulateManyProjectiles }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyProjectiles ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateManyProjectiles ? 'bg-blue-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyProjectiles ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyProjectiles ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
                 </div>
                 {isMatch(t('settings.show_spell_charges')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <Database size={16} />
                       </div>
@@ -589,7 +589,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, showSpellCharges: !s.showSpellCharges }))}
-                      className={`w-10 h-5 rounded-full transition-colors relative ${settings.showSpellCharges ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full transition-colors relative ${settings.showSpellCharges ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showSpellCharges ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -614,7 +614,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.stop_at_recharge')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
                         <Zap size={16} />
                       </div>
@@ -625,7 +625,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, stopAtRecharge: !s.stopAtRecharge }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.stopAtRecharge ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.stopAtRecharge ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.stopAtRecharge ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -650,7 +650,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.group_identical_casts')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
                         <Layers size={16} />
                       </div>
@@ -661,7 +661,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, groupIdenticalCasts: !s.groupIdenticalCasts }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.groupIdenticalCasts ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.groupIdenticalCasts ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.groupIdenticalCasts ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -669,7 +669,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.fold_nodes')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
                         <Layers size={16} />
                       </div>
@@ -680,7 +680,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, foldNodes: !s.foldNodes }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.foldNodes ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.foldNodes ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.foldNodes ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -688,7 +688,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.show_indices')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <Database size={16} />
                       </div>
@@ -699,7 +699,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, showIndices: !s.showIndices }))}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${settings.showIndices ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showIndices ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showIndices ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -825,7 +825,7 @@ export function SettingsModal({
                 <h3 className="text-[11px] font-black text-zinc-300 uppercase">{t('settings.data_backup')}</h3>
                 {isMatch(t('settings.export_history')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
                         <Activity size={16} />
                       </div>
@@ -836,7 +836,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, exportHistory: !s.exportHistory }))}
-                      className={`w-10 h-5 rounded-full relative transition-all ${settings.exportHistory ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-all ${settings.exportHistory ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.exportHistory ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -844,7 +844,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.embed_metadata')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
                         <Wand2 size={16} />
                       </div>
@@ -855,7 +855,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, embedMetadataInImage: !s.embedMetadataInImage }))}
-                      className={`w-10 h-5 rounded-full relative transition-all ${settings.embedMetadataInImage ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-all ${settings.embedMetadataInImage ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.embedMetadataInImage ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -863,7 +863,7 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.pure_spells_export')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
                         <ImageIcon size={16} />
                       </div>
@@ -874,7 +874,7 @@ export function SettingsModal({
                     </div>
                     <button
                       onClick={() => setSettings(s => ({ ...s, pureSpellsExport: !s.pureSpellsExport }))}
-                      className={`w-10 h-5 rounded-full relative transition-all ${settings.pureSpellsExport ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-all ${settings.pureSpellsExport ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.pureSpellsExport ? 'left-6' : 'left-1'}`} />
                     </button>
@@ -939,7 +939,7 @@ export function SettingsModal({
           onClick={() => setShowHelp(false)}
         >
           <div className="flex items-center justify-between mb-8 border-b border-white/10 pb-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="p-2 bg-amber-500/10 rounded-xl text-amber-500">
                 <HelpCircle size={24} />
               </div>
