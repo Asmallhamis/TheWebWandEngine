@@ -159,29 +159,29 @@ export function WandCard({
             <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${data.shuffle_deck_when_empty ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
               <div className={`w-1 h-1 rounded-full ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
               <span className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
-                {data.shuffle_deck_when_empty ? 'Shuffle' : 'No Shuffle'}
+                {data.shuffle_deck_when_empty ? t('editor.shuffle') : t('editor.no_shuffle')}
               </span>
             </div>
           </div>
 
           {/* Group 2: Mana */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
-            <StatItem label="Mana Max" value={data.mana_max || 0} colorClass="text-cyan-400" />
-            <StatItem label="Recharge" value={data.mana_charge_speed || 0} colorClass="text-cyan-400" />
+            <StatItem label={t('editor.mana_max')} value={data.mana_max || 0} colorClass="text-cyan-400" />
+            <StatItem label={t('editor.recharge')} value={data.mana_charge_speed || 0} colorClass="text-cyan-400" />
           </div>
 
           {/* Group 3: Timing */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
-            {renderTimeStat("Cast Delay", data.fire_rate_wait, "text-amber-300")}
-            {renderTimeStat("Rechg. Time", data.reload_time, "text-amber-300")}
+            {renderTimeStat(t('editor.cast_delay'), data.fire_rate_wait, "text-amber-300")}
+            {renderTimeStat(t('editor.recharge_time'), data.reload_time, "text-amber-300")}
           </div>
 
           {/* Group 4: Capacity & Other */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
-            <StatItem label="Capacity" value={data.deck_capacity} />
-            <StatItem label="Spread" value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
-            <StatItem label="Cast" value={data.actions_per_round} />
-            <StatItem label="Speed" value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
+            <StatItem label={t('editor.capacity')} value={data.deck_capacity} />
+            <StatItem label={t('editor.spread')} value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
+            <StatItem label={t('editor.spells_per_cast')} value={data.actions_per_round} />
+            <StatItem label={t('editor.speed')} value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
           <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">

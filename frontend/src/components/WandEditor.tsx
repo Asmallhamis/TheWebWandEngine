@@ -253,13 +253,14 @@ export function WandEditor({
   const renderTimeInput = (label: string, frames: number, updateKey: keyof WandData) => {
     const primaryValue = settings.showStatsInFrames ? frames : parseFloat((frames / 60).toFixed(3));
     const secondaryValue = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames + 'f';
+    const colorClass = frames <= 0 ? 'text-emerald-400' : 'text-amber-300';
     
     return (
       <PropInput 
         label={label}
         value={primaryValue}
         secondaryValue={secondaryValue}
-        colorClass="text-amber-300"
+        colorClass={colorClass}
         onChange={v => updateWand(slot, { [updateKey]: settings.showStatsInFrames ? Math.round(v) : Math.round(v * 60) })}
       />
     );
@@ -692,7 +693,7 @@ export function WandEditor({
           <div className="px-8 py-2 flex gap-10">
             <PropInput label={t('editor.capacity')} value={data.deck_capacity} onChange={v => updateWand(slot, { deck_capacity: v })} />
             <PropInput label={t('editor.spread')} value={data.spread_degrees} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} onChange={v => updateWand(slot, { spread_degrees: v })} />
-            <PropInput label={t('editor.spells_per_cast')} value={data.actions_per_round} onChange={v => updateWand(slot, { actions_per_round: Math.max(1, Math.round(v)) })} />
+            <PropInput label={t('editor.spells_per_cast')} value={data.actions_per_round} colorClass={data.actions_per_round > 1 ? 'text-purple-400' : ''} onChange={v => updateWand(slot, { actions_per_round: Math.max(1, Math.round(v)) })} />
             <PropInput label={t('editor.speed')} value={data.speed_multiplier} colorClass="text-indigo-400" onChange={v => updateWand(slot, { speed_multiplier: v })} />
           </div>
         </div>
