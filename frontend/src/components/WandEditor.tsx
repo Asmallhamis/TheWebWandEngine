@@ -697,7 +697,7 @@ export function WandEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 h-fit export-ignore">
+        <div className="flex flex-col items-center gap-3 shrink-0 h-fit export-ignore">
           <div className="flex items-center bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden">
             <button 
               onClick={() => handleExportImage('only_spells')}
@@ -719,7 +719,7 @@ export function WandEditor({
           <div className="flex flex-col gap-1.5">
             <button 
               onClick={() => requestEvaluation(data, true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-[16px] font-black uppercase tracking-widest transition-all"
               title={t('evaluator.force_analyze_desc')}
             >
               <RefreshCw size={12} className="opacity-70" />
