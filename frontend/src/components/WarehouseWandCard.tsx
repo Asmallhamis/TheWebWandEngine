@@ -156,8 +156,8 @@ export const WarehouseWandCard = React.memo(({
                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] font-mono">
                   <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.mana_max')}</span> <span className="text-cyan-400">{wand.mana_max}</span></div>
                   <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.mana_charge_speed')}</span> <span className="text-cyan-400">{wand.mana_charge_speed}</span></div>
-                  <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.fire_rate_wait')}</span> <span className="text-amber-400">{wand.fire_rate_wait}s</span></div>
-                  <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.reload_time')}</span> <span className="text-green-400">{wand.reload_time}s</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.fire_rate_wait')}</span> <span className={wand.fire_rate_wait <= 0 ? "text-emerald-400" : "text-amber-400"}>{wand.fire_rate_wait}s</span></div>
+                  <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.reload_time')}</span> <span className={wand.reload_time <= 0 ? "text-emerald-400" : "text-amber-400"}>{wand.reload_time}s</span></div>
                   <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.deck_capacity')}</span> <span className="text-zinc-300">{wand.deck_capacity}</span></div>
                   <div className="flex justify-between"><span className="text-zinc-500">{t('wand_stats.spread_degrees')}</span> <span className="text-zinc-300">{wand.spread_degrees}°</span></div>
                </div>

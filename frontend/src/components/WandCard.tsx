@@ -172,15 +172,15 @@ export function WandCard({
 
           {/* Group 3: Timing */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
-            {renderTimeStat(t('editor.cast_delay'), data.fire_rate_wait, "text-amber-300")}
-            {renderTimeStat(t('editor.recharge_time'), data.reload_time, "text-amber-300")}
+            {renderTimeStat(t('editor.cast_delay'), data.fire_rate_wait, data.fire_rate_wait <= 0 ? "text-emerald-400" : "text-amber-300")}
+            {renderTimeStat(t('editor.recharge_time'), data.reload_time, data.reload_time <= 0 ? "text-emerald-400" : "text-amber-300")}
           </div>
 
           {/* Group 4: Capacity & Other */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
             <StatItem label={t('editor.capacity')} value={data.deck_capacity} />
             <StatItem label={t('editor.spread')} value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
-            <StatItem label={t('editor.spells_per_cast')} value={data.actions_per_round} />
+            <StatItem label={t('editor.spells_per_cast')} value={data.actions_per_round} colorClass={data.actions_per_round > 1 ? 'text-purple-400' : ''} />
             <StatItem label={t('editor.speed')} value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
