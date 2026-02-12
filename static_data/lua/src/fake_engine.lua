@@ -184,21 +184,24 @@ function M.make_fake_api(options)
 		local success, res = pcall(function()
 			if M.vfs[filename] then return M.vfs[filename] end
 			if filename:sub(1, 4) == "mods" then
+				if _TWWE_VFS_ONLY then return nil end
 				local f = io.open(M.noita_path .. filename)
 				if not f then f = io.open(filename) end -- 如果游戏目录没有，尝试从本地加载补丁
 				return assert(assert(f):read("*a"))
 			end
-			for _, mod in ipairs(options.mods) do
-				local full_path = M.noita_path .. "mods/" .. mod .. "/" .. filename
-				local data_filed = io.open(full_path)
-				if not data_filed then 
-					-- 尝试从本地加载
-					data_filed = io.open("mods/" .. mod .. "/" .. filename)
-				end
-				if data_filed then 
-					M.vfs[filename] = data_filed:read("*a")
-					data_filed:close()
-					return M.vfs[filename]
+			if not _TWWE_VFS_ONLY then
+				for _, mod in ipairs(options.mods) do
+					local full_path = M.noita_path .. "mods/" .. mod .. "/" .. filename
+					local data_filed = io.open(full_path)
+					if not data_filed then 
+						-- 尝试从本地加载
+						data_filed = io.open("mods/" .. mod .. "/" .. filename)
+					end
+					if data_filed then 
+						M.vfs[filename] = data_filed:read("*a")
+						data_filed:close()
+						return M.vfs[filename]
+					end
 				end
 			end
 			-- recheck for mod /data/
@@ -255,7 +258,11 @@ function M.make_fake_api(options)
 					.. "` because it does not exist in the VFS! perhaps your paths are wrong?"
 			)
 		end
-		local res = { loadstring(content, file)() }
+		local fn, err = loadstring(content, file)
+		if not fn then
+			error("Error loading file `" .. file .. "`: " .. tostring(err))
+		end
+		local res = { fn() }
 		for _, v in ipairs(append_map[file] or {}) do
 			dofile(v)
 		end
