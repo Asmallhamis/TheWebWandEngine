@@ -57,6 +57,8 @@ _GAME_ROOT = None
 
 import time
 
+LUAJIT_EXECUTABLE = "luajit.exe" if sys.platform.startswith("win") else "luajit"
+
 # 自动检测打包环境与路径配置
 if getattr(sys, 'frozen', False):
     # PyInstaller 运行模式：从临时解压目录读取 (嵌入数据)
@@ -64,7 +66,7 @@ if getattr(sys, 'frozen', False):
     EXTRACTED_DATA_ROOT = os.path.join(BASE_DIR, "noitadata_internal")
     FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
     WAND_EVAL_DIR = os.path.join(BASE_DIR, "wand_eval_tree")
-    LUAJIT_PATH = os.path.join(BASE_DIR, "bin", "luajit.exe")
+    LUAJIT_PATH = os.path.join(BASE_DIR, "bin", LUAJIT_EXECUTABLE)
 else:
     # 开发模式
     BASE_DIR = os.getcwd()
@@ -75,7 +77,7 @@ else:
     FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "../frontend/dist")
     WAND_EVAL_DIR = os.path.join(BASE_DIR, "wand_eval_tree")
     # 开发模式优先尝试 bin 目录下的 luajit，否则用系统的
-    local_luajit = os.path.join(BASE_DIR, "bin/luajit.exe")
+    local_luajit = os.path.join(BASE_DIR, "bin", LUAJIT_EXECUTABLE)
     LUAJIT_PATH = local_luajit if os.path.exists(local_luajit) else "luajit"
 
 # 配置 Flask 静态资源目录 (用于打包 EXE 后能找到网页)
