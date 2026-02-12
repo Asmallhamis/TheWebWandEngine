@@ -68,7 +68,10 @@ Copy the plugin folder `wand_sync` to Noita's `mods` directory and enable it in-
 ### 1. Environment Preparation
 - **Python 3.8+** and **Node.js 16+**.
 - **LuaJIT**: Ensure `luajit.exe` exists in the `bin/` directory (powers the local evaluation engine).
-- **Resource Files**: Rename the unpacked game `data` folder to `noitadata` and place it in the root directory for full spell icon and translation support.
+- **Resource Files**: 
+  - Unpack Noita's `data.wak` (see [this](<https://noita.wiki.gg/wiki/Modding#Extracting_data_files>).
+  - Create `noitadata` folder in the project root directory.
+  - Copy unpacked `data` folder inside of the `noitadata` folder so that it looks like `noitadata/data/`
 
 ### 2. Local Running
 ```bash
