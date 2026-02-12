@@ -9,8 +9,13 @@ import subprocess
 import webbrowser
 import mimetypes
 import signal
+import base64
+from utils import init_utils, set_active_mods, find_noita_file
+from mod_bundler import ModBundler
+
 
 def kill_existing_instance():
+    import time
     """尝试杀死已经在运行的后端实例 (占用 17471 端口的进程)"""
     if sys.platform != "win32":
         return
@@ -45,6 +50,7 @@ try:
 except ImportError:
     HAS_PYPINYIN = False
 from threading import Timer, Lock
+from bones_manager import BonesManager
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 
@@ -347,6 +353,12 @@ def get_noita_save_path():
         return os.path.join(os.environ["USERPROFILE"], "AppData/LocalLow/Nolla_Games_Noita/save00").replace("\\", "/")
     return None
 
+def get_bones_manager():
+    save_path = get_noita_save_path()
+    if save_path:
+        return BonesManager(save_path)
+    return None
+
 def read_noita_mod_settings():
     save_path = get_noita_save_path()
     if not save_path: return {}
@@ -355,10 +367,9 @@ def read_noita_mod_settings():
     if not os.path.exists(config_path):
         return {}
     
-    import xml.etree.ElementTree as ET
     try:
-        tree = ET.parse(config_path)
-        root = tree.getroot()
+        import xml.etree.ElementTree as ET
+        root = ET.parse(config_path).getroot()
         settings = {}
         for item in root.findall('ConfigItem'):
             setting_id = item.get('setting_id')
@@ -621,6 +632,52 @@ def fetch_spells():
         return jsonify({"success": True, "spells": db})
     return jsonify({"success": False, "error": "Local data not found"}), 404
 
+@app.route("/api/fetch-mod-data")
+def fetch_mod_data():
+    return jsonify({
+        "success": True,
+        "spells": _MOD_SPELL_CACHE,
+        "appends": _MOD_APPENDS_CACHE,
+        "active_mods": _ACTIVE_MODS_CACHE
+    })
+
+@app.route("/api/export-mod-bundle")
+def export_mod_bundle():
+    """导出当前加载的 Mod 环境包 (支持递归追踪 dofile 依赖，解决 Focus 等 Mod 崩溃问题)"""
+    if not _MOD_SPELL_CACHE:
+        return jsonify({"success": False, "error": "No mod spells loaded. Please sync with game first."}), 400
+
+    # 初始化打包器
+    bundler = ModBundler(_ACTIVE_MODS_CACHE)
+    
+    # 0. 全量打包已启用 Mod 目录，确保环境包自包含
+    for mod_id in _ACTIVE_MODS_CACHE:
+        bundler.bundle_mod_directory(mod_id)
+    
+    # 1. 递归抓取所有 Mod Appends 依赖的文件
+    for path, content in _MOD_APPENDS_CACHE.items():
+        # 将 append 本身也视为一个起点，扫描它引用的文件
+        # 先推断 mod_id
+        mod_id = None
+        parts = path.split("/")
+        if len(parts) > 1 and parts[0] == "mods":
+            mod_id = parts[1]
+            
+        deps = bundler.scan_lua_for_paths(content, mod_id)
+        for dep in deps:
+            bundler.bundle_file(dep, mod_id)
+
+    # 2. 抓取图标并处理 Base64
+    bundle_spells = bundler.collect_icons(_MOD_SPELL_CACHE.copy())
+
+    return jsonify({
+        "success": True,
+        "spells": bundle_spells,
+        "appends": _MOD_APPENDS_CACHE,
+        "active_mods": _ACTIVE_MODS_CACHE,
+        "vfs": bundler.vfs  # 包含递归追踪到的所有 .lua 和 .xml 文件
+    })
+
 @app.route("/api/sync-game-spells")
 def sync_game_spells():
     global _MOD_SPELL_CACHE, _MOD_APPENDS_CACHE, _ACTIVE_MODS_CACHE
@@ -642,6 +699,7 @@ def sync_game_spells():
             spells = data.get("spells", [])
             _MOD_APPENDS_CACHE = data.get("appends", {})
             _ACTIVE_MODS_CACHE = data.get("active_mods", [])
+        set_active_mods(_ACTIVE_MODS_CACHE)
         
         static_db = load_spell_database() 
         mod_db = {}
@@ -723,32 +781,13 @@ def get_icon(icon_path):
             print(f"Failed to parse sprite XML {xml_file_path}: {e}")
         return None
 
-    def find_file(rel_path):
-        """在所有已知路径中查找文件，返回绝对路径或 None"""
-        # 1. vanilla 解压目录
-        p = os.path.join(EXTRACTED_DATA_ROOT, rel_path).replace("\\", "/")
-        if os.path.exists(p):
-            return p
-        # 2. 游戏安装目录
-        root = get_game_root()
-        if root:
-            p = os.path.join(root, rel_path).replace("\\", "/")
-            if os.path.exists(p):
-                return p
-            # 3. 活动 Mod 目录
-            for mod_id in _ACTIVE_MODS_CACHE:
-                p = os.path.join(root, "mods", mod_id, rel_path).replace("\\", "/")
-                if os.path.exists(p):
-                    return p
-        return None
-
-    found = find_file(icon_path)
+    found = find_noita_file(icon_path)
     if found:
         # 如果找到的是 XML sprite 文件，解析出 PNG 路径
         if found.lower().endswith(".xml"):
             png_rel = resolve_sprite_xml(found)
             if png_rel:
-                png_found = find_file(png_rel)
+                png_found = find_noita_file(png_rel)
                 if png_found:
                     return send_file(png_found, max_age=31536000)
         else:
@@ -1026,39 +1065,69 @@ def evaluate_wand():
         mock_lua.insert(0, "_TWWE_MANY_PROJECTILES = true")
     
     # 获取活动模组列表
+    # --- 核心修复：处理环境包数据 ---
+    # 优先使用请求中携带的 Mod 数据（环境包模式）
+    # 如果没有，再回退到当前实时连接的游戏环境
+    req_mod_appends = data.get("mod_appends")
+    req_active_mods = data.get("active_mods")
+
     active_mods = []
-    live_active_mods_res = talk_to_game("GET_ACTIVE_MODS")
-    if live_active_mods_res:
-        try:
-            active_mods = json.loads(live_active_mods_res)
-        except: pass
+    if req_active_mods is not None:
+        active_mods = req_active_mods
+    else:
+        live_active_mods_res = talk_to_game("GET_ACTIVE_MODS")
+        if live_active_mods_res:
+            try:
+                active_mods = json.loads(live_active_mods_res)
+            except: pass
+
     if not active_mods and _ACTIVE_MODS_CACHE:
         active_mods = _ACTIVE_MODS_CACHE
 
     # 注入游戏内的法术追加逻辑
     # 我们使用 ModLuaFileAppend 注册追加，这样模拟器在 dofile("gun_actions.lua") 时会自动执行它们
-    if _MOD_APPENDS_CACHE:
+    appends_to_use = req_mod_appends if req_mod_appends is not None else _MOD_APPENDS_CACHE
+    
+    generated_vfs = {}
+    if appends_to_use:
         # 补丁 Mod 应该放在模拟器目录下
         mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", "twwe_mock")
         os.makedirs(mock_mod_dir, exist_ok=True)
         
-        should_write_init = False
-        for i, (path, content) in enumerate(_MOD_APPENDS_CACHE.items()):
+        for i, (path, content) in enumerate(appends_to_use.items()):
             file_name = f"gen_{i}.lua"
-            file_path = os.path.join(mock_mod_dir, file_name)
-            
-            # 优化：内容没变就不写磁盘，减少 I/O
-            try:
-                if os.path.exists(file_path):
-                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                        if f.read() == content:
-                            continue
-            except: pass
 
+            # Python-side placeholder pre-processing for mods like The-Focus
+            if "___" in content or "__MOD_" in content:
+                # 只有当路径是以 mods/ 开头时，我们才能推断出真正的 mod_id
+                mod_id = None
+                parts = path.split("/")
+                if len(parts) > 1 and parts[0] == "mods":
+                    mod_id = parts[1]
+
+                # 如果推断不出（比如是 data/ 里的追加），则尝试用第一个 active_mod 兜底
+                if not mod_id and active_mods:
+                    mod_id = active_mods[0]
+
+                if mod_id:
+                    mp = f"mods/{mod_id}/"
+                    content = content.replace("___", f"{mod_id}_")
+                    content = content.replace("__MOD_NAME__", mod_id)
+                    content = content.replace("__MOD_FILES__", f"{mp}files/")
+                    content = content.replace("__MOD_ACTIONS__", f"{mp}files/actions/")
+                    content = content.replace("__MOD_LIBS__", f"{mp}libs/")
+                    content = content.replace("__MOD_ACTION_UTILS__", f"{mp}files/action_utils/")
+
+            file_path = os.path.join(mock_mod_dir, file_name)
+            mock_lua.append(f'ModLuaFileAppend("data/scripts/gun/gun_actions.lua", "mods/twwe_mock/{file_name}")')
+            generated_vfs[f"mods/twwe_mock/{file_name}"] = content
+            
+            # 这里必须写入磁盘，因为环境包的 gen_x 可能是动态导入的，旧的 gen_x 可能已经失效
             with open(file_path, "w", encoding="utf-8", errors="replace") as f:
                 f.write(content)
-            mock_lua.append(f'ModLuaFileAppend("data/scripts/gun/gun_actions.lua", "mods/twwe_mock/{file_name}")')
-            should_write_init = True
+
+    # 清理多余的 gen_x.lua 文件，防止旧环境干扰
+    # (可选，如果以后 gen 数量变少会导致多余旧文件运行)
 
     if mock_lua:
         # 写入 init.lua
@@ -1081,6 +1150,133 @@ def evaluate_wand():
             with open(init_path, "w", encoding="utf-8") as f:
                 f.write(init_content)
         
+        # Extract all mod IDs for the Lua-side fix
+        # Ensure we generate a valid Lua table literal { "a", "b" } instead of JSON { "0": "a" }
+        mods_list = []
+        if isinstance(active_mods, list):
+            mods_list = active_mods
+        elif isinstance(active_mods, dict):
+            # Try to restore list order if possible, otherwise just take values
+            try:
+                keys = sorted(active_mods.keys(), key=lambda x: int(x))
+                mods_list = [active_mods[k] for k in keys]
+            except:
+                mods_list = list(active_mods.values())
+        
+        all_mod_ids_lua = "{" + ", ".join([f'"{m}"' for m in mods_list if isinstance(m, str)]) + "}"
+
+        # 注入动态占位符修复逻辑，解决 The-Focus 等模组的 ID 匹配问题
+        placeholder_fix_lua = [
+            "\n-- TWWE VFS Initialization",
+            "local _TWWE_VFS = {}",
+        ]
+
+        # 如果请求中带有 VFS 数据（环境包模式），则注入到 Lua 环境中
+        req_vfs = data.get("vfs")
+        if req_vfs:
+            mock_lua.insert(0, "_TWWE_VFS_ONLY = true")
+            combined_vfs = dict(req_vfs)
+            combined_vfs.update(generated_vfs)
+            for vfs_path, vfs_content in combined_vfs.items():
+                # 对内容进行简单的转义处理
+                safe_vfs_content = vfs_content.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r")
+                placeholder_fix_lua.append(f'_TWWE_VFS["{vfs_path}"] = "{safe_vfs_content}"')
+
+        placeholder_fix_lua.extend([
+            "\n-- TWWE Placeholder Fixer",
+            f"local _TWWE_ACTIVE_MODS = {all_mod_ids_lua}",
+            """
+-- 将 VFS 数据同步到 fake_engine 的 M.vfs 中（如果存在）
+local _old_MTFGC = ModTextFileGetContent
+function ModTextFileGetContent(filename)
+    if not filename then return nil end
+    local actual_filename = filename
+    
+    -- 1. 修复文件名中的占位符 (支持 dofile("__MOD_ACTIONS__..."))
+    if actual_filename:find("__MOD_") or actual_filename:find("___") then
+        for _, mid in ipairs(_TWWE_ACTIVE_MODS) do
+            if type(mid) ~= "string" then goto continue end
+            local mp = "mods/" .. mid .. "/"
+            local test_name = actual_filename:gsub("___", mid .. "_")
+            test_name = test_name:gsub("__MOD_NAME__", mid)
+            test_name = test_name:gsub("__MOD_FILES__", mp .. "files/")
+            test_name = test_name:gsub("__MOD_ACTIONS__", mp .. "files/actions/")
+            test_name = test_name:gsub("__MOD_LIBS__", mp .. "libs/")
+            test_name = test_name:gsub("__MOD_ACTION_UTILS__", mp .. "files/action_utils/")
+            
+            if _TWWE_VFS[test_name] or _old_MTFGC(test_name) then
+                actual_filename = test_name
+                break
+            end
+            ::continue::
+        end
+    end
+
+    local content = _TWWE_VFS[actual_filename]
+    if not content then content = _old_MTFGC(actual_filename) end
+    if not content or type(content) ~= "string" then return content end
+
+    -- 2. 修复内容中的占位符
+    local mod_id = nil
+    if actual_filename:sub(1, 5) == "mods/" then
+        local next_slash = actual_filename:find("/", 6)
+        if next_slash then mod_id = actual_filename:sub(6, next_slash - 1) end
+    end
+    
+    -- 兜底推断: 如果文件名仍含占位符或在 mod 目录下
+    if not mod_id then mod_id = _TWWE_ACTIVE_MODS[1] end
+
+    if mod_id and not actual_filename:find("twwe_mock") then
+        local prefix = mod_id .. "_"
+        local mp = "mods/" .. mod_id .. "/"
+        content = content:gsub("___", prefix)
+        content = content:gsub("__MOD_NAME__", mod_id)
+        content = content:gsub("__MOD_FILES__", mp .. "files/")
+        content = content:gsub("__MOD_ACTIONS__", mp .. "files/actions/")
+        content = content:gsub("__MOD_LIBS__", mp .. "libs/")
+        content = content:gsub("__MOD_ACTION_UTILS__", mp .. "files/action_utils/")
+    end
+    
+    return content
+end
+
+function ModDoesFileExist(filename)
+    local c = ModTextFileGetContent(filename)
+    return c ~= nil and c ~= ""
+end
+
+local _TWWE_WRITTEN_FILES_OWNER = {}
+local _old_MTFSC = ModTextFileSetContent
+function ModTextFileSetContent(filename, content)
+    if debug then
+        local info = debug.getinfo(2, "S")
+        if info and info.source and info.source:sub(1, 6) == "@mods/" then
+            local mid = info.source:match("@mods/([^/]+)/")
+            if mid then _TWWE_WRITTEN_FILES_OWNER[filename] = mid end
+        end
+    end
+    if _old_MTFSC then return _old_MTFSC(filename, content) end
+end
+
+function ModTextFileWhoSetContent(filename)
+    return _TWWE_WRITTEN_FILES_OWNER[filename] or _TWWE_ACTIVE_MODS[1] or ""
+end
+
+-- 故障诊断：当找不到法术时 dump 所有已注册 ID
+local _old_error = error
+function error(msg, level)
+    if type(msg) == "string" and msg:find("Unknown spell") then
+        print("\\n[TWWE-Debug] Registered Action IDs:")
+        if actions then for _, a in ipairs(actions) do print("  " .. tostring(a.id)) end end
+    end
+    return _old_error(msg, level)
+end
+"""
+        ])
+
+        with open(init_path, "a", encoding="utf-8") as f:
+            f.write("\n".join(placeholder_fix_lua))
+        
         # 核心改动：我们需要把所有 mod 传给模拟器，以便它能找到文件（VFS）
         # 但是我们会在模拟器内部控制只运行 twwe_mock 的代码
         if "twwe_mock" not in cmd:
@@ -1089,9 +1285,15 @@ def evaluate_wand():
             
         # 即使 twwe_mock 已经存在，也要补全其他 mod 以支持 VFS 搜索
         # 优化：只添加真正的字符串 ID，过滤掉可能被污染的键名
-        for m in active_mods:
-            if isinstance(m, str) and m not in cmd and m not in ["wand_sync", "appends", "spells", "active_mods"]:
-                cmd.append(m)
+        if isinstance(active_mods, list):
+            for m in active_mods:
+                if isinstance(m, str) and m not in cmd and m not in ["wand_sync", "appends", "spells", "active_mods"]:
+                    cmd.append(m)
+        elif isinstance(active_mods, dict):
+            # 防止 active_mods 被意外解析为字典（包含数字键的情况）
+            for m in active_mods.values():
+                if isinstance(m, str) and m not in cmd and m not in ["wand_sync", "appends", "spells", "active_mods"]:
+                    cmd.append(m)
 
     # 乱序设置
     if data.get("shuffle_deck_when_empty"):
@@ -1210,6 +1412,32 @@ def evaluate_wand():
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/bones")
+def pull_bones():
+    manager = get_bones_manager()
+    if not manager:
+        return jsonify({"success": False, "error": "Save path not found"}), 404
+    
+    wands = manager.pull_bones(load_spell_database)
+    return jsonify({"success": True, "wands": wands})
+
+@app.route("/api/bones", methods=["POST"])
+def push_bones():
+    manager = get_bones_manager()
+    if not manager:
+        return jsonify({"success": False, "error": "Save path not found"}), 404
+    
+    data = request.get_json()
+    wands = data.get("wands", [])
+    
+    # 合并所有法术库供导出使用
+    full_db = load_spell_database().copy()
+    if _MOD_SPELL_CACHE:
+        full_db.update(_MOD_SPELL_CACHE)
+        
+    count = manager.push_bones(wands, full_db)
+    return jsonify({"success": True, "count": count})
+
 @app.route("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
@@ -1223,6 +1451,8 @@ if __name__ == "__main__":
     
     # 启动前清理旧进程，防止端口占用导致无法连接游戏或逻辑错误
     kill_existing_instance()
+    
+    init_utils(get_game_root(), EXTRACTED_DATA_ROOT)
 
     def open_browser():
         webbrowser.open_new("http://127.0.0.1:17471")

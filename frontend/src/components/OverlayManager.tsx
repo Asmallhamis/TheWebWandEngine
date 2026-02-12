@@ -83,11 +83,14 @@ interface OverlayManagerProps {
   syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => void;
   setNotification: (notif: AppNotification | null) => void;
   setSelection: (selection: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
+  pullBones: () => Promise<void>;
+  pushBones: () => Promise<void>;
 
   // Interaction
   dragSource: DragSource | null;
   mousePos: MousePos;
   isDraggingFile: boolean;
+  onReloadSpells?: () => Promise<void | boolean>;
 }
 
 export function OverlayManager({
@@ -139,6 +142,9 @@ export function OverlayManager({
   mousePos,
   isDraggingFile,
   setSelection,
+  onReloadSpells,
+  pullBones,
+  pushBones,
 }: OverlayManagerProps) {
   const { t } = useTranslation();
 
@@ -165,6 +171,7 @@ export function OverlayManager({
         setSettings={setSettings}
         onImport={importAllData}
         onExport={exportAllData}
+        onReloadSpells={onReloadSpells}
       />
 
       {tabMenu && (
@@ -284,6 +291,8 @@ export function OverlayManager({
         setSmartTags={setSmartTags}
         settings={settings}
         isConnected={isConnected}
+        pullBones={pullBones}
+        pushBones={pushBones}
         onImportWand={(w: WarehouseWand) => {
           const nextSlot = (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
           performAction((prevWands: any) => ({

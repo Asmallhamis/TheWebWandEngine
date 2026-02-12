@@ -100,10 +100,10 @@ export function WandCard({
             {(() => {
               const spriteUrl = getWandSpriteUrl(data.appearance, isConnected);
               return spriteUrl ? (
-              <img src={spriteUrl} className="w-full h-full object-contain image-pixelated p-1" alt="" />
-            ) : (
-              <Wand2 size={16} className={`${activeTab.isRealtime ? 'text-indigo-400' : 'text-amber-400'}`} />
-            );
+                <img src={spriteUrl} className="w-full h-full object-contain image-pixelated p-1" alt="" />
+              ) : (
+                <Wand2 size={16} className={`${activeTab.isRealtime ? 'text-indigo-400' : 'text-amber-400'}`} />
+              );
             })()}
           </div>
           <div className="text-[10px] font-black w-6 text-center">{slot}</div>
@@ -115,16 +115,16 @@ export function WandCard({
             .map(([idx, sid]) => {
               const spell = spellDb[sid];
               const uses = (data.spell_uses || {})[idx] ?? (spell as any)?.max_uses;
-              const isTriggered = (sid === 'IF_HP' && settings.simulateLowHp) || 
-                                 (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
-                                 (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
+              const isTriggered = (sid === 'IF_HP' && settings.simulateLowHp) ||
+                (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
+                (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
               const isMarked = (data.marked_slots || []).includes(parseInt(idx));
               const isGrayscale = (uses === 0) || isTriggered;
               const shouldShowCharge = (uses === 0 || settings.showSpellCharges) && !isTriggered;
-              
+
               if (!spell) return null;
               const displayName = i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name;
-              
+
               return (
                 <div key={idx} className="relative shrink-0">
                   <img
@@ -166,8 +166,8 @@ export function WandCard({
 
           {/* Group 2: Mana */}
           <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
-            <StatItem label="Mana Max" value={data.mana_max} colorClass="text-cyan-400" />
-            <StatItem label="Recharge" value={data.mana_charge_speed} colorClass="text-cyan-400" />
+            <StatItem label="Mana Max" value={data.mana_max || 0} colorClass="text-cyan-400" />
+            <StatItem label="Recharge" value={data.mana_charge_speed || 0} colorClass="text-cyan-400" />
           </div>
 
           {/* Group 3: Timing */}
@@ -181,7 +181,7 @@ export function WandCard({
             <StatItem label="Capacity" value={data.deck_capacity} />
             <StatItem label="Spread" value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
             <StatItem label="Cast" value={data.actions_per_round} />
-            <StatItem label="Speed" value={data.speed_multiplier.toFixed(2) + 'x'} colorClass="text-indigo-400" />
+            <StatItem label="Speed" value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
           <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">
@@ -254,20 +254,20 @@ export function WandCard({
           />
           {evalData && evalData.data && (
             <div className={`px-4 pb-4 transition-opacity duration-300 ${evalData.loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-               {evalData.loading && (
-                 <div className="flex items-center gap-2 mb-2 text-amber-500 animate-pulse">
-                   <Activity size={12} />
-                   <span className="text-[10px] font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
-                 </div>
-               )}
-               <WandEvaluator 
-                 data={evalData.data} 
-                 spellDb={spellDb} 
-                 settings={settings} 
-                 markedSlots={data.marked_slots} 
-                 wandSpells={data.spells} 
-                 deckCapacity={data.deck_capacity} 
-               />
+              {evalData.loading && (
+                <div className="flex items-center gap-2 mb-2 text-amber-500 animate-pulse">
+                  <Activity size={12} />
+                  <span className="text-[10px] font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
+                </div>
+              )}
+              <WandEvaluator
+                data={evalData.data}
+                spellDb={spellDb}
+                settings={settings}
+                markedSlots={data.marked_slots}
+                wandSpells={data.spells}
+                deckCapacity={data.deck_capacity}
+              />
             </div>
           )}
         </>

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  Settings, X, Zap, Info, Download, Upload, 
-  Search, Wand2, Activity, Layers, Database, Star,
+  Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
+  Search, Wand2, Activity, Layers, Database, Star, Package,
   HelpCircle, Image as ImageIcon, Hand, RefreshCw
 } from 'lucide-react';
-import { Plus, Trash2, Edit2, GripVertical } from 'lucide-react';
 import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
+import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ interface SettingsModalProps {
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport: () => void;
+  onReloadSpells?: () => Promise<void | boolean>;
 }
 
 type Category = 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
@@ -27,14 +28,61 @@ export function SettingsModal({
   settings,
   setSettings,
   onImport,
-  onExport
+  onExport,
+  onReloadSpells
 }: SettingsModalProps) {
   const [activeCategory, setActiveCategory] = useState<Category>('general');
+  const [modBundles, setModBundles] = useState<ModBundle[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showHelp, setShowHelp] = useState(false);
   const { t } = useTranslation();
 
+  const loadModBundles = async () => {
+    try {
+      const bundles = await getModBundles();
+      setModBundles(bundles || []);
+    } catch (e) {
+      console.error("Failed to load mod bundles:", e);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (activeCategory === 'data' || searchQuery) {
+      loadModBundles();
+    }
+  }, [activeCategory, searchQuery, isOpen]);
+
   if (!isOpen || !settings) return null;
+
+  const handleImportModBundle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const bundle = JSON.parse(event.target?.result as string);
+        if (bundle.spells && bundle.appends) {
+          const normalized = {
+            id: bundle.id || `mod_bundle_${Date.now()}`,
+            name: bundle.name || 'Imported Mod Bundle',
+            timestamp: Date.now(),
+            spells: bundle.spells,
+            appends: bundle.appends,
+            active_mods: Array.isArray(bundle.active_mods) ? bundle.active_mods : [],
+            vfs: bundle.vfs || {}
+          };
+          await saveModBundle(normalized);
+          await loadModBundles();
+          onReloadSpells?.();
+          alert(t('app.notification.import_mod_bundle_success'));
+        }
+      } catch (err) {
+        alert('Invalid Mod Bundle file');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   // --- Safe Accessors ---
   const themeColors = settings.themeColors || ['','','',''];
@@ -832,6 +880,40 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                  <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">
+                    <Package size={14} /> {t('settings.mod_environments')}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {modBundles.map((bundle: ModBundle) => (
+                      <div key={bundle.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                        <div className="flex flex-col">
+                          <div className="text-xs font-bold text-zinc-200">{bundle.name}</div>
+                          <div className="text-[9px] text-zinc-500">
+                            {Object.keys(bundle.spells).length} Spells | {new Date(bundle.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={async () => {
+                            if (confirm(t('settings.delete_mod_bundle_confirm'))) {
+                              await deleteModBundle(bundle.id);
+                              await loadModBundles();
+                              onReloadSpells?.();
+                            }
+                          }}
+                          className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-full transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="neo-button bg-amber-500/10 text-amber-400 border border-amber-500/20 cursor-pointer text-xs py-3 justify-center">
+                    {t('settings.import_mod_bundle')} <input type="file" className="hidden" accept=".json" onChange={handleImportModBundle} />
+                  </label>
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <label className="neo-button bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-pointer text-xs py-3 justify-center">
                     {t('settings.import_json')} <input type="file" className="hidden" onChange={onImport} />

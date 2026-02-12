@@ -38,6 +38,7 @@ import {
 // --- Internal ---
 import { checkPinyinFuzzy } from './lib/searchUtils';
 import { SpellInfo, WandData, HistoryItem, Tab, AppSettings, EvalResponse, WarehouseWand, SmartTag, WarehouseFolder, AppNotification } from './types';
+import { saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND, DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from './constants';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -90,7 +91,8 @@ function App() {
 
   const { 
     isWarehouseOpen, setIsWarehouseOpen, warehouseWands, setWarehouseWands, 
-    warehouseFolders, setWarehouseFolders, smartTags, setSmartTags, saveToWarehouse 
+    warehouseFolders, setWarehouseFolders, smartTags, setSmartTags, saveToWarehouse,
+    pullBones, pushBones
   } = useWarehouse(setNotification);
 
   // --- Conflict Resolution ---
@@ -101,8 +103,45 @@ function App() {
   const { isConnected, syncWand, pullData, pushAllToGame, toggleSync, resolveConflict } = useGameSync({
     activeTab, activeTabId, settings, setTabs, performAction, setNotification, setConflict, t, lastLocalUpdateRef
   });
-  const { spellDb, spellNameToId, syncGameSpells: syncSpells } = useSpellDb(isConnected);
+  const { spellDb, spellNameToId, syncGameSpells: syncSpells, fetchSpellDb } = useSpellDb(isConnected);
   const syncGameSpells = () => syncSpells(setNotification);
+
+  const exportModBundle = async () => {
+    if (!isConnected) return;
+    setNotification({ msg: t('app.notification.exporting_mod_bundle'), type: 'info' });
+    try {
+      const res = await fetch('/api/export-mod-bundle');
+      const data = await res.json();
+      if (data.success) {
+        const bundleName = prompt(t('app.notification.enter_bundle_name'), `ModBundle_${new Date().toLocaleDateString()}`);
+        if (!bundleName) return;
+
+        const bundle = {
+          id: `mod_bundle_${Date.now()}`,
+          name: bundleName,
+          timestamp: Date.now(),
+          spells: data.spells,
+          appends: data.appends,
+          active_mods: data.active_mods,
+          vfs: data.vfs || {}
+        };
+
+        // Save to IndexedDB
+        await saveModBundle(bundle);
+
+        // Also download as file for sharing
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${bundleName}.twwe-env.json`;
+        a.click();
+        setNotification({ msg: t('app.notification.export_mod_bundle_success'), type: 'success' });
+      }
+    } catch (e) {
+      setNotification({ msg: t('app.notification.export_mod_bundle_failed'), type: 'error' });
+    }
+  };
 
   // Picker State
   const [pickerConfig, setPickerConfig] = useState<{
@@ -235,6 +274,7 @@ function App() {
         isConnected={isConnected}
         setIsWarehouseOpen={setIsWarehouseOpen}
         syncGameSpells={syncGameSpells}
+        exportModBundle={exportModBundle}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
@@ -281,6 +321,7 @@ function App() {
           isConnected={isConnected}
           isSettingsOpen={isSettingsOpen}
           setIsSettingsOpen={setIsSettingsOpen}
+          onReloadSpells={fetchSpellDb}
           importAllData={importAllData}
           exportAllData={exportAllData}
           tabMenu={tabMenu}
@@ -316,6 +357,8 @@ function App() {
           mousePos={mousePos}
           isDraggingFile={isDraggingFile}
           setSelection={setSelection}
+          pullBones={pullBones}
+          pushBones={pushBones}
         />
       </main>
 

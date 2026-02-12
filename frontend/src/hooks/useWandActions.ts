@@ -22,12 +22,12 @@ export const useWandActions = (params: {
   setPickerExpandedGroups: (s: Set<number>) => void,
   updateWand: (slot: string, data: Partial<WandData>, actionName?: string, icons?: string[]) => void
 }) => {
-  const { 
+  const {
     tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard,
     performAction, syncWand, setTabs, setNotification, lastLocalUpdateRef,
     setSelection, setPickerConfig, setPickerSearch, setPickerExpandedGroups, updateWand
   } = params;
-  
+
   const { t } = useTranslation();
 
   const addWand = useCallback(() => {
@@ -88,12 +88,12 @@ export const useWandActions = (params: {
 | spellsCast   = ${wand.actions_per_round}
 | shuffle      = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
 | castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}
-| rechargeTime = ${(wand.reload_time / 60).toFixed(2)}
-| manaMax      = ${wand.mana_max.toFixed(2)}
-| manaCharge   = ${wand.mana_charge_speed.toFixed(2)}
-| capacity     = ${wand.deck_capacity}
-| spread       = ${wand.spread_degrees}
-| speed        = ${wand.speed_multiplier.toFixed(2)}
+| reload_time = ${((wand.reload_time || 0) / 60).toFixed(2)}
+| manaMax      = ${(wand.mana_max || 0).toFixed(2)}
+| manaCharge   = ${(wand.mana_charge_speed || 0).toFixed(2)}
+| capacity     = ${wand.deck_capacity || 0}
+| spread       = ${wand.spread_degrees || 0}
+| speed        = ${(wand.speed_multiplier || 1).toFixed(2)}
 | spells       = ${Array.from({ length: wand.deck_capacity }).map((_, i) => wand.spells[(i + 1).toString()] || "").join(',')}
 }}`;
       try {
@@ -143,7 +143,7 @@ export const useWandActions = (params: {
 
   const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => {
     let x, y, initialSearch = '';
-    
+
     if (e && 'currentTarget' in e && e.currentTarget) {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       x = rect.left;

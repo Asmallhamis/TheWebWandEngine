@@ -59,7 +59,12 @@
       "import_tags_success": "Successfully imported {{count}} new tags",
       "import_tags_none": "No new tags imported (may already exist or invalid format)",
       "smart_tag_edit_tip": "Right click to clear, Ctrl+V to paste",
-      "empty_slot_tip": "Empty slot (Click below to add, right click to clear)"
+      "empty_slot_tip": "Empty slot (Click below to add, right click to clear)",
+      "exporting_mod_bundle": "Exporting Mod Environment Bundle...",
+      "enter_bundle_name": "Enter Environment Bundle Name",
+      "export_mod_bundle_success": "Mod Bundle exported successfully!",
+      "export_mod_bundle_failed": "Mod Bundle export failed",
+      "import_mod_bundle_success": "Mod Bundle imported successfully!"
     }
   },
   "nav": {
@@ -207,10 +212,12 @@
       "modifier": "Modifier",
       "utility_multicast_other": "Utility + Multicast + Other",
       "static_material_passive": "Static + Material + Passive"
-    }
-    ,
+    },
     "wiki_language": "Wiki Language",
-    "wiki_language_desc": "Choose the Wiki language version to open when Ctrl + Middle Clicking a spell."
+    "wiki_language_desc": "Choose the Wiki language version to open when Ctrl + Middle Clicking a spell.",
+    "mod_environments": "Mod Environment Management",
+    "import_mod_bundle": "Import Mod Bundle (.twwe-env.json)",
+    "delete_mod_bundle_confirm": "Are you sure you want to delete this Mod Environment? Related spell definitions and logic will be lost."
   },
   "warehouse": {
     "title": "Wand Warehouse",
@@ -249,6 +256,7 @@
     "save_smart_tag": "Save Smart Tag",
     "cancel": "Cancel",
     "import_success": "Successfully imported {{count}} wands",
+    "selected_wands": "{{count}} Selected",
     "backup_detected": "Backup file detected.\nContains {{wandCount}} wands, {{folderCount}} folders.\n\nMerge into current warehouse? (Click 'Cancel' to overwrite current warehouse)",
     "all_wands": "{{count}} Wands",
     "export_tag": "Export this tag",
@@ -261,7 +269,12 @@
     "import_tags_success": "Successfully imported {{count}} new tags",
     "import_tags_none": "No new tags imported (may already exist or invalid format)",
     "smart_tag_edit_tip": "Right click to clear, Ctrl+V to paste",
-    "empty_slot_tip": "Empty slot (Click below to add, right click to clear)"
+    "empty_slot_tip": "Empty slot (Click below to add, right click to clear)",
+    "pull_bones": "Pull Bones from Disk",
+    "push_bones": "Push Bones to Disk",
+    "pull_bones_confirm": "Pulling will read all bone wands from disk and overwrite the contents of this folder. Continue?",
+    "push_bones_confirm": "Pushing will overwrite bone files on disk with the current folder's content (auto-backup to twwe_bones_backups). Continue?",
+    "push_bones_success": "Successfully pushed {{count}} bone wands. Original files backed up to persistent directory."
   },
   "wand_card": {
     "copy": "Copy (Ctrl+C)",

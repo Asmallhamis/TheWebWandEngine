@@ -10,6 +10,7 @@ export interface SpellInfo {
   alias_initials?: string;
   type: number;
   max_uses?: number;
+  icon_base64?: string;
 }
 
 export interface WandData {

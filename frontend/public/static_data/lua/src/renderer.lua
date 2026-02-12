@@ -324,8 +324,19 @@ local function gather_state_modifications(state, first)
 			table.insert(mods, mod)
 		end
 		for k, mod in ipairs(mods) do
-			local suffix = mod:gmatch("/[^/]+%.xml")()
-			mods[k] = suffix:sub(2, suffix:len() - 4)
+			local base = mod:match("/([^/]+)%.xml$")
+			if base == "extra_entity" then
+				local parent = mod:match("/([^/]+)/[^/]+%.xml$")
+				if parent and parent ~= "" then
+					mods[k] = parent
+				else
+					mods[k] = base
+				end
+			elseif base then
+				mods[k] = base
+			else
+				mods[k] = mod
+			end
 		end
 		local counted = {}
 		for _, v in ipairs(mods) do

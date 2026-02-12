@@ -16,9 +16,13 @@ a = Analysis(
         # 嵌入法杖外观图片 (仓库卡片 & Wand2 模板)
         ('noitadata/data/items_gfx/wands', 'noitadata_internal/data/items_gfx/wands'),
         ('noitadata/data/items_gfx/handgun.png', 'noitadata_internal/data/items_gfx'),
+        ('noitadata/data/items_gfx/handgun.xml', 'noitadata_internal/data/items_gfx'),
         ('noitadata/data/items_gfx/bomb_wand.png', 'noitadata_internal/data/items_gfx'),
+        ('noitadata/data/items_gfx/bomb_wand.xml', 'noitadata_internal/data/items_gfx'),
         ('noitadata/data/items_gfx/flute.png', 'noitadata_internal/data/items_gfx'),
+        ('noitadata/data/items_gfx/flute.xml', 'noitadata_internal/data/items_gfx'),
         ('noitadata/data/items_gfx/kantele.png', 'noitadata_internal/data/items_gfx'),
+        ('noitadata/data/items_gfx/kantele.xml', 'noitadata_internal/data/items_gfx'),
         ('noitadata/data/entities/items/wands/experimental', 'noitadata_internal/data/entities/items/wands/experimental'),
         # 嵌入翻译数据
         ('noitadata/data/translations/common.csv', 'noitadata_internal/data/translations'),

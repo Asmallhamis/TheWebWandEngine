@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Activity, Layers, X, Plus, RefreshCw, Lock, Unlock, Clipboard, Upload, Download, Settings, Library } from 'lucide-react';
+import { Cpu, Activity, Layers, X, Plus, RefreshCw, Lock, Unlock, Clipboard, Upload, Download, Settings, Library, Package } from 'lucide-react';
 import { Tab, WandData } from '../types';
 import { useTranslation } from 'react-i18next';
 
@@ -24,6 +24,7 @@ interface HeaderProps {
   isConnected: boolean;
   setIsWarehouseOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   syncGameSpells: () => Promise<void>;
+  exportModBundle?: () => Promise<void>;
 }
 
 export function Header({
@@ -46,7 +47,8 @@ export function Header({
   setIsSettingsOpen,
   isConnected,
   setIsWarehouseOpen,
-  syncGameSpells
+  syncGameSpells,
+  exportModBundle
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
@@ -161,6 +163,15 @@ export function Header({
             title="同步模组法术数据"
           >
             <Cpu size={18} />
+          </button>
+        )}
+        {isConnected && exportModBundle && (
+          <button 
+            onClick={exportModBundle} 
+            className="p-2 text-amber-400 hover:text-amber-300 transition-colors"
+            title="导出/持久化当前 Mod 环境包"
+          >
+            <Package size={18} />
           </button>
         )}
       </div>

@@ -13,14 +13,15 @@ export function CompactStat({ icon, value, label }: { icon: React.ReactNode, val
 }
 
 export function PropInput({ label, value, onChange, colorClass, secondaryValue }: { label: string, value: number | string, onChange: (v: number) => void, colorClass?: string, secondaryValue?: string }) {
-  const [inputValue, setInputValue] = React.useState(value.toString());
+  const [inputValue, setInputValue] = React.useState((value ?? "").toString());
   const [isFocused, setIsFocused] = React.useState(false);
 
   React.useEffect(() => {
-    if (value.toString() !== inputValue && !isFocused) {
-      setInputValue(value.toString());
+    const stringVal = (value ?? "").toString();
+    if (stringVal !== inputValue && !isFocused) {
+      setInputValue(stringVal);
     }
-  }, [value, isFocused]);
+  }, [value, isFocused, inputValue]); // Added inputValue to dependencies for accurate comparison
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
@@ -52,7 +53,7 @@ export function PropInput({ label, value, onChange, colorClass, secondaryValue }
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);
-            setInputValue(value.toString());
+            setInputValue((value ?? "").toString());
           }}
           className={`bg-transparent font-mono text-xl font-bold w-24 focus:outline-none transition-opacity ${colorClass || 'text-white'} ${isFocused ? 'opacity-100' : 'opacity-0'}`}
         />

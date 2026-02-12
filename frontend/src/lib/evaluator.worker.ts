@@ -164,13 +164,16 @@ async function getNewLuaEngine(customVFS?: Record<string, string>) {
 }
 
 self.onmessage = async (e: MessageEvent) => {
-    const { type, data, options, id } = e.data;
+    const { type, data, options, id, mod_appends, active_mods, vfs } = e.data;
     
     if (type === 'EVALUATE') {
         try {
             // 构造环境模拟逻辑 (和后端 server.py 保持一致)
+            const activeModsList = active_mods || [];
+            const allModIdsJson = JSON.stringify(activeModsList).replace(/\[/g, '{').replace(/\]/g, '}');
+
             const mockLuaLines = [
-                "-- Environment simulation for IF_HP, IF_ENEMY, IF_PROJECTILE",
+                "-- Environment simulation and Mod ID Placeholder Fixer",
                 "local _old_EntityGetWithTag = EntityGetWithTag",
                 "function EntityGetWithTag(tag)",
                 "    if tag == 'player_unit' then return { 12345 } end",
@@ -232,7 +235,79 @@ self.onmessage = async (e: MessageEvent) => {
                 "    if _old_ComponentGetValue2 then return _old_ComponentGetValue2(comp, field) end",
                 "    return 0",
                 "end",
-                "function EntityGetIsAlive(ent) return true end"
+                "function EntityGetIsAlive(ent) return true end",
+                "",
+                "-- TWWE Placeholder Fixer (Sync with server.py)",
+                "local _TWWE_VFS = _TWWE_VFS or {}",
+                `local _TWWE_ACTIVE_MODS = ${allModIdsJson}`,
+                "local _old_MTFGC = ModTextFileGetContent",
+                "function ModTextFileGetContent(filename)",
+                "    if not filename then return nil end",
+                "    local actual_filename = filename",
+                "    ",
+                "    -- 1. 修复文件名中的占位符",
+                "    if actual_filename:find('__MOD_') or actual_filename:find('___') then",
+                "        for _, mid in ipairs(_TWWE_ACTIVE_MODS) do",
+                "            if type(mid) ~= 'string' then goto continue end",
+                "            local mp = 'mods/' .. mid .. '/'",
+                "            local test_name = actual_filename:gsub('___', mid .. '_')",
+                "            test_name = test_name:gsub('__MOD_NAME__', mid)",
+                "            test_name = test_name:gsub('__MOD_FILES__', mp .. 'files/')",
+                "            test_name = test_name:gsub('__MOD_ACTIONS__', mp .. 'files/actions/')",
+                "            test_name = test_name:gsub('__MOD_LIBS__', mp .. 'libs/')",
+                "            test_name = test_name:gsub('__MOD_ACTION_UTILS__', mp .. 'files/action_utils/')",
+                "            ",
+                "            if _TWWE_VFS[test_name] or _old_MTFGC(test_name) then",
+                "                actual_filename = test_name",
+                "                break",
+                "            end",
+                "            ::continue::",
+                "        end",
+                "    end",
+                "",
+                "    local content = _old_MTFGC(actual_filename)",
+                "    if not content or type(content) ~= 'string' then return content end",
+                "",
+                "    -- 2. 修复内容中的占位符",
+                "    local mod_id = nil",
+                "    if actual_filename:sub(1, 5) == 'mods/' then",
+                "        local next_slash = actual_filename:find('/', 6)",
+                "        if next_slash then mod_id = actual_filename:sub(6, next_slash - 1) end",
+                "    end",
+                "    ",
+                "    if not mod_id then mod_id = _TWWE_ACTIVE_MODS[1] end",
+                "",
+                "    if mod_id and not actual_filename:find('twwe_mock') then",
+                "        local prefix = mod_id .. '_'",
+                "        local mp = 'mods/' .. mod_id .. '/'",
+                "        content = content:gsub('___', prefix)",
+                "        content = content:gsub('__MOD_NAME__', mod_id)",
+                "        content = content:gsub('__MOD_FILES__', mp .. 'files/')",
+                "        content = content:gsub('__MOD_ACTIONS__', mp .. 'files/actions/')",
+                "        content = content:gsub('__MOD_LIBS__', mp .. 'libs/')",
+                "        content = content:gsub('__MOD_ACTION_UTILS__', mp .. 'files/action_utils/')",
+                "    end",
+                "    ",
+                "    return content",
+                "end",
+                "",
+                "function ModDoesFileExist(filename)",
+                "    local c = ModTextFileGetContent(filename)",
+                "    return c ~= nil and c ~= ''",
+                "end",
+                "",
+                "local _TWWE_WRITTEN_FILES_OWNER = {}",
+                "local _old_MTFSC = ModTextFileSetContent",
+                "function ModTextFileSetContent(filename, content)",
+                "    if _old_MTFSC then return _old_MTFSC(filename, content) end",
+                "end",
+                "",
+                "function ModTextFileWhoSetContent(filename)",
+                "    return _TWWE_WRITTEN_FILES_OWNER[filename] or _TWWE_ACTIVE_MODS[1] or ''",
+                "end",
+                "",
+                "-- 对齐 ModLuaFileAppend，它在模拟器内部维护 append_map",
+                "ModLuaFileAppend = ModLuaFileAppend"
             ];
 
             if (options.simulateLowHp) mockLuaLines.unshift("_TWWE_LOW_HP = true");
@@ -240,9 +315,65 @@ self.onmessage = async (e: MessageEvent) => {
             if (options.simulateManyProjectiles) mockLuaLines.unshift("_TWWE_MANY_PROJECTILES = true");
 
             // 注入动态 VFS
-            const customVFS = {
+            const customVFS: Record<string, string> = {
                 'mods/twwe_mock/init.lua': mockLuaLines.join('\n')
             };
+
+            // Inject mod appends
+            if (mod_appends) {
+                Object.entries(mod_appends).forEach(([path, content], i) => {
+                    // Skip if it's already in the provided vfs to avoid duplication
+                    // but usually appends are special
+                    if (vfs && vfs[path]) {
+                        // If it's already in VFS, we might want to use the VFS version or the appends version
+                    }
+                    let processedContent = content as string;
+                    const fileName = `gen_${i}.lua`;
+
+                    // Placeholder pre-processing (Sync with server.py logic)
+                    if (processedContent.includes('___') || processedContent.includes('__MOD_')) {
+                        let mod_id = 'unknown';
+                        if (path.startsWith('mods/')) {
+                            const parts = path.split('/');
+                            if (parts.length > 1) mod_id = parts[1];
+                        }
+                        if (mod_id !== 'unknown') {
+                            processedContent = processedContent.replace(/___/g, mod_id + '_');
+                            processedContent = processedContent.replace(/__MOD_NAME__/g, mod_id);
+                            processedContent = processedContent.replace(/__MOD_FILES__/g, `mods/${mod_id}/files/`);
+                            processedContent = processedContent.replace(/__MOD_ACTIONS__/g, `mods/${mod_id}/files/actions/`);
+                            processedContent = processedContent.replace(/__MOD_LIBS__/g, `mods/${mod_id}/libs/`);
+                            processedContent = processedContent.replace(/__MOD_ACTION_UTILS__/g, `mods/${mod_id}/files/action_utils/`);
+                        }
+                    }
+
+                    customVFS[`mods/twwe_mock/${fileName}`] = processedContent;
+                    // 核心修复：始终追加到 gun_actions.lua，因为这些是 captured appends
+                    mockLuaLines.push(`ModLuaFileAppend("data/scripts/gun/gun_actions.lua", "mods/twwe_mock/${fileName}")`);
+                });
+            }
+
+            // Inject provided VFS files from the bundle into Lua's _TWWE_VFS
+            if (vfs) {
+                Object.entries(vfs).forEach(([vPath, vContent]) => {
+                    customVFS[vPath] = vContent as string;
+                    // 转义 Lua 字符串
+                    const safeContent = (vContent as string)
+                        .replace(/\\/g, '\\\\')
+                        .replace(/"/g, '\\"')
+                        .replace(/\n/g, '\\n')
+                        .replace(/\r/g, '\\r');
+                    mockLuaLines.push(`_TWWE_VFS["${vPath}"] = "${safeContent}"`);
+                });
+                customVFS['mods/twwe_mock/init.lua'] = mockLuaLines.join('\n');
+            }
+
+            // Inject provided VFS files from the bundle
+            if (vfs) {
+                Object.entries(vfs).forEach(([path, content]) => {
+                    customVFS[path] = content as string;
+                });
+            }
 
             lua = await getNewLuaEngine(customVFS);
             
@@ -273,6 +404,13 @@ self.onmessage = async (e: MessageEvent) => {
                 '-e', options.initialIfHalf ? 'true' : 'false',
                 '-md', 'twwe_mock', // 启用 Mock Mod
             ];
+
+            // Add active mods to support VFS searching in worker
+            if (active_mods) {
+                active_mods.forEach((m: string) => {
+                    if (m && typeof m === 'string' && !luaArgs.includes(m)) luaArgs.push(m);
+                });
+            }
 
             if (options.stopAtRecharge) {
                 luaArgs.push('-sr', 'true');

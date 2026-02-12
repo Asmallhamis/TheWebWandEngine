@@ -1,5 +1,6 @@
 import { WandData, EvalResponse } from '../types';
 
+import { getActiveModBundle } from './modStorage';
 let worker: Worker | null = null;
 let lastRequestId = 0;
 
@@ -7,6 +8,11 @@ let lastRequestId = 0;
  * 获取图标路径
  */
 export function getIconUrl(iconPath: string, isConnected: boolean): string {
+  // 如果 iconPath 本身就是 base64 数据（以 data: 开头），直接返回
+  if (iconPath && iconPath.startsWith('data:')) {
+    return iconPath;
+  }
+
   const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
   
   // 如果是静态模式（GitHub Pages），始终使用相对路径
@@ -165,11 +171,16 @@ export async function evaluateWand(
         spells.push(wand.spells[i.toString()] || "");
       }
 
+      const bundle = await getActiveModBundle();
+
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tab_id: tabId,
+          mod_appends: bundle?.appends || null,
+          active_mods: bundle?.active_mods || null,
+          vfs: bundle?.vfs || null,
           slot_id: slotId,
           mana_max: wand.mana_max,
           mana_charge_speed: wand.mana_charge_speed,
@@ -215,6 +226,22 @@ export async function evaluateWand(
   // 只有在 Static 模式下才初始化 Worker
   return new Promise((resolve, reject) => {
     try {
+      // Get mod appends for WASM evaluation
+      getActiveModBundle().then(bundle => {
+        const appends = bundle?.appends || {};
+        const activeMods = bundle?.active_mods || [];
+        
+        worker?.postMessage({ 
+          type: 'EVALUATE', 
+          data: wand, 
+          options: settings, 
+          id: requestId,
+          mod_appends: appends,
+          active_mods: activeMods,
+          vfs: bundle?.vfs || null,
+        });
+      });
+
       if (!worker) {
         worker = new Worker(new URL('./evaluator.worker.ts', import.meta.url), {
           type: 'module'
@@ -233,7 +260,6 @@ export async function evaluateWand(
       };
 
       worker.addEventListener('message', handler);
-      worker.postMessage({ type: 'EVALUATE', data: wand, options: settings, id: requestId });
     } catch (err) {
       reject(err);
     }

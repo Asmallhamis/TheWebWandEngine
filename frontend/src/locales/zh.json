@@ -59,7 +59,12 @@
       "import_tags_success": "成功导入 {{count}} 个新标签",
       "import_tags_none": "没有新标签被导入（可能已存在或格式不正确）",
       "smart_tag_edit_tip": "右键清除, 支持 Ctrl+V 粘贴",
-      "empty_slot_tip": "空槽位 (点击下方列表添加，右键清除)"
+      "empty_slot_tip": "空槽位 (点击下方列表添加，右键清除)",
+      "exporting_mod_bundle": "正在导出 Mod 环境包...",
+      "enter_bundle_name": "请输入环境包名称",
+      "export_mod_bundle_success": "Mod 环境包导出成功！",
+      "export_mod_bundle_failed": "Mod 环境包导出失败",
+      "import_mod_bundle_success": "Mod 环境包导入成功！"
     }
   },
   "nav": {
@@ -207,10 +212,12 @@
       "modifier": "修正",
       "utility_multicast_other": "实用+多重+其他",
       "static_material_passive": "静态+材料+被动"
-    }
-    ,
+    },
     "wiki_language": "Wiki 语言",
-    "wiki_language_desc": "选择 Ctrl+鼠标中键 点击法术时打开的 Wiki 语言版本 (Noita Wiki)."
+    "wiki_language_desc": "选择 Ctrl+鼠标中键 点击法术时打开的 Wiki 语言版本 (Noita Wiki).",
+    "mod_environments": "Mod 环境管理",
+    "import_mod_bundle": "导入 Mod 环境包 (.twwe-env.json)",
+    "delete_mod_bundle_confirm": "确定要删除这个 Mod 环境吗？相关的法术定义和逻辑将失效。"
   },
   "warehouse": {
     "title": "魔杖仓库",
@@ -249,6 +256,7 @@
     "save_smart_tag": "保存智能标签",
     "cancel": "取消",
     "import_success": "成功导入 {{count}} 个法杖",
+    "selected_wands": "已选中 {{count}} 个魔杖",
     "backup_detected": "检测到备份文件。\n包含 {{wandCount}} 个魔杖，{{folderCount}} 个文件夹。\n\n是否合并到当前仓库？(点击“取消”则完全覆盖当前仓库)",
     "all_wands": "{{count}} 个魔杖",
     "export_tag": "导出此标签",
@@ -261,7 +269,12 @@
     "import_tags_success": "成功导入 {{count}} 个新标签",
     "import_tags_none": "没有新标签被导入（可能已存在或格式不正确）",
     "smart_tag_edit_tip": "右键清除, 支持 Ctrl+V 粘贴",
-    "empty_slot_tip": "空槽位 (点击下方列表添加，右键清除)"
+    "empty_slot_tip": "空槽位 (点击下方列表添加，右键清除)",
+    "pull_bones": "从磁盘拉取老古",
+    "push_bones": "推送到磁盘老古",
+    "pull_bones_confirm": "拉取将从磁盘读取所有老古法杖，并覆盖当前文件夹内的内容。确定继续吗？",
+    "push_bones_confirm": "推送将用当前文件夹的内容覆盖磁盘上的老古存档（会自动备份到 twwe_bones_backups）。确定继续吗？",
+    "push_bones_success": "成功推送 {{count}} 根老古法杖，原文件已备份至 persistent 目录。"
   },
   "wand_card": {
     "copy": "复制 (Ctrl+C)",

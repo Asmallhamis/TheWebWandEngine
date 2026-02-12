@@ -46,6 +46,8 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const BONES_FOLDER_ID = 'bones_folder';
+
 interface WandWarehouseProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,6 +61,8 @@ interface WandWarehouseProps {
   setSmartTags: React.Dispatch<React.SetStateAction<SmartTag[]>>;
   settings: AppSettings;
   isConnected: boolean;
+  pullBones: () => Promise<void>;
+  pushBones: () => Promise<void>;
 }
 
 export function WandWarehouse({ 
@@ -73,7 +77,9 @@ export function WandWarehouse({
   smartTags,
   setSmartTags,
   settings,
-  isConnected
+  isConnected,
+  pullBones,
+  pushBones
 }: WandWarehouseProps) {
   const { t, i18n } = useTranslation();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -413,6 +419,23 @@ export function WandWarehouse({
     setDragOverPos(null);
   }, [draggedWandId, draggedFolderId, folders, setFolders, setWands, dragOverPos]);
 
+  // Bones Handlers
+  const handlePullBones = useCallback(async () => {
+    if (!confirm(t('warehouse.pull_bones_confirm'))) return;
+    try {
+      await pullBones();
+      alert(t('warehouse.pull_bones_success'));
+    } catch (e) { alert(t('warehouse.pull_bones_failed')); }
+  }, [t, pullBones]);
+
+  const handlePushBones = useCallback(async () => {
+    if (!confirm(t('warehouse.push_bones_confirm'))) return;
+    try {
+      await pushBones();
+      alert(t('warehouse.push_bones_success'));
+    } catch (e) { alert(t('warehouse.push_bones_failed')); }
+  }, [t, pushBones]);
+
   // --- Optimized Data Calculations ---
   const wandSmartTagsMap = useMemo(() => {
     const map: Record<string, SmartTag[]> = {};
@@ -517,6 +540,40 @@ export function WandWarehouse({
     });
   }, [wands, searchQuery, selectedFolderId, selectedTags, sortBy, getWandSmartTags, spellDb, i18n.language]);
 
+  // Keyboard Shortcuts for Warehouse
+  useEffect(() => {
+    if (!isOpen || editingSmartTag || isSmartTagManagerOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === 'Delete') {
+        if (selectedWandIds.size > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          deleteWand(Array.from(selectedWandIds)[0]);
+        }
+      }
+      
+      if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedWandIds(new Set(displayWands.map(w => w.id)));
+      }
+      
+      if (e.key === 'Escape') {
+        if (selectedWandIds.size > 0) {
+          setSelectedWandIds(new Set());
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen, selectedWandIds, deleteWand, displayWands, editingSmartTag, isSmartTagManagerOpen]);
+
   const folderProps = {
     groupedFolders,
     selectedFolderId,
@@ -603,6 +660,30 @@ export function WandWarehouse({
                     <SortAsc size={14} />
                 </button>
              </div>
+
+             {/* Bones Folder Controls */}
+             {selectedFolderId === BONES_FOLDER_ID && (
+                <div className="flex items-center gap-1 bg-amber-500/10 p-1 rounded-lg border border-amber-500/20 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <button 
+                      onClick={handlePullBones}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-md text-[10px] font-bold transition-all"
+                      title={t('warehouse.pull_bones')}
+                    >
+                      <Download size={14} />
+                      <span className="hidden sm:inline">{t('warehouse.pull_bones')}</span>
+                    </button>
+                    <div className="w-px h-3 bg-amber-500/20 mx-0.5"/>
+                    <button 
+                      onClick={handlePushBones}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 rounded-md text-[10px] font-bold transition-all"
+                      title={t('warehouse.push_bones')}
+                    >
+                      <Upload size={14} />
+                      <span className="hidden sm:inline">{t('warehouse.push_bones')}</span>
+                    </button>
+                </div>
+             )}
+
         </div>
 
         <div className="flex items-center gap-1">
@@ -676,6 +757,11 @@ export function WandWarehouse({
                     {selectedFolderId === 'root' ? t('warehouse.root_folder') : folders.find(f => f.id === selectedFolderId)?.name || '???'}
                 </span>
                 <span className="bg-zinc-800 px-1.5 rounded-full text-[10px]">{t('warehouse.all_wands', { count: displayWands.length })}</span>
+                {selectedWandIds.size > 0 && (
+                    <span className="bg-purple-500/20 text-purple-400 px-1.5 rounded-full text-[10px] font-bold animate-in fade-in zoom-in-95 duration-200">
+                        {t('warehouse.selected_wands', { count: selectedWandIds.size })}
+                    </span>
+                )}
                 
                 <div className="flex-1" />
                 

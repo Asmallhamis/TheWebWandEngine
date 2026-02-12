@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SpellInfo } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
+import { getActiveModBundle } from '../lib/modStorage';
 
 export const useSpellDb = (isConnected: boolean) => {
   const { t, i18n } = useTranslation();
@@ -9,6 +10,20 @@ export const useSpellDb = (isConnected: boolean) => {
   const preloadedRef = (import.meta as any).env?.PROD ? { current: false } : { current: false };
 
   const fetchSpellDb = useCallback(async () => {
+    // Load user imported mod bundles first (highest priority for mod spells)
+    let modSpells: Record<string, SpellInfo> = {};
+    try {
+      const activeBundle = await getActiveModBundle();
+      if (activeBundle && activeBundle.spells) {
+        Object.entries(activeBundle.spells).forEach(([id, info]) => {
+          // 如果有 base64 图标，直接将其设为 icon 路径，这样 getIconUrl 就能自动识别并返回它
+          modSpells[id] = { ...info, id, is_mod: true, icon: info.icon_base64 || info.icon };
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load mod bundle from IndexedDB:", e);
+    }
+
     try {
       const res = await fetch('/api/fetch-spells');
       const data = await res.json();
@@ -17,7 +32,7 @@ export const useSpellDb = (isConnected: boolean) => {
         Object.entries(data.spells as Record<string, any>).forEach(([id, info]) => {
           enriched[id] = { ...info, id };
         });
-        setSpellDb(enriched);
+        setSpellDb({ ...enriched, ...modSpells });
         return true;
       }
     } catch (e) {
@@ -27,7 +42,7 @@ export const useSpellDb = (isConnected: boolean) => {
     try {
       const res = await fetch('./static_data/spells.json');
       const data = await res.json();
-      setSpellDb(data);
+      setSpellDb({ ...data, ...modSpells });
       return true;
     } catch (e) {
       console.error("Failed to fetch spells from anywhere:", e);
@@ -96,7 +111,7 @@ export const useSpellDb = (isConnected: boolean) => {
     const timer = setTimeout(() => {
       spells.forEach(s => {
         const img = new Image();
-        img.src = getIconUrl(s.icon, isConnected);
+        img.src = (s as any).icon_base64 || getIconUrl(s.icon, isConnected);
       });
     }, 1000);
 
