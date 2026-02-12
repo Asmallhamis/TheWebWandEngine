@@ -493,9 +493,9 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateLowHp: !s.simulateLowHp }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateLowHp ? 'bg-red-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateLowHp ? 'bg-red-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateLowHp ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateLowHp ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
@@ -507,9 +507,9 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateManyEnemies: !s.simulateManyEnemies }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyEnemies ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateManyEnemies ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyEnemies ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyEnemies ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
@@ -521,9 +521,9 @@ export function SettingsModal({
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, simulateManyProjectiles: !s.simulateManyProjectiles }))}
-                        className={`w-8 h-4 rounded-full relative transition-colors shrink-0 ${settings.simulateManyProjectiles ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                        className={`w-8 h-4 rounded-full relative flex items-center transition-colors shrink-0 ${settings.simulateManyProjectiles ? 'bg-blue-600' : 'bg-zinc-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyProjectiles ? 'left-5' : 'left-1'}`} />
+                        <div className={`absolute w-2 h-2 rounded-full bg-white transition-all ${settings.simulateManyProjectiles ? 'left-5' : 'left-1'}`} />
                       </button>
                     </div>
                   )}
