@@ -7,6 +7,7 @@ class ModBundler:
     def __init__(self, active_mods):
         self.active_mods = active_mods
         self.vfs = {}  # 路径 -> 内容 (字符串)
+        self.vfs_meta = {}  # 路径 -> mod_id
         self.scanned_files = set()
         self.text_exts = ('.lua', '.xml', '.csv', '.txt')
         
@@ -65,6 +66,8 @@ class ModBundler:
                     content = f.read()
                 
                 self.vfs[rel_path] = content
+                if current_mod_id:
+                    self.vfs_meta[rel_path] = current_mod_id
                 
                 # 如果是 Lua 文件，递归扫描其内部引用的其他文件
                 if rel_path.lower().endswith('.lua'):
@@ -94,6 +97,7 @@ class ModBundler:
                     with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
                     self.vfs[rel_path] = content
+                    self.vfs_meta[rel_path] = mod_id
                     self.scanned_files.add(rel_path)
                 except Exception as e:
                     print(f"[Bundler] Failed to bundle {rel_path}: {e}")

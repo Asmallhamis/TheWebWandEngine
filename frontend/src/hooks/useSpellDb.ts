@@ -10,18 +10,56 @@ export const useSpellDb = (isConnected: boolean) => {
   const preloadedRef = (import.meta as any).env?.PROD ? { current: false } : { current: false };
 
   const fetchSpellDb = useCallback(async () => {
-    // Load user imported mod bundles first (highest priority for mod spells)
     let modSpells: Record<string, SpellInfo> = {};
+    let bundleExists = false;
+
     try {
       const activeBundle = await getActiveModBundle();
-      if (activeBundle && activeBundle.spells) {
+      bundleExists = !!activeBundle;
+      const hasActiveMods = !!(activeBundle && Array.isArray(activeBundle.active_mods) && activeBundle.active_mods.length > 0);
+      if (hasActiveMods && activeBundle && activeBundle.spells) {
+        const activeSet = new Set(activeBundle.active_mods || []);
         Object.entries(activeBundle.spells).forEach(([id, info]) => {
-          // 如果有 base64 图标，直接将其设为 icon 路径，这样 getIconUrl 就能自动识别并返回它
+          const modId = (info as SpellInfo).mod_id;
+          if (modId && !activeSet.has(modId)) return;
           modSpells[id] = { ...info, id, is_mod: true, icon: info.icon_base64 || info.icon };
         });
       }
     } catch (e) {
       console.error("Failed to load mod bundle from IndexedDB:", e);
+    }
+
+    const loadBaseFromStatic = async () => {
+      const res = await fetch('./static_data/spells.json');
+      return res.json();
+    };
+
+    if (bundleExists) {
+      try {
+        if (isConnected) {
+          const res = await fetch('/api/fetch-spells-base');
+          const data = await res.json();
+          if (data.success && data.spells) {
+            const enriched: Record<string, SpellInfo> = {};
+            Object.entries(data.spells as Record<string, any>).forEach(([id, info]) => {
+              enriched[id] = { ...info, id };
+            });
+            setSpellDb({ ...enriched, ...modSpells });
+            return true;
+          }
+        }
+      } catch (e) {
+        console.log("API fetch-spells-base failed, trying static...");
+      }
+
+      try {
+        const data = await loadBaseFromStatic();
+        setSpellDb({ ...data, ...modSpells });
+        return true;
+      } catch (e) {
+        console.error("Failed to fetch base spells for bundle:", e);
+        return false;
+      }
     }
 
     try {
@@ -40,15 +78,14 @@ export const useSpellDb = (isConnected: boolean) => {
     }
 
     try {
-      const res = await fetch('./static_data/spells.json');
-      const data = await res.json();
+      const data = await loadBaseFromStatic();
       setSpellDb({ ...data, ...modSpells });
       return true;
     } catch (e) {
       console.error("Failed to fetch spells from anywhere:", e);
       return false;
     }
-  }, []);
+  }, [isConnected]);
 
   const spellNameToId = useMemo(() => {
     const map: Record<string, string> = {};

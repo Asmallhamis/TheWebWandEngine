@@ -44,15 +44,11 @@ mimetypes.add_type('application/javascript', '.js')
 mimetypes.add_type('text/css', '.css')
 mimetypes.add_type('application/wasm', '.wasm')
 
-try:
-    from pypinyin import pinyin, Style
-    HAS_PYPINYIN = True
-except ImportError:
-    HAS_PYPINYIN = False
 from threading import Timer, Lock
 from bones_manager import BonesManager
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
+from spell_db import init_spell_db, load_spell_database, get_pinyin_data
 
 app = Flask(__name__)
 CORS(app)
@@ -77,8 +73,6 @@ else:
     # 开发模式
     BASE_DIR = os.getcwd()
     EXTRACTED_DATA_ROOT = os.path.join(BASE_DIR, "noitadata")
-    if not os.path.exists(EXTRACTED_DATA_ROOT):
-        EXTRACTED_DATA_ROOT = r"E:\download\TheWebWandEngine\noitadata"
     
     FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "../frontend/dist")
     WAND_EVAL_DIR = os.path.join(BASE_DIR, "wand_eval_tree")
@@ -88,215 +82,16 @@ else:
 
 # 配置 Flask 静态资源目录 (用于打包 EXE 后能找到网页)
 app.static_folder = FRONTEND_DIST
+init_spell_db(BASE_DIR, EXTRACTED_DATA_ROOT)
 
 # 进程管理：防止多个 luajit 同时运行撑爆内存
 active_processes = {}
 process_lock = Lock()
 
 # 预加载数据
-_SPELL_CACHE = {}
 _MOD_SPELL_CACHE = {}
 _MOD_APPENDS_CACHE = {}
 _ACTIVE_MODS_CACHE = []
-_TRANSLATIONS = {}
-
-def get_pinyin_data(text):
-    if not HAS_PYPINYIN or not text:
-        return "", ""
-    try:
-        # Full pinyin without tones
-        full = "".join([item[0] for item in pinyin(text, style=Style.NORMAL)])
-        # Initials
-        initials = "".join([item[0] for item in pinyin(text, style=Style.FIRST_LETTER)])
-        return full.lower(), initials.lower()
-    except:
-        return "", ""
-
-def load_translations():
-    global _TRANSLATIONS
-    if _TRANSLATIONS: return _TRANSLATIONS
-    
-    trans_files = [
-        os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common.csv"),
-        os.path.join(EXTRACTED_DATA_ROOT, "data/translations/common_dev.csv"),
-        os.path.join(BASE_DIR, "spell_mapping.md") # 支持新的 md 格式
-    ]
-    
-    translations = {}
-    for file_path in trans_files:
-        if not os.path.exists(file_path):
-            continue
-        try:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                if file_path.endswith(".md"):
-                    # 处理 Markdown 表格格式 (| 分隔)
-                    for line in f:
-                        if "|" not in line or "SPELL ID" in line or "---" in line:
-                            continue
-                        parts = [p.strip() for p in line.split("|")]
-                        if len(parts) >= 4:
-                            key = parts[0].lstrip('$')
-                            translations[key] = {
-                                "en": key, # md 暂时没存英文名，用 ID 占位
-                                "zh": parts[2] or parts[1], # 优先选汉化 mod 名，没有则选官方中文
-                                "aliases": parts[3] # 存入别名
-                            }
-                    continue
-
-                import csv
-                # Noita CSVs often have junk or extra commas, we use a simple reader
-                reader = csv.reader(f)
-                header = next(reader, None)
-                if not header: continue
-                
-                # Standard Noita indices
-                en_idx = 1
-                zh_idx = 9 # Default zh-cn index
-                
-                # Dynamic index detection
-                for i, h in enumerate(header):
-                    h_lower = h.lower()
-                    if h_lower == 'en': en_idx = i
-                    elif h_lower == 'zh-cn': zh_idx = i
-                    elif 'zh-cn汉化mod' in h_lower: zh_idx = i # Prefer modded zh-cn if available
-                    elif h_lower == '简体中文' and zh_idx == 9: zh_idx = i
-                
-                for row in reader:
-                    if not row or len(row) < 2: continue
-                    key = row[0].lstrip('$')
-                    if not key: continue
-                    
-                    en_val = row[en_idx] if len(row) > en_idx else ""
-                    zh_val = row[zh_idx] if len(row) > zh_idx else ""
-                    
-                    # Store translations
-                    if key not in translations:
-                        translations[key] = {"en": "", "zh": ""}
-                    
-                    if en_val: translations[key]["en"] = en_val.replace('\\n', '\n').strip('"')
-                    if zh_val: translations[key]["zh"] = zh_val.replace('\\n', '\n').strip('"')
-        except Exception as e:
-            print(f"Error loading translations from {file_path}: {e}")
-            
-    _TRANSLATIONS = translations
-    return translations
-
-def load_spell_mapping():
-    mapping_path = os.path.join(BASE_DIR, "spell_mapping.md")
-    if not os.path.exists(mapping_path):
-        return {}
-    
-    mapping = {}
-    try:
-        with open(mapping_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-            for line in lines:
-                if "|" not in line or line.startswith("SPELL ID") or line.startswith("---"):
-                    continue
-                parts = [p.strip() for p in line.split("|")]
-                if len(parts) >= 4:
-                    spell_id = parts[0]
-                    mapping[spell_id] = {
-                        "official": parts[1],
-                        "mod": parts[2],
-                        "aliases": parts[3]
-                    }
-    except Exception as e:
-        print(f"Error loading spell mapping: {e}")
-    return mapping
-
-def load_spell_database():
-    global _SPELL_CACHE
-    if _SPELL_CACHE: return _SPELL_CACHE
-    
-    trans = load_translations()
-    mapping = load_spell_mapping()
-    actions_file = os.path.join(EXTRACTED_DATA_ROOT, "data/scripts/gun/gun_actions.lua")
-    if not os.path.exists(actions_file):
-        print(f"Warning: gun_actions.lua not found at {actions_file}")
-        return {}
-
-    try:
-        with open(actions_file, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-        
-        # 1. 剥离 Lua 注释
-        content = re.sub(r'--\[\[.*?\]\]', '', content, flags=re.DOTALL)
-        content = re.sub(r'--.*', '', content)
-
-        # 2. 定义类型映射
-        TYPE_MAP = {
-            "ACTION_TYPE_PROJECTILE": 0,
-            "ACTION_TYPE_STATIC_PROJECTILE": 1,
-            "ACTION_TYPE_MODIFIER": 2,
-            "ACTION_TYPE_DRAW_MANY": 3,
-            "ACTION_TYPE_MATERIAL": 4,
-            "ACTION_TYPE_OTHER": 5,
-            "ACTION_TYPE_UTILITY": 6,
-            "ACTION_TYPE_PASSIVE": 7
-        }
-
-        # 3. 提取法术块
-        action_blocks = re.findall(r'\{\s*(id\s*=\s*"[^"]+".*?price\s*=\s*\d+.*?)\s*\},', content, re.DOTALL)
-        
-        db = {}
-        for block in action_blocks:
-            id_match = re.search(r'id\s*=\s*"([^"]+)"', block)
-            name_match = re.search(r'name\s*=\s*"([^"]+)"', block)
-            sprite_match = re.search(r'sprite\s*=\s*"([^"]+)"', block)
-            type_match = re.search(r'type\s*=\s*([A-Z0-9_]+)', block)
-            uses_match = re.search(r'max_uses\s*=\s*(-?\d+)', block)
-            
-            if id_match and sprite_match:
-                spell_id = id_match.group(1)
-                raw_name = name_match.group(1) if name_match else spell_id
-                
-                # 获取翻译
-                en_name = raw_name
-                zh_name = raw_name
-                
-                if raw_name.startswith("$"):
-                    trans_key = raw_name.lstrip("$")
-                    if trans_key in trans:
-                        en_name = trans[trans_key]["en"] or raw_name
-                        zh_name = trans[trans_key]["zh"] or raw_name
-                
-                py_full, py_init = get_pinyin_data(zh_name)
-                
-                # Merge from mapping
-                aliases = ""
-                alias_py = ""
-                alias_init = ""
-                if spell_id in mapping:
-                    m = mapping[spell_id]
-                    # If common.csv didn't have a good name, use mapping
-                    if zh_name == raw_name or not zh_name:
-                        zh_name = m["mod"] or m["official"] or zh_name
-                        py_full, py_init = get_pinyin_data(zh_name)
-                    
-                    aliases = m["aliases"]
-                    if aliases:
-                        alias_py, alias_init = get_pinyin_data(aliases)
-
-                type_str = type_match.group(1) if type_match else "ACTION_TYPE_PROJECTILE"
-                db[spell_id] = {
-                    "icon": sprite_match.group(1).lstrip("/"),
-                    "name": zh_name,
-                    "en_name": en_name,
-                    "pinyin": py_full,
-                    "pinyin_initials": py_init,
-                    "aliases": aliases,
-                    "alias_pinyin": alias_py,
-                    "alias_initials": alias_init,
-                    "type": TYPE_MAP.get(type_str, 0),
-                    "max_uses": int(uses_match.group(1)) if uses_match else None
-                }
-        _SPELL_CACHE = db
-        print(f"Loaded {len(db)} clean spells with translations")
-        return db
-    except Exception as e:
-        print(f"Error parsing local spells: {e}")
-        return {}
 
 def get_game_root():
     global _GAME_ROOT
@@ -638,6 +433,13 @@ def fetch_spells():
         return jsonify({"success": True, "spells": db})
     return jsonify({"success": False, "error": "Local data not found"}), 404
 
+@app.route("/api/fetch-spells-base")
+def fetch_spells_base():
+    db = load_spell_database().copy()
+    if db:
+        return jsonify({"success": True, "spells": db})
+    return jsonify({"success": False, "error": "Local data not found"}), 404
+
 @app.route("/api/fetch-mod-data")
 def fetch_mod_data():
     return jsonify({
@@ -681,7 +483,8 @@ def export_mod_bundle():
         "spells": bundle_spells,
         "appends": _MOD_APPENDS_CACHE,
         "active_mods": _ACTIVE_MODS_CACHE,
-        "vfs": bundler.vfs  # 包含递归追踪到的所有 .lua 和 .xml 文件
+        "vfs": bundler.vfs,  # 包含递归追踪到的所有 .lua 和 .xml 文件
+        "vfs_meta": bundler.vfs_meta
     })
 
 @app.route("/api/sync-game-spells")
@@ -728,7 +531,7 @@ def sync_game_spells():
                     alias_py = entry.get("alias_pinyin", "")
                     alias_init = entry.get("alias_initials", "")
             
-            mod_db[spell_id] = {
+            mod_entry = {
                 "icon": s.get("sprite", "").lstrip("/"),
                 "name": name,
                 "en_name": spell_id, 
@@ -744,6 +547,11 @@ def sync_game_spells():
                 "reload_time": s.get("reload_time", 0),
                 "is_mod": True
             }
+            mod_id = s.get("mod_id")
+            if mod_id:
+                mod_entry["mod_id"] = mod_id
+
+            mod_db[spell_id] = mod_entry
         _MOD_SPELL_CACHE = mod_db
         return jsonify({"success": True, "count": len(mod_db)})
     except Exception as e:
@@ -769,7 +577,8 @@ def sync_wand():
 
 @app.route("/api/icon/<path:icon_path>")
 def get_icon(icon_path):
-    icon_path = icon_path.lstrip("/")
+    # 移除首尾空格和首部的斜杠，并统一斜杠方向
+    icon_path = icon_path.strip().lstrip("/").replace("\\", "/")
     
     # Noita 的 sprite_file 通常是 .xml (如 data/items_gfx/handgun.xml)
     # XML 内部 <Sprite filename="data/items_gfx/handgun.png"> 才是真正的图片
@@ -799,7 +608,7 @@ def get_icon(icon_path):
         else:
             return send_file(found, max_age=31536000)
 
-    print(f"Icon not found in vanilla or any active mods: {icon_path}")
+    print(f"[Icon] Not found: {icon_path} (GameRoot: {get_game_root()})")
     return "Not Found", 404
 
 def parse_wiki_wand(text):
@@ -1087,7 +896,7 @@ def evaluate_wand():
                 active_mods = json.loads(live_active_mods_res)
             except: pass
 
-    if not active_mods and _ACTIVE_MODS_CACHE:
+    if req_active_mods is None and not active_mods and _ACTIVE_MODS_CACHE:
         active_mods = _ACTIVE_MODS_CACHE
 
     # 注入游戏内的法术追加逻辑

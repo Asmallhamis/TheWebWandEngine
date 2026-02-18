@@ -38,7 +38,7 @@ import {
 // --- Internal ---
 import { checkPinyinFuzzy } from './lib/searchUtils';
 import { SpellInfo, WandData, HistoryItem, Tab, AppSettings, EvalResponse, WarehouseWand, SmartTag, WarehouseFolder, AppNotification } from './types';
-import { saveModBundle } from './lib/modStorage';
+import { getActiveModBundle, saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND, DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from './constants';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -79,6 +79,14 @@ function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [notification, setNotification] = useState<AppNotification | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isModManagerOpen, setIsModManagerOpen] = useState(false);
+  const [settingsCategoryOverride, setSettingsCategoryOverride] = useState<'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data' | null>(null);
+  const [settingsExpandedBundleId, setSettingsExpandedBundleId] = useState<string | null>(null);
+  const [modBundleInfo, setModBundleInfo] = useState<{ active: number; total: number; bundleId: string | null }>({
+    active: 0,
+    total: 0,
+    bundleId: null
+  });
   const lastLocalUpdateRef = useRef<number>(0);
 
   const { 
@@ -123,11 +131,14 @@ function App() {
           spells: data.spells,
           appends: data.appends,
           active_mods: data.active_mods,
-          vfs: data.vfs || {}
+          all_mods: data.active_mods,
+          vfs: data.vfs || {},
+          vfs_meta: data.vfs_meta || {}
         };
 
         // Save to IndexedDB
         await saveModBundle(bundle);
+        await refreshModBundleInfo();
 
         // Also download as file for sharing
         const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
@@ -142,6 +153,76 @@ function App() {
       setNotification({ msg: t('app.notification.export_mod_bundle_failed'), type: 'error' });
     }
   };
+
+  const refreshModBundleInfo = useCallback(async () => {
+    try {
+      const bundle = await getActiveModBundle();
+      if (!bundle || !bundle.active_mods) {
+        setModBundleInfo({ active: 0, total: 0, bundleId: null });
+        return;
+      }
+
+      // 获取基础法术列表以判断哪些 Mod 是 "Impactful" 的
+      let baseSpells: Record<string, any> = {};
+      try {
+        const res = await fetch('./static_data/spells.json');
+        baseSpells = await res.json();
+      } catch (e) {
+        console.error("Failed to load base spells for bundle info", e);
+      }
+
+      const modSpells = Object.values(bundle.spells || {}).reduce((acc: any, spell: any) => {
+        const modId = spell.mod_id;
+        if (modId) {
+          if (!acc[modId]) acc[modId] = { added: 0, modified: 0 };
+          if (baseSpells[spell.id || '']) acc[modId].modified++;
+          else acc[modId].added++;
+        }
+        return acc;
+      }, {});
+
+      const modsWithAppends = new Set<string>();
+      Object.keys(bundle.appends || {}).forEach(path => {
+        if (path.startsWith('mods/')) {
+          const parts = path.split('/');
+          if (parts.length > 1) modsWithAppends.add(parts[1]);
+        }
+      });
+
+      const isImpactful = (modId: string) => {
+        const s = modSpells[modId];
+        return (s && (s.added > 0 || s.modified > 0)) || modsWithAppends.has(modId);
+      };
+
+      const allMods = (bundle.all_mods && bundle.all_mods.length > 0)
+        ? bundle.all_mods
+        : bundle.active_mods;
+      
+      const impactfulMods = allMods.filter(isImpactful);
+      const activeSet = new Set(bundle.active_mods);
+      const activeImpactfulCount = impactfulMods.filter(id => activeSet.has(id)).length;
+
+      setModBundleInfo({ 
+        active: activeImpactfulCount, 
+        total: impactfulMods.length, 
+        bundleId: bundle.id || null 
+      });
+    } catch (e) {
+      setModBundleInfo({ active: 0, total: 0, bundleId: null });
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshModBundleInfo();
+  }, [refreshModBundleInfo]);
+
+  React.useEffect(() => {
+    if (isSettingsOpen) return;
+    setSettingsCategoryOverride(null);
+    setSettingsExpandedBundleId(null);
+  }, [isSettingsOpen]);
+
+
 
   // Picker State
   const [pickerConfig, setPickerConfig] = useState<{
@@ -275,6 +356,10 @@ function App() {
         setIsWarehouseOpen={setIsWarehouseOpen}
         syncGameSpells={syncGameSpells}
         exportModBundle={exportModBundle}
+        modBundleInfo={modBundleInfo}
+        onOpenModManager={() => {
+          setIsModManagerOpen(true);
+        }}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
@@ -321,7 +406,13 @@ function App() {
           isConnected={isConnected}
           isSettingsOpen={isSettingsOpen}
           setIsSettingsOpen={setIsSettingsOpen}
+          settingsCategoryOverride={settingsCategoryOverride}
+          settingsExpandedBundleId={settingsExpandedBundleId}
+          onModBundleChange={refreshModBundleInfo}
           onReloadSpells={fetchSpellDb}
+          isModManagerOpen={isModManagerOpen}
+          setIsModManagerOpen={setIsModManagerOpen}
+          onOpenSettings={() => setIsSettingsOpen(true)}
           importAllData={importAllData}
           exportAllData={exportAllData}
           tabMenu={tabMenu}

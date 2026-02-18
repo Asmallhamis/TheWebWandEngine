@@ -11,6 +11,7 @@ export interface SpellInfo {
   type: number;
   max_uses?: number;
   icon_base64?: string;
+  mod_id?: string;
 }
 
 export interface WandData {

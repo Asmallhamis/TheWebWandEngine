@@ -1,8 +1,39 @@
 import { WandData, EvalResponse } from '../types';
 
-import { getActiveModBundle } from './modStorage';
+import { getActiveModBundle, ModBundle } from './modStorage';
 let worker: Worker | null = null;
 let lastRequestId = 0;
+
+const filterBundleForActiveMods = (bundle: ModBundle | null) => {
+  if (!bundle || !Array.isArray(bundle.active_mods)) {
+    return { appends: null, vfs: null, activeMods: [] as string[], hasBundle: false };
+  }
+
+  const activeMods = bundle.active_mods || [];
+  const activeSet = new Set(activeMods);
+  const vfsMeta = bundle.vfs_meta || {};
+  const allowPath = (path: string) => {
+    const owner = vfsMeta[path];
+    if (owner) return activeSet.has(owner);
+    if (!path.startsWith('mods/')) return true;
+    const parts = path.split('/');
+    return parts.length > 1 && activeSet.has(parts[1]);
+  };
+
+  const filteredAppends = bundle.appends
+    ? Object.fromEntries(Object.entries(bundle.appends).filter(([path]) => allowPath(path)))
+    : {};
+  const filteredVfs = bundle.vfs
+    ? Object.fromEntries(Object.entries(bundle.vfs).filter(([path]) => allowPath(path)))
+    : {};
+
+  return {
+    appends: filteredAppends,
+    vfs: filteredVfs,
+    activeMods,
+    hasBundle: true
+  };
+};
 
 /**
  * 获取图标路径
@@ -12,7 +43,8 @@ export function getIconUrl(iconPath: string, isConnected: boolean): string {
   if (iconPath && iconPath.startsWith('data:')) {
     return iconPath;
   }
-
+  if (!iconPath) return '';
+  
   const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
   
   // 如果是静态模式（GitHub Pages），始终使用相对路径
@@ -20,7 +52,13 @@ export function getIconUrl(iconPath: string, isConnected: boolean): string {
     return `./static_data/icons/${iconPath}`;
   }
   // 否则（EXE/Dev模式），走后端 API
-  return `/api/icon/${iconPath}`;
+  // 确保路径不带多余的斜杠，并处理可能的绝对路径问题
+  const cleanPath = iconPath.replace(/\\/g, '/').replace(/^\/+/, '');
+  
+  // 如果已经包含 http，说明是完整 URL
+  if (cleanPath.startsWith('http')) return cleanPath;
+  
+  return `/api/icon/${cleanPath}`;
 }
 
 /**
@@ -172,15 +210,16 @@ export async function evaluateWand(
       }
 
       const bundle = await getActiveModBundle();
+      const { appends, vfs, activeMods, hasBundle } = filterBundleForActiveMods(bundle);
 
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tab_id: tabId,
-          mod_appends: bundle?.appends || null,
-          active_mods: bundle?.active_mods || null,
-          vfs: bundle?.vfs || null,
+          mod_appends: hasBundle ? appends : null,
+          active_mods: hasBundle ? activeMods : null,
+          vfs: hasBundle ? vfs : null,
           slot_id: slotId,
           mana_max: wand.mana_max,
           mana_charge_speed: wand.mana_charge_speed,
@@ -228,17 +267,16 @@ export async function evaluateWand(
     try {
       // Get mod appends for WASM evaluation
       getActiveModBundle().then(bundle => {
-        const appends = bundle?.appends || {};
-        const activeMods = bundle?.active_mods || [];
+        const { appends, vfs, activeMods, hasBundle } = filterBundleForActiveMods(bundle);
         
         worker?.postMessage({ 
           type: 'EVALUATE', 
           data: wand, 
           options: settings, 
           id: requestId,
-          mod_appends: appends,
-          active_mods: activeMods,
-          vfs: bundle?.vfs || null,
+          mod_appends: hasBundle ? appends : null,
+          active_mods: hasBundle ? activeMods : null,
+          vfs: hasBundle ? vfs : null,
         });
       });
 

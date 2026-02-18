@@ -13,7 +13,9 @@ export interface ModBundle {
   spells: Record<string, any>;
   appends: Record<string, string>;
   active_mods: string[];
+  all_mods?: string[];
   vfs?: Record<string, string>;
+  vfs_meta?: Record<string, string>;
 }
 
 function openDB(): Promise<IDBDatabase> {

@@ -25,6 +25,8 @@ interface HeaderProps {
   setIsWarehouseOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   syncGameSpells: () => Promise<void>;
   exportModBundle?: () => Promise<void>;
+  modBundleInfo: { active: number; total: number };
+  onOpenModManager: () => void;
 }
 
 export function Header({
@@ -48,7 +50,9 @@ export function Header({
   isConnected,
   setIsWarehouseOpen,
   syncGameSpells,
-  exportModBundle
+  exportModBundle,
+  modBundleInfo,
+  onOpenModManager
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
@@ -152,6 +156,13 @@ export function Header({
         </label>
         <button onClick={() => exportWorkflow()} className="neo-button bg-white/5 hover:bg-white/10 text-[10px]">
           <Download size={14} /> {t('nav.export')}
+        </button>
+        <button
+          onClick={onOpenModManager}
+          className="px-2 py-1 text-[10px] font-black tracking-widest rounded border border-amber-500/30 text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10"
+          title={t('settings.manage_mods')}
+        >
+          {modBundleInfo.active}/{modBundleInfo.total}
         </button>
         <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-zinc-500 hover:text-white transition-colors">
           <Settings size={18} />

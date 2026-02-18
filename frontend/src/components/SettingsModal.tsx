@@ -10,6 +10,12 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 
+const getModIdFromPath = (path: string) => {
+  if (!path || !path.startsWith('mods/')) return null;
+  const parts = path.split('/');
+  return parts.length > 1 ? parts[1] : null;
+};
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +24,9 @@ interface SettingsModalProps {
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport: () => void;
   onReloadSpells?: () => Promise<void | boolean>;
+  onModBundleChange?: () => void;
+  initialCategory?: Category | null;
+  initialExpandedBundleId?: string | null;
 }
 
 type Category = 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
@@ -29,12 +38,16 @@ export function SettingsModal({
   setSettings,
   onImport,
   onExport,
-  onReloadSpells
+  onReloadSpells,
+  onModBundleChange,
+  initialCategory,
+  initialExpandedBundleId
 }: SettingsModalProps) {
   const [activeCategory, setActiveCategory] = useState<Category>('general');
   const [modBundles, setModBundles] = useState<ModBundle[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null);
   const { t } = useTranslation();
 
   const loadModBundles = async () => {
@@ -53,6 +66,17 @@ export function SettingsModal({
     }
   }, [activeCategory, searchQuery, isOpen]);
 
+  React.useEffect(() => {
+    if (!isOpen || !initialCategory) return;
+    setActiveCategory(initialCategory);
+    setSearchQuery('');
+  }, [initialCategory, isOpen]);
+
+  React.useEffect(() => {
+    if (!isOpen || !initialExpandedBundleId) return;
+    setExpandedBundleId(initialExpandedBundleId);
+  }, [initialExpandedBundleId, isOpen]);
+
   if (!isOpen || !settings) return null;
 
   const handleImportModBundle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,11 +94,16 @@ export function SettingsModal({
             spells: bundle.spells,
             appends: bundle.appends,
             active_mods: Array.isArray(bundle.active_mods) ? bundle.active_mods : [],
-            vfs: bundle.vfs || {}
+            all_mods: Array.isArray(bundle.all_mods)
+              ? bundle.all_mods
+              : (Array.isArray(bundle.active_mods) ? bundle.active_mods : []),
+            vfs: bundle.vfs || {},
+            vfs_meta: bundle.vfs_meta || {}
           };
           await saveModBundle(normalized);
           await loadModBundles();
           onReloadSpells?.();
+          onModBundleChange?.();
           alert(t('app.notification.import_mod_bundle_success'));
         }
       } catch (err) {
@@ -82,6 +111,18 @@ export function SettingsModal({
       }
     };
     reader.readAsText(file);
+  };
+
+  const updateBundleActiveMods = async (bundle: ModBundle, activeMods: string[]) => {
+    const updated: ModBundle = {
+      ...bundle,
+      active_mods: activeMods,
+      all_mods: bundle.all_mods || bundle.active_mods
+    };
+    await saveModBundle(updated);
+    setModBundles(prev => prev.map(item => (item.id === bundle.id ? updated : item)));
+    onReloadSpells?.();
+    onModBundleChange?.();
   };
 
   // --- Safe Accessors ---
@@ -885,29 +926,127 @@ export function SettingsModal({
                   <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">
                     <Package size={14} /> {t('settings.mod_environments')}
                   </h3>
+                  <div className="text-[9px] text-zinc-500 mb-2 italic">注: 此处的统计仅计入影响法术或逻辑的 Mod</div>
                   <div className="grid grid-cols-1 gap-2">
-                    {modBundles.map((bundle: ModBundle) => (
-                      <div key={bundle.id} className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                        <div className="flex flex-col">
-                          <div className="text-xs font-bold text-zinc-200">{bundle.name}</div>
-                          <div className="text-[9px] text-zinc-500">
-                            {Object.keys(bundle.spells).length} Spells | {new Date(bundle.timestamp).toLocaleString()}
+                    {modBundles.map((bundle: ModBundle) => {
+                      const modList = (bundle.all_mods && bundle.all_mods.length > 0)
+                        ? bundle.all_mods
+                        : (bundle.active_mods || []);
+                      
+                      // 判断 Impactful Mods
+                      // 此处简单判断：在 bundle.spells 中出现的 mod_id 或者在 appends 中的 mod_id
+                      // 实际上 App.tsx 中有更精确的判断，但由于此处没有 baseDb，我们先用这个逻辑
+                      
+                      const activeSet = new Set(bundle.active_mods || []);
+                      const activeCount = activeSet.size;
+                      const totalCount = modList.length;
+                      const modsWithSpells = new Set<string>();
+                      Object.values(bundle.spells || {}).forEach(info => {
+                        const modId = (info as any)?.mod_id;
+                        if (modId) modsWithSpells.add(modId);
+                      });
+                      const modsWithAppends = new Set<string>();
+                      Object.keys(bundle.appends || {}).forEach(path => {
+                        const modId = getModIdFromPath(path);
+                        if (modId) modsWithAppends.add(modId);
+                      });
+
+                      const impactfulMods = modList.filter(id => modsWithSpells.has(id) || modsWithAppends.has(id));
+                      const hiddenMods = modList.filter(id => !modsWithSpells.has(id) && !modsWithAppends.has(id));
+                      
+                      const activeImpactfulCount = impactfulMods.filter(id => activeSet.has(id)).length;
+                      const totalImpactfulCount = impactfulMods.length;
+
+                      const isExpanded = expandedBundleId === bundle.id;
+
+                      return (
+                        <div key={bundle.id} className={`bg-white/5 p-3 rounded-lg border space-y-2 ${isExpanded ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5'}`}>
+                          <div className="flex justify-between items-center">
+                            <div className="flex flex-col">
+                              <div className="text-xs font-bold text-zinc-200">{bundle.name}</div>
+                              <div className="text-[9px] text-zinc-500">
+                                {Object.keys(bundle.spells || {}).length} Spells
+                                {totalImpactfulCount > 0 ? ` | ${activeImpactfulCount}/${totalImpactfulCount} ${t('settings.mod_bundle_active_mods')}` : ''}
+                                {' | '}{new Date(bundle.timestamp).toLocaleString()}
+                              </div>
+                              {hiddenMods.length > 0 && (
+                                <div className="text-[9px] text-zinc-600 mt-1 flex flex-wrap gap-x-2">
+                                  <span className="font-bold">未影响法术的 Mod ({hiddenMods.length}):</span>
+                                  <span className="opacity-70">{hiddenMods.join(', ')}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {totalCount > 0 && (
+                                <button
+                                  onClick={() => setExpandedBundleId(isExpanded ? null : bundle.id)}
+                                  className="p-2 hover:bg-white/10 text-zinc-400 hover:text-white rounded-full transition-colors"
+                                  title={t('settings.manage_mods')}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                              )}
+                              <button 
+                                onClick={async () => {
+                                  if (confirm(t('settings.delete_mod_bundle_confirm'))) {
+                                    await deleteModBundle(bundle.id);
+                                    await loadModBundles();
+                                    onReloadSpells?.();
+                                    onModBundleChange?.();
+                                  }
+                                }}
+                                className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-full transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
+
+                          {isExpanded && totalCount > 0 && (
+                            <div className="space-y-2 border-t border-white/5 pt-2">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => updateBundleActiveMods(bundle, [...modList])}
+                                  className="text-[10px] uppercase tracking-widest px-2 py-1 rounded bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                                >
+                                  {t('settings.enable_all_mods')}
+                                </button>
+                                <button
+                                  onClick={() => updateBundleActiveMods(bundle, [])}
+                                  className="text-[10px] uppercase tracking-widest px-2 py-1 rounded bg-zinc-500/10 text-zinc-300 hover:bg-zinc-500/20"
+                                >
+                                  {t('settings.disable_all_mods')}
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {impactfulMods.map(modId => {
+                                  const isActive = activeSet.has(modId);
+                                  return (
+                                    <button
+                                      key={modId}
+                                      onClick={() => {
+                                        const next = isActive
+                                          ? modList.filter(id => id !== modId && activeSet.has(id))
+                                          : [...(bundle.active_mods || []), modId];
+                                        const unique = Array.from(new Set(next));
+                                        updateBundleActiveMods(bundle, unique);
+                                      }}
+                                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                                        isActive
+                                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                                          : 'bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200'
+                                      }`}
+                                    >
+                                      {modId}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <button 
-                          onClick={async () => {
-                            if (confirm(t('settings.delete_mod_bundle_confirm'))) {
-                              await deleteModBundle(bundle.id);
-                              await loadModBundles();
-                              onReloadSpells?.();
-                            }
-                          }}
-                          className="p-2 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-full transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <label className="neo-button bg-amber-500/10 text-amber-400 border border-amber-500/20 cursor-pointer text-xs py-3 justify-center">
                     {t('settings.import_mod_bundle')} <input type="file" className="hidden" accept=".json" onChange={handleImportModBundle} />

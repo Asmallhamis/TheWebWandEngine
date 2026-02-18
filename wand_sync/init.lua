@@ -361,6 +361,63 @@ function OnWorldPostUpdate()
 
         local old_draw_actions = draw_actions
         draw_actions = dummy_fn
+
+        local function get_mod_id_from_path(path)
+            if type(path) ~= "string" then return nil end
+            if path:sub(1, 5) ~= "mods/" then return nil end
+            local next_slash = path:find("/", 6)
+            if not next_slash then return nil end
+            return path:sub(6, next_slash - 1)
+        end
+
+        local function detect_mod_id(action)
+            if not action then return nil end
+            if action.action and type(action.action) == "function" and debug and debug.getinfo then
+                local info = debug.getinfo(action.action, "S")
+                if info and type(info.source) == "string" then
+                    local src = info.source
+                    if src:sub(1, 1) == "@" then src = src:sub(2) end
+                    local mod_id = get_mod_id_from_path(src)
+                    if mod_id then return mod_id end
+                end
+            end
+            return get_mod_id_from_path(action.custom_xml_file) or get_mod_id_from_path(action.sprite)
+        end
+
+        -- 预读取 Mod Appends，并从脚本中推断覆盖的法术 ID
+        local appends = ModLuaFileGetAppends("data/scripts/gun/gun_actions.lua") or {}
+        local append_data = {}
+        local override_map = {}
+        local function mark_override(mod_id, spell_id)
+            if not mod_id or not spell_id or spell_id == "" then return end
+            override_map[spell_id] = mod_id
+        end
+
+        for _, path in ipairs(appends) do
+            local content = ModTextFileGetContent(path) or ""
+            append_data[path] = content
+            local mod_id = get_mod_id_from_path(path)
+            if mod_id and content ~= "" then
+                for id in content:gmatch('actions%[%s*"([%w_]+)"%s*%]') do
+                    mark_override(mod_id, id)
+                end
+                for id in content:gmatch("actions%[%s*'([%w_]+)'%s*%]") do
+                    mark_override(mod_id, id)
+                end
+                for id in content:gmatch('%[%s*"([%w_]+)"%s*%]%s*=%s*{') do
+                    mark_override(mod_id, id)
+                end
+                for id in content:gmatch("%[%s*'([%w_]+)'%s*%]%s*=%s*{") do
+                    mark_override(mod_id, id)
+                end
+                for id in content:gmatch('id%s*=%s*"([%w_]+)"') do
+                    mark_override(mod_id, id)
+                end
+                for id in content:gmatch("id%s*=%s*'([%w_]+)'") do
+                    mark_override(mod_id, id)
+                end
+            end
+        end
         
         local all_actions = {}
         for _, a in ipairs(actions or {}) do
@@ -379,6 +436,7 @@ function OnWorldPostUpdate()
                     pcall(a.action, dummy_card)
                 end
 
+                local mod_id = detect_mod_id(a) or override_map[a.id]
                 table.insert(all_actions, {
                     id = a.id,
                     name = GameTextGetTranslatedOrNot(a.name or ""),
@@ -391,7 +449,8 @@ function OnWorldPostUpdate()
                     spread_degrees = dummy_c.spread_degrees,
                     speed_multiplier = dummy_c.speed_multiplier,
                     custom_xml_file = a.custom_xml_file,
-                    never_unlimited = a.never_unlimited or false
+                    never_unlimited = a.never_unlimited or false,
+                    mod_id = mod_id
                 })
             end
         end
@@ -424,13 +483,6 @@ function OnWorldPostUpdate()
         CreateItemActionEntity = old_CreateItemActionEntity
         draw_actions = old_draw_actions
         
-        -- 获取当前的 Mod 追加信息
-        local appends = ModLuaFileGetAppends("data/scripts/gun/gun_actions.lua") or {}
-        local append_data = {}
-        for _, path in ipairs(appends) do
-            append_data[path] = ModTextFileGetContent(path) or ""
-        end
-
         local response = {
             spells = all_actions,
             appends = append_data,

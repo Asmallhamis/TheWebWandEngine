@@ -5,6 +5,7 @@ import { SpellPicker } from './SpellPicker';
 import { SettingsModal } from './SettingsModal';
 import { ConflictModal } from './ConflictModal';
 import { HistoryPanel } from './HistoryPanel';
+import { ModManagerPanel } from './ModManagerPanel';
 import { WandWarehouse } from './WandWarehouse';
 import { FloatingDragModeToggle } from './FloatingDragModeToggle';
 import { 
@@ -91,6 +92,12 @@ interface OverlayManagerProps {
   mousePos: MousePos;
   isDraggingFile: boolean;
   onReloadSpells?: () => Promise<void | boolean>;
+  onModBundleChange?: () => void;
+  settingsCategoryOverride?: 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data' | null;
+  settingsExpandedBundleId?: string | null;
+  isModManagerOpen: boolean;
+  setIsModManagerOpen: (open: boolean) => void;
+  onOpenSettings?: () => void;
 }
 
 export function OverlayManager({
@@ -143,8 +150,14 @@ export function OverlayManager({
   isDraggingFile,
   setSelection,
   onReloadSpells,
+  onModBundleChange,
+  settingsCategoryOverride,
+  settingsExpandedBundleId,
   pullBones,
   pushBones,
+  isModManagerOpen,
+  setIsModManagerOpen,
+  onOpenSettings,
 }: OverlayManagerProps) {
   const { t } = useTranslation();
 
@@ -172,6 +185,18 @@ export function OverlayManager({
         onImport={importAllData}
         onExport={exportAllData}
         onReloadSpells={onReloadSpells}
+        onModBundleChange={onModBundleChange}
+        initialCategory={settingsCategoryOverride}
+        initialExpandedBundleId={settingsExpandedBundleId}
+      />
+
+      <ModManagerPanel
+        isOpen={isModManagerOpen}
+        onClose={() => setIsModManagerOpen(false)}
+        isConnected={isConnected}
+        onReloadSpells={onReloadSpells}
+        onModBundleChange={onModBundleChange}
+        onOpenSettings={onOpenSettings}
       />
 
       {tabMenu && (
