@@ -97,7 +97,7 @@ export interface AppSettings {
   pureSpellsExport: boolean;
   showDragModeToggle: boolean;
   editorDragMode: 'cursor' | 'hand';
-  useNoitaSwapLogic: boolean;
+  dragSpellMode: 'legacy' | 'noita_swap' | '20260222';
   dragModeTogglePos?: { x: number, y: number };
   spellTypes: SpellTypeConfig[];
   spellGroups: SpellGroupConfig[];

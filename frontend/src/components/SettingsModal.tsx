@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { 
+import {
   Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
   Search, Wand2, Activity, Layers, Database, Star, Package,
   HelpCircle, Image as ImageIcon, Hand, RefreshCw
@@ -126,7 +126,7 @@ export function SettingsModal({
   };
 
   // --- Safe Accessors ---
-  const themeColors = settings.themeColors || ['','','',''];
+  const themeColors = settings.themeColors || ['', '', '', ''];
   const defaultWandStats = settings.defaultWandStats || {};
 
   const updateDefaultWand = (key: keyof WandData, value: any) => {
@@ -245,8 +245,8 @@ export function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md px-4 py-8" onClick={onClose}>
-      <div 
-        className="glass-card bg-[#0c0c0e] border-white/10 w-full max-w-3xl h-full max-h-[600px] flex overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200" 
+      <div
+        className="glass-card bg-[#0c0c0e] border-white/10 w-full max-w-3xl h-full max-h-[600px] flex overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Sidebar */}
@@ -283,7 +283,7 @@ export function SettingsModal({
           <div className="p-4 border-b border-white/5 flex items-center gap-4 bg-black/20">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={14} />
-              <input 
+              <input
                 type="text"
                 placeholder={t('settings.search_placeholder')}
                 value={searchQuery}
@@ -297,7 +297,7 @@ export function SettingsModal({
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
-            
+
             {/* GENERAL */}
             {(searchQuery || activeCategory === 'general') && (
               <div className="space-y-6">
@@ -414,23 +414,33 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
-                {isMatch(t('settings.use_noita_swap_logic')) && (
-                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                {isMatch(t('settings.drag_spell_mode')) && (
+                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
                     <div className="flex items-center gap-2">
                       <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
                         <RefreshCw size={16} />
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-zinc-200">{t('settings.use_noita_swap_logic')}</div>
-                        <div className="text-[10px] text-zinc-500">{t('settings.use_noita_swap_logic_desc')}</div>
-                      </div>
+                      <div className="text-xs font-bold text-zinc-200">{t('settings.drag_spell_mode')}</div>
                     </div>
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, useNoitaSwapLogic: !s.useNoitaSwapLogic }))}
-                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.useNoitaSwapLogic ? 'bg-indigo-600' : 'bg-zinc-700'}`}
-                    >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.useNoitaSwapLogic ? 'left-6' : 'left-1'}`} />
-                    </button>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { id: 'legacy', name: t('settings.drag_spell_mode_legacy'), desc: t('settings.drag_spell_mode_legacy_desc') },
+                        { id: 'noita_swap', name: t('settings.drag_spell_mode_noita_swap'), desc: t('settings.drag_spell_mode_noita_swap_desc') },
+                        { id: '20260222', name: t('settings.drag_spell_mode_20260222'), desc: t('settings.drag_spell_mode_20260222_desc') },
+                      ].map(mode => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setSettings(s => ({ ...s, dragSpellMode: mode.id as any }))}
+                          className={`flex flex-col gap-1 p-3 rounded-lg border text-left transition-all ${settings.dragSpellMode === mode.id ? 'bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/20' : 'bg-black/20 border-white/5 hover:bg-white/5'}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[11px] font-bold ${settings.dragSpellMode === mode.id ? 'text-indigo-400' : 'text-zinc-300'}`}>{mode.name}</span>
+                            {settings.dragSpellMode === mode.id && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 leading-relaxed">{mode.desc}</div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -502,26 +512,26 @@ export function SettingsModal({
                     <div className="grid grid-cols-2 gap-4">
                       {(['mana_max', 'mana_charge_speed', 'deck_capacity', 'fire_rate_wait', 'reload_time'] as const).map(key => {
                         const isTime = key === 'fire_rate_wait' || key === 'reload_time';
-                        const displayValue = (isTime && !settings.showStatsInFrames) 
+                        const displayValue = (isTime && !settings.showStatsInFrames)
                           ? parseFloat(((defaultWandStats[key] as number || 0) / 60).toFixed(3))
                           : (defaultWandStats[key] as number | undefined) ?? '';
-                        
-                        const label = isTime 
+
+                        const label = isTime
                           ? `${key.replace(/_/g, ' ')} (${settings.showStatsInFrames ? 'f' : 's'})`
                           : key.replace(/_/g, ' ');
 
                         return (
                           <div key={key} className="space-y-1">
                             <label className="text-[9px] font-bold text-zinc-500 uppercase">{label}</label>
-                            <input 
-                              type="number" 
-                              value={displayValue} 
+                            <input
+                              type="number"
+                              value={displayValue}
                               onChange={e => {
                                 let val = parseFloat(e.target.value) || 0;
                                 if (isTime && !settings.showStatsInFrames) val = Math.round(val * 60);
                                 updateDefaultWand(key, val);
                               }}
-                              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs font-mono text-indigo-300 outline-none focus:border-indigo-500/50" 
+                              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs font-mono text-indigo-300 outline-none focus:border-indigo-500/50"
                             />
                           </div>
                         );
@@ -641,13 +651,13 @@ export function SettingsModal({
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.num_casts')} ({settings.numCasts || 3})</label>
                     <div className="text-[10px] text-zinc-500 mb-2 italic">{t('settings.num_casts_desc')}</div>
                     <div className="flex items-center gap-4">
-                      <input 
-                        type="range" 
-                        min="1" 
-                        max="50" 
-                        value={settings.numCasts || 3} 
-                        onChange={e => setSettings(s => ({ ...s, numCasts: parseInt(e.target.value) || 3 }))} 
-                        className="flex-1 accent-blue-500" 
+                      <input
+                        type="range"
+                        min="1"
+                        max="50"
+                        value={settings.numCasts || 3}
+                        onChange={e => setSettings(s => ({ ...s, numCasts: parseInt(e.target.value) || 3 }))}
+                        className="flex-1 accent-blue-500"
                       />
                       <span className="text-xs font-mono font-bold text-blue-400 w-8">{settings.numCasts || 3}</span>
                     </div>
@@ -677,13 +687,13 @@ export function SettingsModal({
                     <label className="text-[10px] font-black uppercase tracking-widest">{t('settings.auto_hide_threshold')}</label>
                     <div className="text-[10px] text-zinc-500 mb-2 italic">{t('settings.auto_hide_threshold_desc')}</div>
                     <div className="flex items-center gap-4">
-                      <input 
-                        type="range" 
-                        min="5" 
-                        max="100" 
-                        value={settings.autoHideThreshold || 20} 
-                        onChange={e => setSettings(s => ({ ...s, autoHideThreshold: parseInt(e.target.value) || 20 }))} 
-                        className="flex-1 accent-indigo-500" 
+                      <input
+                        type="range"
+                        min="5"
+                        max="100"
+                        value={settings.autoHideThreshold || 20}
+                        onChange={e => setSettings(s => ({ ...s, autoHideThreshold: parseInt(e.target.value) || 20 }))}
+                        className="flex-1 accent-indigo-500"
                       />
                       <span className="text-xs font-mono font-bold text-indigo-400 w-8">{settings.autoHideThreshold || 20}</span>
                     </div>
@@ -761,9 +771,9 @@ export function SettingsModal({
                   <div className="grid grid-cols-2 gap-3">
                     {settings.spellTypes.map(type => (
                       <div key={type.id} className="flex items-center gap-3 bg-white/5 p-2 rounded border border-white/5">
-                        <input 
-                          type="color" 
-                          value={type.color} 
+                        <input
+                          type="color"
+                          value={type.color}
                           onChange={e => updateSpellTypeColor(type.id, e.target.value)}
                           className="w-8 h-8 rounded border-0 bg-transparent cursor-pointer overflow-hidden p-0"
                         />
@@ -783,20 +793,20 @@ export function SettingsModal({
                       <div className="w-1 h-3 rounded-full bg-indigo-500" />
                       {t('settings.spell_group_management')}
                     </h3>
-                    <button 
+                    <button
                       onClick={addGroup}
                       className="text-[9px] font-black bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-500/20 flex items-center gap-1"
                     >
                       <Plus size={10} /> {t('settings.add_group')}
                     </button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     {settings.spellGroups.map((group, gIdx) => (
                       <div key={gIdx} className="bg-white/5 border border-white/5 rounded-lg overflow-hidden">
                         <div className="p-3 border-b border-white/5 bg-black/20 flex items-center gap-3">
-                          <input 
-                            value={translateSpellGroup(group.name)} 
+                          <input
+                            value={translateSpellGroup(group.name)}
                             onChange={e => updateGroupName(gIdx, e.target.value)}
                             className="bg-transparent text-xs font-bold text-zinc-200 outline-none focus:text-white flex-1"
                           />
@@ -809,7 +819,7 @@ export function SettingsModal({
                               />
                             ))}
                           </div>
-                          <button 
+                          <button
                             onClick={() => deleteGroup(gIdx)}
                             className="text-zinc-600 hover:text-red-400 transition-colors ml-1"
                           >
@@ -825,8 +835,8 @@ export function SettingsModal({
                                 onClick={() => toggleTypeInGroup(gIdx, type.id)}
                                 className={`
                                   px-2 py-1 rounded text-[10px] font-bold border transition-all
-                                  ${group.types.includes(type.id) 
-                                    ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300' 
+                                  ${group.types.includes(type.id)
+                                    ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
                                     : 'bg-black/20 border-white/5 text-zinc-600 hover:text-zinc-400'}
                                 `}
                               >
@@ -846,7 +856,7 @@ export function SettingsModal({
             {(searchQuery || activeCategory === 'sync') && (
               <div className="space-y-4">
                 <h3 className="text-[11px] font-black text-zinc-300 uppercase">{t('settings.conflict_strategy')}</h3>
-{['ask', 'override_game', 'new_workflow'].map(id => (
+                {['ask', 'override_game', 'new_workflow'].map(id => (
                   <button
                     key={id}
                     onClick={() => setSettings(s => ({ ...s, conflictStrategy: id as any }))}
@@ -921,7 +931,7 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
-                
+
                 <div className="space-y-4 pt-4 border-t border-white/5">
                   <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">
                     <Package size={14} /> {t('settings.mod_environments')}
@@ -932,11 +942,11 @@ export function SettingsModal({
                       const modList = (bundle.all_mods && bundle.all_mods.length > 0)
                         ? bundle.all_mods
                         : (bundle.active_mods || []);
-                      
+
                       // 判断 Impactful Mods
                       // 此处简单判断：在 bundle.spells 中出现的 mod_id 或者在 appends 中的 mod_id
                       // 实际上 App.tsx 中有更精确的判断，但由于此处没有 baseDb，我们先用这个逻辑
-                      
+
                       const activeSet = new Set(bundle.active_mods || []);
                       const activeCount = activeSet.size;
                       const totalCount = modList.length;
@@ -953,7 +963,7 @@ export function SettingsModal({
 
                       const impactfulMods = modList.filter(id => modsWithSpells.has(id) || modsWithAppends.has(id));
                       const hiddenMods = modList.filter(id => !modsWithSpells.has(id) && !modsWithAppends.has(id));
-                      
+
                       const activeImpactfulCount = impactfulMods.filter(id => activeSet.has(id)).length;
                       const totalImpactfulCount = impactfulMods.length;
 
@@ -986,7 +996,7 @@ export function SettingsModal({
                                   <Edit2 size={14} />
                                 </button>
                               )}
-                              <button 
+                              <button
                                 onClick={async () => {
                                   if (confirm(t('settings.delete_mod_bundle_confirm'))) {
                                     await deleteModBundle(bundle.id);
@@ -1031,11 +1041,10 @@ export function SettingsModal({
                                         const unique = Array.from(new Set(next));
                                         updateBundleActiveMods(bundle, unique);
                                       }}
-                                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${
-                                        isActive
+                                      className={`text-[10px] px-2 py-1 rounded border transition-colors ${isActive
                                           ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
                                           : 'bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200'
-                                      }`}
+                                        }`}
                                     >
                                       {modId}
                                     </button>
@@ -1073,7 +1082,7 @@ export function SettingsModal({
       </div>
 
       {showHelp && (
-        <div 
+        <div
           className="absolute inset-0 z-[200] bg-black/90 backdrop-blur-xl flex flex-col p-8 animate-in fade-in zoom-in-95 duration-200"
           onClick={() => setShowHelp(false)}
         >
@@ -1087,7 +1096,7 @@ export function SettingsModal({
                 <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">{t('guide.subtitle')}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setShowHelp(false)}
               className="p-2 hover:bg-white/10 rounded-full text-zinc-500 transition-colors"
             >
@@ -1095,7 +1104,7 @@ export function SettingsModal({
             </button>
           </div>
 
-          <div 
+          <div
             className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-8"
             onClick={e => e.stopPropagation()}
           >

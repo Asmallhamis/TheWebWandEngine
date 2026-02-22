@@ -29,7 +29,7 @@ export const useInteraction = (params: {
   // --- Mouse Handlers ---
   const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false) => {
     const isHandMode = settings.editorDragMode === 'hand';
-    
+
     if (isRightClick || (isHandMode && !isRightClick)) {
       const wand = activeTab.wands[wandSlot];
       const sid = idx < 0 ? wand?.always_cast[(-idx) - 1] : wand?.spells[idx.toString()];
@@ -40,7 +40,7 @@ export const useInteraction = (params: {
 
     if (isRightClick || isHandMode) return;
 
-    if (idx < 0) return; 
+    if (idx < 0) return;
     setIsSelecting(true);
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
   }, [activeTab.wands, settings.editorDragMode]);
@@ -86,7 +86,7 @@ export const useInteraction = (params: {
             newAC.splice(acIdx + (isRightHalf ? 1 : 0), 0, sid);
           }
           targetWand.always_cast = newAC;
-        } else if (settings.useNoitaSwapLogic) {
+        } else if (settings.dragSpellMode === 'noita_swap') {
           const targetSid = targetWand.spells[targetIdx.toString()];
           const targetUses = targetWand.spell_uses?.[targetIdx.toString()];
 
@@ -100,7 +100,7 @@ export const useInteraction = (params: {
           targetWand.spells = nextTargetSpells;
           targetWand.spell_uses = nextTargetUses;
 
-          if (sourceIdx >= 0) {
+          if (sourceIdx >= 0 && (sourceWandSlot !== targetWandSlot || sourceIdx !== targetIdx)) {
             const sourceWandToUpdate = sourceWandSlot === targetWandSlot ? targetWand : sourceWand;
             const nextSourceSpells = { ...sourceWandToUpdate.spells };
             const nextSourceUses = { ...(sourceWandToUpdate.spell_uses || {}) };
@@ -115,12 +115,84 @@ export const useInteraction = (params: {
             }
             sourceWandToUpdate.spells = nextSourceSpells;
             sourceWandToUpdate.spell_uses = nextSourceUses;
-          } else if (targetSid) {
+          } else if (targetSid && (sourceWandSlot !== targetWandSlot || sourceIdx !== targetIdx)) {
             targetWand.always_cast = [...targetWand.always_cast, targetSid];
           }
 
           if (targetIdx > targetWand.deck_capacity) {
             targetWand.deck_capacity = targetIdx;
+          }
+        } else if (settings.dragSpellMode === '20260222') {
+          const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot &&
+            hoveredSlotRef.current?.idx === targetIdx &&
+            hoveredSlotRef.current?.isRightHalf;
+
+          const bIdx = isRightHalf ? targetIdx : targetIdx - 1;
+          const cIdx = isRightHalf ? targetIdx + 1 : targetIdx;
+
+          if (sourceWandSlot === targetWandSlot && targetIdx === sourceIdx) {
+            // Restore original position
+            const finalSpells = { ...targetWand.spells };
+            const finalUses = { ...(targetWand.spell_uses || {}) };
+            finalSpells[sourceIdx.toString()] = sid;
+            if (uses !== undefined) finalUses[sourceIdx.toString()] = uses;
+            targetWand.spells = finalSpells;
+            targetWand.spell_uses = finalUses;
+          } else {
+            const bSid = targetWand.spells[bIdx.toString()];
+            const cSid = targetWand.spells[cIdx.toString()];
+            const isBEmpty = !bSid;
+            const isCEmpty = !cSid;
+
+            if (!isCEmpty && !isBEmpty) {
+              // Rule 2: Both filled -> Insert at C
+              const maxIdx = Math.max(targetWand.deck_capacity, ...Object.keys(targetWand.spells).map(Number));
+              const slots: { sid: string, uses?: number }[] = [];
+              for (let i = 1; i <= maxIdx; i++) {
+                slots.push({
+                  sid: targetWand.spells[i.toString()] || "",
+                  uses: targetWand.spell_uses?.[i.toString()]
+                });
+              }
+              slots.splice(cIdx - 1, 0, { sid, uses });
+              const finalSpells: Record<string, string> = {};
+              const finalUses: Record<string, number> = {};
+              slots.forEach((item, i) => {
+                if (item.sid) {
+                  finalSpells[(i + 1).toString()] = item.sid;
+                  if (item.uses !== undefined) finalUses[(i + 1).toString()] = item.uses;
+                }
+              });
+              targetWand.spells = finalSpells;
+              targetWand.spell_uses = finalUses;
+              if (slots.length > targetWand.deck_capacity) targetWand.deck_capacity = slots.length;
+            } else if (isBEmpty && isCEmpty) {
+              // Rule 4: Both empty -> proximity (drop on targetIdx)
+              const finalSpells = { ...targetWand.spells };
+              const finalUses = { ...(targetWand.spell_uses || {}) };
+              finalSpells[targetIdx.toString()] = sid;
+              if (uses !== undefined) finalUses[targetIdx.toString()] = uses;
+              targetWand.spells = finalSpells;
+              targetWand.spell_uses = finalUses;
+              if (targetIdx > targetWand.deck_capacity) targetWand.deck_capacity = targetIdx;
+            } else if (isCEmpty) {
+              // Rule 1: C empty -> C
+              const finalSpells = { ...targetWand.spells };
+              const finalUses = { ...(targetWand.spell_uses || {}) };
+              finalSpells[cIdx.toString()] = sid;
+              if (uses !== undefined) finalUses[cIdx.toString()] = uses;
+              targetWand.spells = finalSpells;
+              targetWand.spell_uses = finalUses;
+              if (cIdx > targetWand.deck_capacity) targetWand.deck_capacity = cIdx;
+            } else {
+              // Rule 3: B empty -> B
+              const finalSpells = { ...targetWand.spells };
+              const finalUses = { ...(targetWand.spell_uses || {}) };
+              finalSpells[bIdx.toString()] = sid;
+              if (uses !== undefined) finalUses[bIdx.toString()] = uses;
+              targetWand.spells = finalSpells;
+              targetWand.spell_uses = finalUses;
+            }
           }
         } else {
           const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot &&
@@ -177,7 +249,8 @@ export const useInteraction = (params: {
       setDragSource(null);
     }
     setIsSelecting(false);
-  }, [dragSource, activeTab.isRealtime, settings.useNoitaSwapLogic, performAction, syncWand, t]);
+  }, [dragSource, activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t]);
+
 
   const handleSlotMouseEnter = useCallback((wandSlot: string, idx: number) => {
     if (isSelecting && selection && selection.wandSlot === wandSlot) {
