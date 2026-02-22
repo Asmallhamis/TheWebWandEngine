@@ -45,7 +45,7 @@ export const useSettings = () => {
       pureSpellsExport: false,
       showDragModeToggle: true,
       editorDragMode: 'cursor',
-      dragSpellMode: 'legacy',
+      dragSpellMode: '20260222',
       spellTypes: DEFAULT_SPELL_TYPES,
       spellGroups: DEFAULT_SPELL_GROUPS,
       warehouseFolderHeight: 200,
@@ -59,7 +59,7 @@ export const useSettings = () => {
           ...defaults,
           ...parsed,
           defaultWandStats: parsed.defaultWandStats || {},
-          dragSpellMode: parsed.dragSpellMode || (parsed.useNoitaSwapLogic ? 'noita_swap' : 'legacy')
+          dragSpellMode: parsed.dragSpellMode || (parsed.useNoitaSwapLogic ? 'noita_swap' : '20260222')
         };
       } catch (e) {
         console.error("Failed to load settings from localStorage:", e);
