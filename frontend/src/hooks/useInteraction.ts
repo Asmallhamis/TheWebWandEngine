@@ -141,7 +141,7 @@ export const useInteraction = (params: {
           } else {
             const bSid = targetWand.spells[bIdx.toString()];
             const cSid = targetWand.spells[cIdx.toString()];
-            const isBEmpty = !bSid;
+            const isBEmpty = bIdx >= 1 ? !bSid : false; // Index 0 or less is the wall, not empty
             const isCEmpty = !cSid;
 
             if (!isCEmpty && !isBEmpty) {
