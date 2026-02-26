@@ -37,6 +37,7 @@ local option_list = {
 	fe = "fuzz_end",
 	se = "seed",
 	sr = "stop_on_recharge",
+	pk = "perks",
 }
 
 -- we duplicate the type to have an inexact variant
@@ -63,6 +64,7 @@ local defaults = {
 	always_casts = {},
 	mods = {},
 	spells = {},
+	perks = {},
 	noita_path = "/home/wand_crafter/.local/share/Steam/steamapps/common/Noita/",
 	data_path = "/home/wand_crafter/Documents/code/noitadata/",
 	colour_scheme = {
@@ -288,6 +290,7 @@ local help_order = {
 	"spread_degrees",
 	"number_of_casts",
 	"always_casts",
+	"perks",
 	"mods",
 	"spells",
 	"data_path",
@@ -326,6 +329,7 @@ local help_defs = {
 	spread_degrees = "the wands spread degrees",
 	number_of_casts = "the number of casts to calculate",
 	always_casts = "the list of always casts",
+	perks = "the list of active perks (extra modifiers), e.g. lower_spread low_recoil",
 	mods = "the list of mods to load",
 	spells = "the list of spells",
 	data_path = "the path to /Nolla_Games_Noita/ which contains /data/",
@@ -425,6 +429,7 @@ local complex_option_fns = {
 	spread_degrees = numeric("spread_degrees"),
 	number_of_casts = integer("number_of_casts"),
 	always_casts = spell_parse,
+	perks = identity,
 	mods = identity,
 	noita_path = path("noita_path"),
 	data_path = path("data_path"),
