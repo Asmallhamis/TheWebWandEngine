@@ -12,22 +12,22 @@ import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib
 
 // 天赋图标路径映射 (全部使用 public/perk_icons/ 下的静态资源)
 const PERK_ICON_MAP: Record<string, string> = {
-  critical_hit_boost: '/perk_icons/Effect_Bloody.png',
-  critical_plus_small: '/perk_icons/critical_plus_small.webp',
-  lower_spread: '/perk_icons/lower_spread.png',
-  low_recoil: '/perk_icons/low_recoil.png',
-  laser_aim: '/perk_icons/laser_aim.png',
-  powerful_shot: '/perk_icons/powerful_shot.png',
-  projectile_homing_shooter: '/perk_icons/projectile_homing_shooter.png',
-  damage_plus_small: '/perk_icons/damage_plus_small.png',
-  extra_knockback: '/perk_icons/extra_knockback.png',
-  bounce: '/perk_icons/bounce.png',
-  food_clock: '/perk_icons/food_clock.png',
-  projectile_homing_shooter_wizard: '/perk_icons/projectile_homing_shooter_wizard.png',
-  projectile_alcohol_trail: '/perk_icons/projectile_alcohol_trail.webp',
-  duplicate_projectile: '/perk_icons/duplicate_projectile.png',
-  fast_projectiles: '/perk_icons/fast_projectiles.png',
-  slow_firing: '/perk_icons/slow_firing.png',
+  critical_hit_boost: 'perk_icons/Effect_Bloody.png',
+  critical_plus_small: 'perk_icons/critical_plus_small.webp',
+  lower_spread: 'perk_icons/lower_spread.png',
+  low_recoil: 'perk_icons/low_recoil.png',
+  laser_aim: 'perk_icons/laser_aim.png',
+  powerful_shot: 'perk_icons/powerful_shot.png',
+  projectile_homing_shooter: 'perk_icons/projectile_homing_shooter.png',
+  damage_plus_small: 'perk_icons/damage_plus_small.png',
+  extra_knockback: 'perk_icons/extra_knockback.png',
+  bounce: 'perk_icons/bounce.png',
+  food_clock: 'perk_icons/food_clock.png',
+  projectile_homing_shooter_wizard: 'perk_icons/projectile_homing_shooter_wizard.png',
+  projectile_alcohol_trail: 'perk_icons/projectile_alcohol_trail.webp',
+  duplicate_projectile: 'perk_icons/duplicate_projectile.png',
+  fast_projectiles: 'perk_icons/fast_projectiles.png',
+  slow_firing: 'perk_icons/slow_firing.png',
 };
 
 const getModIdFromPath = (path: string) => {
