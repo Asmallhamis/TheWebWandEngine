@@ -1,122 +1,78 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import {
-  Wand2,
-  Zap,
-  Settings,
-  Play,
-  Share2,
-  Download,
-  Upload,
-  Plus,
-  X,
-  Monitor,
-  MonitorOff,
-  ChevronRight,
-  Layers,
-  Maximize2,
-  Minimize2,
-  Cpu,
-  Trash2,
-  Activity,
-  Timer,
-  Battery,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Star,
-  Info,
-  RefreshCw,
-  Lock,
-  Unlock,
-  History,
-  Copy,
-  Scissors,
-  Clipboard,
-  Library
-} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // --- Internal ---
-import { checkPinyinFuzzy } from './lib/searchUtils';
-import { SpellInfo, WandData, HistoryItem, Tab, AppSettings, EvalResponse, WarehouseWand, SmartTag, WarehouseFolder, AppNotification } from './types';
+import { SpellInfo, WandData, Tab } from './types';
 import { getActiveModBundle, saveModBundle } from './lib/modStorage';
-import { DEFAULT_WAND, DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from './constants';
+import { DEFAULT_WAND } from './constants';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
-import { WandCard } from './components/WandCard';
 import { WandWorkspace } from './components/WandWorkspace';
-import { HistoryPanel } from './components/HistoryPanel';
-import { SettingsModal } from './components/SettingsModal';
-import { ConflictModal } from './components/ConflictModal';
-import { SpellPicker } from './components/SpellPicker';
-import { CompactStat } from './components/Common';
-import WandEvaluator from './components/WandEvaluator';
-import { WandWarehouse } from './components/WandWarehouse';
-import { FloatingDragModeToggle } from './components/FloatingDragModeToggle';
 import { OverlayManager } from './components/OverlayManager';
 import { useSettings } from './hooks/useSettings';
 import { useGlobalEvents } from './hooks/useGlobalEvents';
 import { useSpellDb } from './hooks/useSpellDb';
-import { useWandImport, readMetadataFromPng } from './hooks/useWandImport';
+import { useWandImport } from './hooks/useWandImport';
 import { useGameSync } from './hooks/useGameSync';
 import { useTabs } from './hooks/useTabs';
 import { useInteraction } from './hooks/useInteraction';
+import { useUIStore } from './store/useUIStore';
 import { useWandEvaluator } from './hooks/useWandEvaluator';
 import { useSpellSearch } from './hooks/useSpellSearch';
 import { useWarehouse } from './hooks/useWarehouse';
 import { useWandActions } from './hooks/useWandActions';
 import { useHistory } from './hooks/useHistory';
-import { evaluateWand, getIconUrl } from './lib/evaluatorAdapter';
-import { useTranslation } from 'react-i18next';
-
-
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   // --- Context Menus ---
   const { settings, setSettings } = useSettings();
   const [tabMenu, setTabMenu] = useState<{ x: number, y: number, tabId: string } | null>(null);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [notification, setNotification] = useState<AppNotification | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isModManagerOpen, setIsModManagerOpen] = useState(false);
-  const [settingsCategoryOverride, setSettingsCategoryOverride] = useState<'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data' | null>(null);
-  const [settingsExpandedBundleId, setSettingsExpandedBundleId] = useState<string | null>(null);
-  const [modBundleInfo, setModBundleInfo] = useState<{ active: number; total: number; bundleId: string | null }>({
-    active: 0,
-    total: 0,
-    bundleId: null
-  });
+
+  const {
+    setIsSettingsOpen,
+    setIsHistoryOpen,
+    setIsWarehouseOpen,
+    setIsModManagerOpen,
+    notification, showNotification,
+    settingsCategoryOverride, setSettingsCategoryOverride,
+    settingsExpandedBundleId, setSettingsExpandedBundleId,
+    modBundleInfo, setModBundleInfo
+  } = useUIStore();
+
   const lastLocalUpdateRef = useRef<number>(0);
 
-  const { 
-    tabs, setTabs, activeTabId, setActiveTabId, activeTab, 
-    addNewTab, deleteTab, exportAllData, importAllData, 
-    importWorkflow, exportWorkflow 
+  const {
+    tabs, setTabs, activeTabId, setActiveTabId, activeTab,
+    addNewTab, deleteTab, exportAllData, importAllData,
+    importWorkflow, exportWorkflow
   } = useTabs(settings, setSettings);
 
   const { performAction, undo, redo, jumpToPast, jumpToFuture } = useHistory(tabs, setTabs, activeTabId);
 
-  const { 
-    isWarehouseOpen, setIsWarehouseOpen, warehouseWands, setWarehouseWands, 
+  const {
+    warehouseWands, setWarehouseWands,
     warehouseFolders, setWarehouseFolders, smartTags, setSmartTags, saveToWarehouse,
     pullBones, pushBones
-  } = useWarehouse(setNotification);
+  } = useWarehouse((n) => showNotification(n?.msg || '', n?.type));
 
   // --- Conflict Resolution ---
   const [conflict, setConflict] = useState<{
     tabId: string;
     gameWands: Record<string, WandData>;
   } | null>(null);
+
   const { isConnected, syncWand, pullData, pushAllToGame, toggleSync, resolveConflict } = useGameSync({
-    activeTab, activeTabId, settings, setTabs, performAction, setNotification, setConflict, t, lastLocalUpdateRef
+    activeTab, activeTabId, settings, setTabs, performAction, setNotification: (n) => showNotification(n?.msg || '', n?.type), setConflict, t, lastLocalUpdateRef
   });
+
   const { spellDb, spellNameToId, syncGameSpells: syncSpells, fetchSpellDb } = useSpellDb(isConnected);
-  const syncGameSpells = () => syncSpells(setNotification);
+  const syncGameSpells = () => syncSpells((n) => showNotification(n?.msg || '', n?.type));
 
   const exportModBundle = async () => {
     if (!isConnected) return;
-    setNotification({ msg: t('app.notification.exporting_mod_bundle'), type: 'info' });
+    showNotification(t('app.notification.exporting_mod_bundle'), 'info');
     try {
       const res = await fetch('/api/export-mod-bundle');
       const data = await res.json();
@@ -136,21 +92,19 @@ function App() {
           vfs_meta: data.vfs_meta || {}
         };
 
-        // Save to IndexedDB
         await saveModBundle(bundle);
         await refreshModBundleInfo();
 
-        // Also download as file for sharing
         const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `${bundleName}.twwe-env.json`;
         a.click();
-        setNotification({ msg: t('app.notification.export_mod_bundle_success'), type: 'success' });
+        showNotification(t('app.notification.export_mod_bundle_success'), 'success');
       }
     } catch (e) {
-      setNotification({ msg: t('app.notification.export_mod_bundle_failed'), type: 'error' });
+      showNotification(t('app.notification.export_mod_bundle_failed'), 'error');
     }
   };
 
@@ -162,7 +116,6 @@ function App() {
         return;
       }
 
-      // 获取基础法术列表以判断哪些 Mod 是 "Impactful" 的
       let baseSpells: Record<string, any> = {};
       try {
         const res = await fetch('./static_data/spells.json');
@@ -194,48 +147,39 @@ function App() {
         return (s && (s.added > 0 || s.modified > 0)) || modsWithAppends.has(modId);
       };
 
-      const allMods = (bundle.all_mods && bundle.all_mods.length > 0)
-        ? bundle.all_mods
-        : bundle.active_mods;
-      
+      const allMods = (bundle.all_mods && bundle.all_mods.length > 0) ? bundle.all_mods : bundle.active_mods;
       const impactfulMods = allMods.filter(isImpactful);
       const activeSet = new Set(bundle.active_mods);
       const activeImpactfulCount = impactfulMods.filter(id => activeSet.has(id)).length;
 
-      setModBundleInfo({ 
-        active: activeImpactfulCount, 
-        total: impactfulMods.length, 
-        bundleId: bundle.id || null 
+      setModBundleInfo({
+        active: activeImpactfulCount,
+        total: impactfulMods.length,
+        bundleId: bundle.id || null
       });
     } catch (e) {
       setModBundleInfo({ active: 0, total: 0, bundleId: null });
     }
-  }, []);
+  }, [setModBundleInfo]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     refreshModBundleInfo();
   }, [refreshModBundleInfo]);
 
-  React.useEffect(() => {
-    if (isSettingsOpen) return;
-    setSettingsCategoryOverride(null);
-    setSettingsExpandedBundleId(null);
-  }, [isSettingsOpen]);
-
-
+  useEffect(() => {
+    if (!useUIStore.getState().isSettingsOpen) {
+      setSettingsCategoryOverride(null);
+      setSettingsExpandedBundleId(null);
+    }
+  }, [setSettingsCategoryOverride, setSettingsExpandedBundleId]);
 
   // Picker State
-  const [pickerConfig, setPickerConfig] = useState<{
-    wandSlot: string;
-    spellIdx: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [pickerConfig, setPickerConfig] = useState<{ wandSlot: string; spellIdx: string; x: number; y: number; } | null>(null);
 
-  const { 
-    pickerSearch, setPickerSearch, 
+  const {
+    pickerSearch, setPickerSearch,
     pickerExpandedGroups, setPickerExpandedGroups,
-    spellStats, searchResults 
+    spellStats, searchResults
   } = useSpellSearch(tabs, spellDb, settings);
 
   const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected);
@@ -264,33 +208,65 @@ function App() {
   const [clipboard, setClipboard] = useState<{ type: 'wand', data: WandData } | null>(null);
 
   const { addWand, deleteWand, toggleExpand, copyWand, copyLegacyWand, cutWand, pasteWand, openPicker } = useWandActions({
-    tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard, performAction, syncWand, setTabs, setNotification, lastLocalUpdateRef, setSelection, setPickerConfig, setPickerSearch, setPickerExpandedGroups, updateWand
+    tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard, performAction, syncWand, setTabs, setNotification: (n) => showNotification(n?.msg || '', n?.type), lastLocalUpdateRef, setSelection, setPickerConfig, setPickerSearch, setPickerExpandedGroups, updateWand
   });
 
   const insertEmptySlot = () => _insertEmptySlot(updateWand);
 
   const { importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng } = useWandImport({
-    activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification, hoveredSlotRef, selectionRef
+    activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification: (n) => showNotification(n?.msg || '', n?.type), hoveredSlotRef, selectionRef
   });
 
   useGlobalEvents({
     activeTab, activeTabId, tabs, settings, spellDb, dragSource, pickerConfig, notification,
-    setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification, setTabMenu,
+    setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification: (n) => showNotification(n?.msg || '', n?.type), setTabMenu,
     selectionRef, hoveredSlotRef,
     importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng,
     insertEmptySlot, updateWand
   });
 
-
-
   const pickSpell = (spellId: string | null, isKeyboard: boolean = false) => {
     if (!pickerConfig) return;
     const { wandSlot, spellIdx } = pickerConfig;
 
+    // 处理智能标签编辑器的法术选择
+    if (wandSlot.startsWith('smart-tag-req-') || wandSlot.startsWith('smart-tag-exc-')) {
+      setPickerConfig(null);
+      // WandEditor 的 updateWand 已经把 spells 转换回 SmartTag 格式了,
+      // 但 pickSpell 需要在这里手动 apply, 因为 Picker 是全局的
+      const isExcluded = wandSlot.startsWith('smart-tag-exc-');
+      setSmartTags(prev => {
+        // 这里不需要做什么，因为 WandEditor 的 updateWand handler 会处理
+        // 但我们其实需要直接更新 editingSmartTag 的临时状态
+        return prev;
+      });
+      // 我们需要通过 useWarehouse 提供的 setter 更新，但 editingSmartTag 是 WandWarehouse 内部状态。
+      // 解决办法：让 WandWarehouse 的 updateWand handler 处理通过 openPicker 触发的更新。
+      // 因为 WandEditor 内部的 click handler 最终调用 openPicker，然后 pickSpell 被调用。
+      // 不过 pickSpell 这里并不知道 editingSmartTag。
+      // 最佳方案：pickSpell 不走 performAction，而是手动构造 spells dict 传给一个自定义 callback。
+
+      // 但更简洁的方案是，让 WandWarehouse 的 updateWand 在调用 openPicker 后被 picker 正确回调，
+      // 因此我们只需让 pickSpell 当作正常的 slot 来处理 - 但需要将结果传给仓库的临时状态。
+      // 由于目前逻辑较复杂，我使用事件广播机制来解耦。
+
+      // 简化方案：直接通过 CustomEvent 将法术选择传递给 WandWarehouse
+      window.dispatchEvent(new CustomEvent('twwe-smart-tag-pick', {
+        detail: { wandSlot, spellIdx, spellId }
+      }));
+
+      if (isKeyboard && spellId) {
+        const currentIdx = parseInt(spellIdx);
+        setSelection({ wandSlot, indices: [currentIdx + 1], startIdx: currentIdx + 1 });
+      } else if (!isKeyboard) {
+        setSelection(null);
+      }
+      return;
+    }
+
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
       const wand = prevWands[wandSlot] || { ...DEFAULT_WAND };
-
       if (spellIdx.startsWith('ac-')) {
         const acIdx = parseInt(spellIdx.split('-')[1]);
         const newAC = [...(wand.always_cast || [])];
@@ -307,17 +283,13 @@ function App() {
         const newSpells = { ...wand.spells };
         if (spellId) newSpells[spellIdx] = spellId;
         else delete newSpells[spellIdx];
-
         const newWand = { ...wand, spells: newSpells };
         if (activeTab.isRealtime) syncWand(wandSlot, newWand);
         return { ...prevWands, [wandSlot]: newWand };
       }
     }, spellId ? t('app.notification.change_spell') : t('app.notification.clear_slot', { idx: spellIdx }), spellId ? [spellId] : []);
-    
     setPickerConfig(null);
-
     if (isKeyboard && spellId && !spellIdx.startsWith('ac-')) {
-      // 键盘选词成功：自动跳到下一格
       const currentIdx = parseInt(spellIdx);
       const wand = activeTab.wands[wandSlot];
       if (wand && currentIdx < wand.deck_capacity) {
@@ -326,14 +298,12 @@ function App() {
         setSelection(null);
       }
     } else if (!isKeyboard) {
-      // 鼠标点击或取消：直接清空焦点，避免干扰后续全局按键
       setSelection(null);
     }
   };
+
   return (
-    <div
-      className="flex flex-col h-screen bg-zinc-950 overflow-hidden text-zinc-100 selection:bg-purple-500/30"
-    >
+    <div className="flex flex-col h-screen bg-zinc-950 overflow-hidden text-zinc-100 selection:bg-purple-500/30">
       <Header
         tabs={tabs}
         activeTabId={activeTabId}
@@ -357,9 +327,7 @@ function App() {
         syncGameSpells={syncGameSpells}
         exportModBundle={exportModBundle}
         modBundleInfo={modBundleInfo}
-        onOpenModManager={() => {
-          setIsModManagerOpen(true);
-        }}
+        onOpenModManager={() => setIsModManagerOpen(true)}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
@@ -404,14 +372,8 @@ function App() {
           pickerExpandedGroups={pickerExpandedGroups}
           setPickerExpandedGroups={setPickerExpandedGroups}
           isConnected={isConnected}
-          isSettingsOpen={isSettingsOpen}
-          setIsSettingsOpen={setIsSettingsOpen}
-          settingsCategoryOverride={settingsCategoryOverride}
-          settingsExpandedBundleId={settingsExpandedBundleId}
-          onModBundleChange={refreshModBundleInfo}
           onReloadSpells={fetchSpellDb}
-          isModManagerOpen={isModManagerOpen}
-          setIsModManagerOpen={setIsModManagerOpen}
+          onModBundleChange={refreshModBundleInfo}
           onOpenSettings={() => setIsSettingsOpen(true)}
           importAllData={importAllData}
           exportAllData={exportAllData}
@@ -424,32 +386,34 @@ function App() {
           conflict={conflict}
           activeTab={activeTab}
           resolveConflict={resolveConflict}
-          isHistoryOpen={isHistoryOpen}
-          setIsHistoryOpen={setIsHistoryOpen}
           spellDb={spellDb}
           jumpToPast={jumpToPast}
           jumpToFuture={jumpToFuture}
           undo={undo}
           redo={redo}
-          isWarehouseOpen={isWarehouseOpen}
-          setIsWarehouseOpen={setIsWarehouseOpen}
+          performAction={performAction}
           warehouseWands={warehouseWands}
           setWarehouseWands={setWarehouseWands}
           warehouseFolders={warehouseFolders}
           setWarehouseFolders={setWarehouseFolders}
           smartTags={smartTags}
           setSmartTags={setSmartTags}
-          saveToWarehouse={saveToWarehouse}
-          performAction={performAction}
+          pullBones={pullBones}
+          pushBones={pushBones}
           activeTabId={activeTabId}
           syncWand={syncWand}
-          setNotification={setNotification}
           dragSource={dragSource}
           mousePos={mousePos}
           isDraggingFile={isDraggingFile}
           setSelection={setSelection}
-          pullBones={pullBones}
-          pushBones={pushBones}
+          selection={selection}
+          hoveredSlot={hoveredSlot}
+          handleSlotMouseDown={handleSlotMouseDown}
+          handleSlotMouseUp={handleSlotMouseUp}
+          handleSlotMouseEnter={handleSlotMouseEnter}
+          handleSlotMouseMove={handleSlotMouseMove}
+          handleSlotMouseLeave={handleSlotMouseLeave}
+          openPicker={openPicker}
         />
       </main>
 

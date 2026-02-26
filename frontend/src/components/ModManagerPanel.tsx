@@ -136,10 +136,10 @@ export function ModManagerPanel({
       if (!modId) return acc;
       if (!acc[modId]) acc[modId] = [];
       // 预处理：确保 icon 优先使用 base64，提高在环境包模式下的显示成功率
-      const spellWithIcon = { 
-        ...(info as SpellInfo), 
+      const spellWithIcon = {
+        ...(info as SpellInfo),
         id,
-        icon: (info as any).icon_base64 || (info as SpellInfo).icon 
+        icon: (info as any).icon_base64 || (info as SpellInfo).icon
       };
       acc[modId].push(spellWithIcon);
       return acc;
@@ -177,7 +177,7 @@ export function ModManagerPanel({
     if (!bundle) return [] as (ModEntry & { _hasSearchMatch: boolean })[];
     const q = query.trim().toLowerCase();
     const isEnglish = i18n.language.startsWith('en');
-    
+
     const results = modEntries.visible
       .map(entry => {
         const modMatch = !q || entry.id.toLowerCase().includes(q);
@@ -187,10 +187,10 @@ export function ModManagerPanel({
         const modifiedMatches = q && !modMatch
           ? entry.modified.filter(spell => matchSpell(spell, q, isEnglish))
           : entry.modified;
-        
+
         const hasMatch = modMatch || addedMatches.length > 0 || modifiedMatches.length > 0;
         if (!hasMatch) return null;
-        
+
         return {
           ...entry,
           added: addedMatches,
@@ -232,16 +232,16 @@ export function ModManagerPanel({
         </div>
         <div className="flex flex-wrap gap-1">
           {spells.map(spell => (
-            <div 
-              key={spell.id} 
+            <div
+              key={spell.id}
               className="relative group/spell"
               title={`${spell.name || spell.id}\nID: ${spell.id}${spell.en_name ? `\nEN: ${spell.en_name}` : ''}`}
             >
               <div className={`w-8 h-8 rounded border border-white/5 bg-black/40 flex items-center justify-center p-0.5 group-hover/spell:border-white/20 transition-colors`}>
-                <img 
-                  src={getIconUrl(spell.icon, isConnected)} 
-                  className="w-full h-full image-pixelated" 
-                  alt={spell.name} 
+                <img
+                  src={getIconUrl(spell.icon, isConnected)}
+                  className="w-full h-full image-pixelated"
+                  alt={spell.name}
                 />
               </div>
             </div>
@@ -266,13 +266,13 @@ export function ModManagerPanel({
             <div>
               <h2 className="text-lg font-black tracking-tight text-zinc-100 uppercase">{t('mod_manager.title')}</h2>
               <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase">
-                {visibleMods.length 
-                  ? t('mod_manager.impactful_enabled', { active: activeImpactfulCount, total: visibleMods.length }) 
+                {visibleMods.length
+                  ? t('mod_manager.impactful_enabled', { active: activeImpactfulCount, total: visibleMods.length })
                   : t('mod_manager.no_impactful_mods')}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="flex p-1 bg-white/5 rounded-lg border border-white/5">
               <button
@@ -308,7 +308,7 @@ export function ModManagerPanel({
               className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-amber-500/50 focus:bg-white/[0.08] transition-all placeholder:text-zinc-600 font-medium"
             />
             {query && (
-              <button 
+              <button
                 onClick={() => setQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
               >
@@ -316,7 +316,7 @@ export function ModManagerPanel({
               </button>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => enableAll(visibleMods.map(m => m.id))}
@@ -341,7 +341,7 @@ export function ModManagerPanel({
               <p className="text-sm font-medium tracking-wide">{t('mod_manager.no_bundle')}</p>
             </div>
           )}
-          
+
           {bundle && filteredEntries.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-zinc-600 gap-4">
               <Filter size={48} strokeWidth={1} />
@@ -352,18 +352,17 @@ export function ModManagerPanel({
           {bundle && filteredEntries.map(entry => {
             const isActive = activeSet.has(entry.id);
             const isExpanded = expandedMods.has(entry.id) || viewMode === 'detailed';
-            
+
             return (
-              <div 
-                key={entry.id} 
-                className={`group border transition-all duration-300 rounded-2xl overflow-hidden ${
-                  isActive 
-                    ? 'bg-amber-500/[0.03] border-amber-500/20 shadow-[0_4px_20px_rgba(245,158,11,0.05)]' 
-                    : 'bg-white/[0.02] border-white/5 hover:border-white/10'
-                }`}
+              <div
+                key={entry.id}
+                className={`group border transition-all duration-300 rounded-2xl overflow-hidden ${isActive
+                  ? 'bg-amber-500/[0.03] border-amber-500/20 shadow-[0_4px_20px_rgba(245,158,11,0.05)]'
+                  : 'bg-white/[0.02] border-white/5 hover:border-white/10'
+                  }`}
               >
                 {/* Mod Header */}
-                <div 
+                <div
                   className={`px-5 py-4 flex items-center gap-4 cursor-pointer transition-colors ${isExpanded ? 'bg-white/[0.02]' : 'hover:bg-white/[0.04]'}`}
                   onClick={() => {
                     setExpandedMods(prev => {
@@ -374,13 +373,12 @@ export function ModManagerPanel({
                     });
                   }}
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shrink-0 transition-all ${
-                    isActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/5'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border shrink-0 transition-all ${isActive ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/5'
+                    }`}>
                     {/* Placeholder for Mod Icon */}
                     <Box size={24} className={isActive ? 'text-amber-400' : 'text-zinc-600'} />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className={`font-black text-sm truncate uppercase tracking-tight ${isActive ? 'text-amber-100' : 'text-zinc-300'}`}>
@@ -412,11 +410,11 @@ export function ModManagerPanel({
                   {!isExpanded && viewMode === 'compact' && (
                     <div className="hidden md:flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity pr-4">
                       {[...entry.added, ...entry.modified].slice(0, 8).map((s, i) => (
-                        <img 
+                        <img
                           key={i}
-                          src={getIconUrl(s.icon, isConnected)} 
-                          className="w-5 h-5 image-pixelated grayscale" 
-                          alt="" 
+                          src={getIconUrl(s.icon, isConnected)}
+                          className="w-5 h-5 image-pixelated grayscale"
+                          alt=""
                         />
                       ))}
                       {(entry.added.length + entry.modified.length) > 8 && (
@@ -431,11 +429,10 @@ export function ModManagerPanel({
                         e.stopPropagation();
                         toggleMod(entry.id);
                       }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        isActive 
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
-                          : 'bg-white/5 text-zinc-500 border border-white/10 hover:border-white/20 hover:text-zinc-300'
-                      }`}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isActive
+                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        : 'bg-white/5 text-zinc-500 border border-white/10 hover:border-white/20 hover:text-zinc-300'
+                        }`}
                     >
                       {isActive ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                       {isActive ? t('mod_manager.status_enabled') : t('mod_manager.status_disabled')}
@@ -453,7 +450,7 @@ export function ModManagerPanel({
                       <SpellGrid spells={entry.added} type="added" />
                       <SpellGrid spells={entry.modified} type="modified" />
                     </div>
-                    
+
                     {entry.added.length === 0 && entry.modified.length === 0 && entry.hasAppend && (
                       <div className="py-4 text-center">
                         <p className="text-[10px] text-zinc-600 italic">{t('mod_manager.only_appends')}</p>
@@ -464,7 +461,7 @@ export function ModManagerPanel({
               </div>
             );
           })}
-          
+
           {modEntries.hidden.length > 0 && (
             <div className="pt-4 pb-8 text-center">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5">
@@ -472,7 +469,7 @@ export function ModManagerPanel({
                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                   {t('mod_manager.hidden_count', { count: modEntries.hidden.length })}
                 </span>
-                <button 
+                <button
                   onClick={onOpenSettings}
                   className="text-amber-500/80 hover:text-amber-400 ml-1 underline decoration-amber-500/20 underline-offset-4"
                 >
@@ -482,25 +479,25 @@ export function ModManagerPanel({
             </div>
           )}
         </div>
-        
+
         {/* Footer info */}
         <div className="px-6 py-3 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
           <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">
             {t('mod_manager.tip_reload')}
           </p>
           <div className="flex gap-4">
-             <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.added_label')}</span>
-             </div>
-             <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.modified_label')}</span>
-             </div>
-             <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.logic_label')}</span>
-             </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.added_label')}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.modified_label')}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{t('mod_manager.logic_label')}</span>
+            </div>
           </div>
         </div>
       </div>

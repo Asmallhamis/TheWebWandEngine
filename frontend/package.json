@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "clsx": "^2.0.0",
@@ -18,9 +19,11 @@
     "react-dom": "^18.2.0",
     "react-i18next": "^16.5.3",
     "tailwind-merge": "^1.14.0",
-    "wasmoon": "^1.16.0"
+    "wasmoon": "^1.16.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",

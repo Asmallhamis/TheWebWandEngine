@@ -793,6 +793,12 @@ def evaluate_wand():
         cmd.append("-ac")
         cmd.extend([str(ac) for ac in always_casts if ac])
 
+    # Perks (Extra Modifiers) 支持
+    perks = data.get("perks", [])
+    if perks:
+        cmd.append("-pk")
+        cmd.extend([str(pk) for pk in perks if pk])
+
     # RNG 种子支持
     evaluation_seed = data.get("evaluation_seed")
     if evaluation_seed is not None and evaluation_seed != "":

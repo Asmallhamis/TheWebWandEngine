@@ -6,12 +6,12 @@ let VFS_CACHE: Record<string, string> | null = null;
 
 async function loadBundle() {
     if (VFS_CACHE) return;
-    
+
     try {
         const isProd = import.meta.url.includes('/assets/');
         const bundlePath = isProd ? '../static_data/lua_bundle.json' : '../../static_data/lua_bundle.json';
         const url = new URL(bundlePath, import.meta.url).href;
-        
+
         const res = await fetch(url);
         if (res.ok) {
             VFS_CACHE = await res.json();
@@ -131,12 +131,12 @@ table.insert(searchers, 1, vfs_searcher)
 async function getNewLuaEngine(customVFS?: Record<string, string>) {
     await loadBundle();
     const engine = await factory.createEngine();
-    
+
     engine.global.set('_JS_PRINT', (msg: string) => console.log('[Lua]', msg));
     engine.global.set('_JS_GET_FILE_CONTENT', (path: string) => {
         // Normalize path
         const cleanPath = path.replace(/^\.\//, '').replace(/\\/g, '/');
-        
+
         // 0. Try Custom/Dynamic VFS (for mocks)
         if (customVFS && customVFS[cleanPath]) {
             return customVFS[cleanPath];
@@ -146,7 +146,7 @@ async function getNewLuaEngine(customVFS?: Record<string, string>) {
         if (VFS_CACHE && VFS_CACHE[cleanPath]) {
             return VFS_CACHE[cleanPath];
         }
-        
+
         // 2. Static Mode Safety: If it's not in cache/custom, it doesn't exist.
         // DO NOT fall back to Sync XHR on GitHub Pages as it causes massive lag.
         return undefined;
@@ -165,7 +165,7 @@ async function getNewLuaEngine(customVFS?: Record<string, string>) {
 
 self.onmessage = async (e: MessageEvent) => {
     const { type, data, options, id, mod_appends, active_mods, vfs } = e.data;
-    
+
     if (type === 'EVALUATE') {
         try {
             // 构造环境模拟逻辑 (和后端 server.py 保持一致)
@@ -376,7 +376,7 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             lua = await getNewLuaEngine(customVFS);
-            
+
             const formatLuaArg = (val: any) => {
                 try {
                     const fVal = parseFloat(val);
@@ -424,6 +424,15 @@ self.onmessage = async (e: MessageEvent) => {
                 luaArgs.push('-f');
             }
 
+            // Perks (Extra Modifiers) support
+            if (options.perks) {
+                const perkList = Object.entries(options.perks as Record<string, number>)
+                    .flatMap(([id, count]) => Array.from({ length: count as number }, () => id));
+                if (perkList.length > 0) {
+                    luaArgs.push('-pk', ...perkList);
+                }
+            }
+
             if (data.always_cast && data.always_cast.length > 0) {
                 const acs = data.always_cast.filter((ac: string) => !!ac);
                 if (acs.length > 0) luaArgs.push('-ac', ...acs);
@@ -453,7 +462,7 @@ self.onmessage = async (e: MessageEvent) => {
                     count = count + 1
                 end
             `);
-            
+
             if (luaArgs.length > 0) {
                 const checkLen = await lua.doString('return #arg');
                 if (checkLen === 0) {
@@ -484,14 +493,14 @@ self.onmessage = async (e: MessageEvent) => {
             `);
 
             await lua.doString('dofile("main.lua")');
-            
+
             if (!lastOutput) {
                 throw new Error('Lua 执行完成但没有输出有效的 JSON 结果');
             }
-            
+
             const result = JSON.parse(lastOutput);
             self.postMessage({ type: 'RESULT', data: result, id });
-            
+
         } catch (err: any) {
             console.error('[Worker Error]', err);
             self.postMessage({ type: 'ERROR', error: err.message, id });

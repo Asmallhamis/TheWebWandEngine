@@ -44,9 +44,9 @@ export function getIconUrl(iconPath: string, isConnected: boolean): string {
     return iconPath;
   }
   if (!iconPath) return '';
-  
+
   const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
-  
+
   // 如果是静态模式（GitHub Pages），始终使用相对路径
   if (isStaticMode) {
     return `./static_data/icons/${iconPath}`;
@@ -54,10 +54,10 @@ export function getIconUrl(iconPath: string, isConnected: boolean): string {
   // 否则（EXE/Dev模式），走后端 API
   // 确保路径不带多余的斜杠，并处理可能的绝对路径问题
   const cleanPath = iconPath.replace(/\\/g, '/').replace(/^\/+/, '');
-  
+
   // 如果已经包含 http，说明是完整 URL
   if (cleanPath.startsWith('http')) return cleanPath;
-  
+
   return `/api/icon/${cleanPath}`;
 }
 
@@ -70,13 +70,13 @@ export function getWandSpriteUrl(appearance: { sprite?: string; item_sprite?: st
   // 优先 PNG 路径
   let best = appearance.item_sprite || appearance.sprite;
   if (!best) return null;
-  
+
   // 静态模式下无法解析 XML sprite，尝试将 .xml 替换为 .png
   const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
   if (isStaticMode && best.endsWith('.xml')) {
     best = best.replace(/\.xml$/, '.png');
   }
-  
+
   return getIconUrl(best, isConnected);
 }
 
@@ -89,23 +89,23 @@ export function getWandSpriteUrl(appearance: { sprite?: string; item_sprite?: st
  * key: sprite_file (XML) 或 image_file (PNG) → value: wiki_file 名称
  */
 const UNIQUE_WAND_SPRITES: { sprite_file?: string; image_file: string; wiki_file: string }[] = [
-  { sprite_file: "data/items_gfx/flute.xml",                                             image_file: "data/items_gfx/flute.png",                                             wiki_file: "Huilu (Wand).png" },
-  { sprite_file: "data/items_gfx/kantele.xml",                                           image_file: "data/items_gfx/kantele.png",                                           wiki_file: "Wand kantele.png" },
-  { sprite_file: "data/items_gfx/bomb_wand.xml",                                         image_file: "data/items_gfx/bomb_wand.png",                                         wiki_file: "Wand bomb wand.png" },
-  { sprite_file: "data/items_gfx/handgun.xml",                                           image_file: "data/items_gfx/handgun.png",                                           wiki_file: "Wand handgun.png" },
-  { sprite_file: "data/items_gfx/wands/custom/scepter_01.xml",                           image_file: "data/items_gfx/wands/custom/scepter_01.png",                           wiki_file: "Wand scepter 01.png" },
-  { sprite_file: "data/entities/items/wands/experimental/experimental_wand_1_sprite.xml", image_file: "data/entities/items/wands/experimental/experimental_wand_1.png",        wiki_file: "Wand experimental wand 1.png" },
-  { sprite_file: "data/entities/items/wands/experimental/experimental_wand_2_sprite.xml", image_file: "data/entities/items/wands/experimental/experimental_wand_2.png",        wiki_file: "Wand experimental wand 2.png" },
-  { sprite_file: "data/items_gfx/wands/custom/actual_wand.xml",                          image_file: "data/items_gfx/wands/custom/actual_wand_honest.png",                   wiki_file: "Actual wand honest.png" },
-  { sprite_file: "data/items_gfx/wands/custom/good_01.xml",                              image_file: "data/items_gfx/wands/custom/good_01.png",                              wiki_file: "Wand wand good 1.png" },
-  { sprite_file: "data/items_gfx/wands/custom/good_02.xml",                              image_file: "data/items_gfx/wands/custom/good_02.png",                              wiki_file: "Wand wand good 2.png" },
-  { sprite_file: "data/items_gfx/wands/custom/good_03.xml",                              image_file: "data/items_gfx/wands/custom/good_03.png",                              wiki_file: "Wand wand good 3.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/skull_01.png",                             wiki_file: "Wand skull 01.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/wood_01.png",                              wiki_file: "Wand wood 01.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/plant_01.png",                             wiki_file: "Wand plant 01.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/plant_02.png",                             wiki_file: "Wand plant 02.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/vasta.png",                                wiki_file: "Wand vasta.png" },
-  {                                                                                       image_file: "data/items_gfx/wands/custom/vihta.png",                                wiki_file: "Wand vihta.png" },
+  { sprite_file: "data/items_gfx/flute.xml", image_file: "data/items_gfx/flute.png", wiki_file: "Huilu (Wand).png" },
+  { sprite_file: "data/items_gfx/kantele.xml", image_file: "data/items_gfx/kantele.png", wiki_file: "Wand kantele.png" },
+  { sprite_file: "data/items_gfx/bomb_wand.xml", image_file: "data/items_gfx/bomb_wand.png", wiki_file: "Wand bomb wand.png" },
+  { sprite_file: "data/items_gfx/handgun.xml", image_file: "data/items_gfx/handgun.png", wiki_file: "Wand handgun.png" },
+  { sprite_file: "data/items_gfx/wands/custom/scepter_01.xml", image_file: "data/items_gfx/wands/custom/scepter_01.png", wiki_file: "Wand scepter 01.png" },
+  { sprite_file: "data/entities/items/wands/experimental/experimental_wand_1_sprite.xml", image_file: "data/entities/items/wands/experimental/experimental_wand_1.png", wiki_file: "Wand experimental wand 1.png" },
+  { sprite_file: "data/entities/items/wands/experimental/experimental_wand_2_sprite.xml", image_file: "data/entities/items/wands/experimental/experimental_wand_2.png", wiki_file: "Wand experimental wand 2.png" },
+  { sprite_file: "data/items_gfx/wands/custom/actual_wand.xml", image_file: "data/items_gfx/wands/custom/actual_wand_honest.png", wiki_file: "Actual wand honest.png" },
+  { sprite_file: "data/items_gfx/wands/custom/good_01.xml", image_file: "data/items_gfx/wands/custom/good_01.png", wiki_file: "Wand wand good 1.png" },
+  { sprite_file: "data/items_gfx/wands/custom/good_02.xml", image_file: "data/items_gfx/wands/custom/good_02.png", wiki_file: "Wand wand good 2.png" },
+  { sprite_file: "data/items_gfx/wands/custom/good_03.xml", image_file: "data/items_gfx/wands/custom/good_03.png", wiki_file: "Wand wand good 3.png" },
+  { image_file: "data/items_gfx/wands/custom/skull_01.png", wiki_file: "Wand skull 01.png" },
+  { image_file: "data/items_gfx/wands/custom/wood_01.png", wiki_file: "Wand wood 01.png" },
+  { image_file: "data/items_gfx/wands/custom/plant_01.png", wiki_file: "Wand plant 01.png" },
+  { image_file: "data/items_gfx/wands/custom/plant_02.png", wiki_file: "Wand plant 02.png" },
+  { image_file: "data/items_gfx/wands/custom/vasta.png", wiki_file: "Wand vasta.png" },
+  { image_file: "data/items_gfx/wands/custom/vihta.png", wiki_file: "Wand vihta.png" },
 ];
 
 /**
@@ -129,25 +129,25 @@ function normalisePageName(name: string): string {
  */
 export function spritePathToWikiName(appearance: { sprite?: string; item_sprite?: string } | undefined): string {
   if (!appearance) return '';
-  
+
   const spritePath = appearance.sprite || '';
   const imagePath = appearance.item_sprite || '';
-  
+
   // 1. 先在 unique wands 表中精确匹配
   for (const entry of UNIQUE_WAND_SPRITES) {
     if ((entry.sprite_file && entry.sprite_file === spritePath) || entry.image_file === imagePath || entry.image_file === spritePath) {
       return entry.wiki_file;
     }
   }
-  
+
   // 2. 对于 procedural wands，取文件名然后 normalise
   // procedural wand 的 file 格式: data/items_gfx/wands/wand_0001.png
   const bestPath = imagePath || spritePath;
   if (!bestPath) return '';
-  
+
   const filename = bestPath.split('/').pop() || '';
   if (!filename) return '';
-  
+
   return normalisePageName(filename);
 }
 
@@ -160,27 +160,27 @@ export function spritePathToWikiName(appearance: { sprite?: string; item_sprite?
  */
 export function wikiNameToSpritePath(wikiName: string): { sprite?: string; item_sprite?: string } | null {
   if (!wikiName) return null;
-  
+
   const normalised = normalisePageName(wikiName.trim());
-  
+
   // 1. 在 unique wands 表中匹配
   for (const entry of UNIQUE_WAND_SPRITES) {
     if (normalisePageName(entry.wiki_file) === normalised) {
       return { sprite: entry.sprite_file || entry.image_file, item_sprite: entry.image_file };
     }
   }
-  
+
   // 2. 尝试作为 procedural wand 解析
   // wiki 格式 "Wand 0001.png" → 文件 "data/items_gfx/wands/wand_0001.png"
   // 反向: 空格转下划线, 首字母小写
   const asFilename = wikiName.trim().replace(/ /g, '_').replace(/^[A-Z]/, c => c.toLowerCase());
   const pngPath = `data/items_gfx/wands/${asFilename}`;
-  
+
   // 3. 如果传入的本身就是一个文件路径 (data/... 开头)，直接返回
   if (wikiName.startsWith('data/') || wikiName.startsWith('mods/')) {
     return { sprite: wikiName, item_sprite: wikiName.replace(/\.xml$/, '.png') };
   }
-  
+
   return { item_sprite: pngPath };
 }
 
@@ -189,14 +189,14 @@ export function wikiNameToSpritePath(wikiName: string): { sprite?: string; item_
  * 自动在 后端API 和 本地WASM引擎 之间切换
  */
 export async function evaluateWand(
-  wand: WandData, 
-  settings: any, 
+  wand: WandData,
+  settings: any,
   isConnected: boolean,
   tabId: string = 'default',
   slotId: string = '1',
   force: boolean = false
 ): Promise<{ data: EvalResponse, id: number } | null> {
-  
+
   const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
   const requestId = ++lastRequestId;
 
@@ -241,10 +241,13 @@ export async function evaluateWand(
           simulate_many_projectiles: settings.simulateManyProjectiles,
           fold_nodes: settings.foldNodes,
           evaluation_seed: settings.evaluationSeed,
-          stop_at_recharge: settings.stopAtRecharge
+          stop_at_recharge: settings.stopAtRecharge,
+          perks: Object.entries((settings.perks || {}) as Record<string, number>).flatMap(([id, count]) =>
+            Array.from({ length: count }, () => id)
+          )
         })
       });
-      
+
       if (!res.ok) {
         const errText = await res.text();
         console.error(`Backend Error: ${errText}`);
@@ -268,11 +271,11 @@ export async function evaluateWand(
       // Get mod appends for WASM evaluation
       getActiveModBundle().then(bundle => {
         const { appends, vfs, activeMods, hasBundle } = filterBundleForActiveMods(bundle);
-        
-        worker?.postMessage({ 
-          type: 'EVALUATE', 
-          data: wand, 
-          options: settings, 
+
+        worker?.postMessage({
+          type: 'EVALUATE',
+          data: wand,
+          options: settings,
           id: requestId,
           mod_appends: hasBundle ? appends : null,
           active_mods: hasBundle ? activeMods : null,

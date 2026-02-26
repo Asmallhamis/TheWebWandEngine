@@ -43,7 +43,7 @@ export const useSpellSearch = (
 
   const searchResults = useMemo(() => {
     if (!pickerSearch) return null;
-    const query = pickerSearch.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const query = pickerSearch.toLowerCase().trim();
     if (!query) return null;
 
     const allSpells = Object.values(spellDb);

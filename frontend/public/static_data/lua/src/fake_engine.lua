@@ -362,6 +362,9 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 
 	local old_mana = mana
 	_start_shot(mana)
+	for _, perk in ipairs(options.perks) do
+		_add_extra_modifier_to_shot(perk)
+	end
 	for k, v in ipairs(options.always_casts) do
 		if type(v) == "table" then v = v.name end
 		---@cast v string
@@ -406,7 +409,8 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 		M.reload_time = nil
 	end
 	delay = math.max(delay, 1)
-	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana)
+	local recoil = shot_effects and shot_effects.recoil_knockback or 0
+	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana) .. ", Recoil: " .. recoil
 	mana = mana + delay * options.mana_charge / 60
 	return did_recharge
 end

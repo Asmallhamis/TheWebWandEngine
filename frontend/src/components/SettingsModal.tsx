@@ -10,6 +10,26 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 
+// 天赋图标路径映射 (全部使用 public/perk_icons/ 下的静态资源)
+const PERK_ICON_MAP: Record<string, string> = {
+  critical_hit_boost: '/perk_icons/Effect_Bloody.png',
+  critical_plus_small: '/perk_icons/critical_plus_small.webp',
+  lower_spread: '/perk_icons/lower_spread.png',
+  low_recoil: '/perk_icons/low_recoil.png',
+  laser_aim: '/perk_icons/laser_aim.png',
+  powerful_shot: '/perk_icons/powerful_shot.png',
+  projectile_homing_shooter: '/perk_icons/projectile_homing_shooter.png',
+  damage_plus_small: '/perk_icons/damage_plus_small.png',
+  extra_knockback: '/perk_icons/extra_knockback.png',
+  bounce: '/perk_icons/bounce.png',
+  food_clock: '/perk_icons/food_clock.png',
+  projectile_homing_shooter_wizard: '/perk_icons/projectile_homing_shooter_wizard.png',
+  projectile_alcohol_trail: '/perk_icons/projectile_alcohol_trail.webp',
+  duplicate_projectile: '/perk_icons/duplicate_projectile.png',
+  fast_projectiles: '/perk_icons/fast_projectiles.png',
+  slow_firing: '/perk_icons/slow_firing.png',
+};
+
 const getModIdFromPath = (path: string) => {
   if (!path || !path.startsWith('mods/')) return null;
   const parts = path.split('/');
@@ -248,6 +268,7 @@ export function SettingsModal({
       <div
         className="glass-card bg-[#0c0c0e] border-white/10 w-full max-w-3xl h-full max-h-[600px] flex overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
+        data-testid="settings-modal"
       >
         {/* Sidebar */}
         <div className="w-40 bg-black/40 border-r border-white/5 flex flex-col shrink-0">
@@ -756,6 +777,62 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.perks_title')) && (
+                  <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-lg space-y-3">
+                    <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">
+                      <Star size={14} />
+                      {t('settings.perks_title')}
+                    </h3>
+                    <div className="text-[9px] text-zinc-500 italic">{t('settings.perks_desc')}</div>
+
+                    <div className="flex flex-col gap-1">
+                      {[
+                        'critical_hit_boost', 'critical_plus_small',
+                        'lower_spread', 'low_recoil', 'laser_aim',
+                        'powerful_shot', 'projectile_homing_shooter',
+                        'damage_plus_small', 'extra_knockback', 'bounce',
+                        'food_clock', 'projectile_homing_shooter_wizard',
+                        'projectile_alcohol_trail', 'duplicate_projectile',
+                        'fast_projectiles', 'slow_firing',
+                      ].map(id => {
+                        const count = (settings.perks || {})[id] || 0;
+                        return (
+                          <div key={id} className={`flex items-center justify-between px-2 py-1 rounded border transition-colors ${count > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-black/20 border-white/5'}`}>
+                            <div className="flex items-center gap-1.5">
+                              {PERK_ICON_MAP[id] ? (
+                                <img src={PERK_ICON_MAP[id]} alt="" className="w-4 h-4" style={{ imageRendering: 'pixelated' }} />
+                              ) : (
+                                <div className="w-4 h-4" />
+                              )}
+                              <span className={`text-[10px] font-mono font-bold ${count > 0 ? 'text-amber-300' : 'text-zinc-500'}`}>{t(`settings.perk_names.${id}`, id)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => setSettings(s => {
+                                  const next = { ...(s.perks || {}) };
+                                  next[id] = Math.max(0, (next[id] || 0) - 1);
+                                  if (next[id] <= 0) delete next[id];
+                                  return { ...s, perks: next };
+                                })}
+                                disabled={count === 0}
+                                className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white text-[11px] font-black disabled:opacity-30 disabled:cursor-not-allowed"
+                              >−</button>
+                              <span className={`text-[11px] font-mono font-black w-4 text-center ${count > 0 ? 'text-white' : 'text-zinc-600'}`}>{count}</span>
+                              <button
+                                onClick={() => setSettings(s => {
+                                  const next = { ...(s.perks || {}) };
+                                  next[id] = (next[id] || 0) + 1;
+                                  return { ...s, perks: next };
+                                })}
+                                className="w-5 h-5 flex items-center justify-center rounded bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white text-[11px] font-black"
+                              >+</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1042,8 +1119,8 @@ export function SettingsModal({
                                         updateBundleActiveMods(bundle, unique);
                                       }}
                                       className={`text-[10px] px-2 py-1 rounded border transition-colors ${isActive
-                                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                                          : 'bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200'
+                                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                                        : 'bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200'
                                         }`}
                                     >
                                       {modId}

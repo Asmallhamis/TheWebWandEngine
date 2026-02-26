@@ -114,7 +114,8 @@
     "force_analyze_desc": "重新启动评估引擎并分析当前法杖 (解决卡顿或同步错位)",
     "analyzing": "正在分析法杖...",
     "evaluation_seed": "随机种子 (Seed)",
-    "evaluation_seed_desc": "手动指定一个数值来固定随机结果。留空则每次点击都会重新随机。"
+    "evaluation_seed_desc": "手动指定一个数值来固定随机结果。留空则每次点击都会重新随机。",
+    "recoil": "后坐力 (Recoil)"
   },
   "settings": {
     "title": "Settings",
@@ -220,6 +221,27 @@
     },
     "wiki_language": "Wiki 语言",
     "wiki_language_desc": "选择 Ctrl+鼠标中键 点击法术时打开的 Wiki 语言版本 (Noita Wiki).",
+    "perks_title": "天赋 (Perks / Extra Modifiers)",
+    "perks_desc": "此处的层数代表该持有的额外修正（Extra Modifier）层数。例如，一个饥饿幽灵天赋有时可以叠两层，则在这里填 2。",
+    "perks_add": "添加天赋...",
+    "perk_names": {
+      "critical_hit_boost": "critical_hit_boost (染血)",
+      "critical_plus_small": "critical_plus_small (千钧一发)",
+      "lower_spread": "lower_spread (聚焦法术)",
+      "low_recoil": "low_recoil (低后座力)",
+      "laser_aim": "laser_aim (激光瞄具)",
+      "powerful_shot": "powerful_shot (回旋法术)",
+      "projectile_homing_shooter": "projectile_homing_shooter (回旋法术·效果)",
+      "damage_plus_small": "damage_plus_small (饥饿幽灵)",
+      "extra_knockback": "extra_knockback (强力冲击)",
+      "bounce": "bounce (弹跳法术)",
+      "food_clock": "food_clock (素食主义)",
+      "projectile_homing_shooter_wizard": "projectile_homing_shooter_wizard (法师领主)",
+      "projectile_alcohol_trail": "projectile_alcohol_trail (酒之精粹)",
+      "duplicate_projectile": "duplicate_projectile (投射物复制)",
+      "fast_projectiles": "fast_projectiles (加速法术)",
+      "slow_firing": "slow_firing (镭射眼)"
+    },
     "mod_environments": "Mod 环境管理",
     "import_mod_bundle": "导入 Mod 环境包 (.twwe-env.json)",
     "delete_mod_bundle_confirm": "确定要删除这个 Mod 环境吗？相关的法术定义和逻辑将失效。",

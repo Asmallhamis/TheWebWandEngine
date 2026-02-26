@@ -58,10 +58,11 @@ export function Header({
   return (
     <header className="flex items-center px-4 pt-2 bg-zinc-900/50 border-b border-white/5 space-x-0.5">
       <div className="flex items-center gap-2.5 px-3 py-2 mr-4">
-        <button 
+        <button
           onClick={() => setIsWarehouseOpen(prev => !prev)}
           className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all group"
           title={t('nav.warehouse') + ' (Ctrl+B)'}
+          data-testid="header-warehouse-btn"
         >
           <Library size={16} className="text-white group-hover:rotate-12 transition-transform" />
         </button>
@@ -161,15 +162,20 @@ export function Header({
           onClick={onOpenModManager}
           className="px-2 py-1 text-[10px] font-black tracking-widest rounded border border-amber-500/30 text-amber-300/90 hover:text-amber-200 hover:bg-amber-500/10"
           title={t('settings.manage_mods')}
+          data-testid="header-mod-manager-btn"
         >
           {modBundleInfo.active}/{modBundleInfo.total}
         </button>
-        <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-zinc-500 hover:text-white transition-colors">
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="p-2 text-zinc-500 hover:text-white transition-colors"
+          data-testid="header-settings-btn"
+        >
           <Settings size={18} />
         </button>
         {isConnected && (
-          <button 
-            onClick={syncGameSpells} 
+          <button
+            onClick={syncGameSpells}
             className="p-2 text-indigo-400 hover:text-indigo-300 transition-colors"
             title="同步模组法术数据"
           >
@@ -177,8 +183,8 @@ export function Header({
           </button>
         )}
         {isConnected && exportModBundle && (
-          <button 
-            onClick={exportModBundle} 
+          <button
+            onClick={exportModBundle}
             className="p-2 text-amber-400 hover:text-amber-300 transition-colors"
             title="导出/持久化当前 Mod 环境包"
           >

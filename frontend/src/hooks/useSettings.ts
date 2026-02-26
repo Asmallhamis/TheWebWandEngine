@@ -50,7 +50,8 @@ export const useSettings = () => {
       spellGroups: DEFAULT_SPELL_GROUPS,
       warehouseFolderHeight: 200,
       wikiLanguage: 'en',
-      stopAtRecharge: true
+      stopAtRecharge: true,
+      perks: {}
     };
     if (saved) {
       try {

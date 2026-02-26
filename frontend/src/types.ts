@@ -104,6 +104,7 @@ export interface AppSettings {
   warehouseFolderHeight: number;
   wikiLanguage: 'en' | 'zh';
   stopAtRecharge: boolean;
+  perks: Record<string, number>;
 }
 
 export interface EvalNode {
@@ -152,6 +153,7 @@ export interface SmartTag {
   id: string;
   name: string;
   spells: string[];
+  excludedSpells?: string[];
   mode: 'strict' | 'contains';
 }
 

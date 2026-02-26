@@ -26,6 +26,10 @@ interface WandEditorProps {
   onMoveSelection?: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   settings: AppSettings;
   isConnected: boolean;
+  /** 隐藏法杖属性面板、导出按钮等 (用于智能标签编辑) */
+  hideAttributes?: boolean;
+  /** 隐藏始终施放区域 (用于智能标签编辑) */
+  hideAlwaysCast?: boolean;
 }
 
 export function WandEditor({
@@ -47,7 +51,9 @@ export function WandEditor({
   requestEvaluation,
   onMoveSelection,
   settings,
-  isConnected
+  isConnected,
+  hideAttributes,
+  hideAlwaysCast
 }: WandEditorProps) {
   const { t, i18n } = useTranslation();
   const [isAltPressed, setIsAltPressed] = React.useState(false);
@@ -629,8 +635,8 @@ export function WandEditor({
   };
 
   return (
-    <div ref={wandRef} className="px-6 py-6 bg-[#0c0c0e] border-t border-white/5 space-y-8 select-none">
-      <div className="flex items-start gap-8 attributes-container">
+    <div ref={wandRef} className={`px-6 py-6 bg-[#0c0c0e] border-t border-white/5 space-y-8 select-none ${hideAttributes ? 'pt-4 pb-4' : ''}`}>
+      {!hideAttributes && <div className="flex items-start gap-8 attributes-container">
         <div
           className="flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl min-w-[600px] wand-attributes-box"
           onMouseUp={() => handleSlotMouseUp(slot, -1000)}
@@ -741,10 +747,10 @@ export function WandEditor({
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div ref={spellsRef} className="space-y-8">
-        {Array.isArray(data.always_cast) && data.always_cast.length > 0 && (
+        {!hideAlwaysCast && Array.isArray(data.always_cast) && data.always_cast.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />

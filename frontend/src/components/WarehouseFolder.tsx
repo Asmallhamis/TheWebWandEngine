@@ -1,12 +1,12 @@
 import React, { useCallback } from 'react';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Folder, 
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
   FolderOpen,
-  FolderPlus, 
-  Edit2, 
-  Trash2, 
+  FolderPlus,
+  Edit2,
+  Trash2,
   GripVertical
 } from 'lucide-react';
 import { WarehouseFolder as FolderType, WarehouseWand } from '../types';
@@ -62,7 +62,9 @@ export const WarehouseFolder: React.FC<WarehouseFolderProps> = React.memo((props
 
   return (
     <div className="select-none">
-      <div 
+      <div
+        data-testid="warehouse-folder-item"
+        data-folder-name={folder.name}
         className={cn(
           "group/folder flex items-center gap-1 py-1 px-2 rounded-lg cursor-pointer transition-all border border-transparent",
           isSelected ? "bg-purple-600/20 text-purple-300 border-purple-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200",
@@ -77,7 +79,7 @@ export const WarehouseFolder: React.FC<WarehouseFolderProps> = React.memo((props
         onDrop={(e) => onDrop(e, 'folder', folder.id)}
         onContextMenu={(e) => onContextMenu(e, folder.id)}
       >
-        <div 
+        <div
           className="p-0.5 rounded hover:bg-white/10 transition-colors"
           onClick={(e) => { e.stopPropagation(); onToggle(folder.id); }}
         >
@@ -87,16 +89,17 @@ export const WarehouseFolder: React.FC<WarehouseFolderProps> = React.memo((props
         </div>
 
         {isOpen ? <FolderOpen size={14} className={cn(isSelected ? "text-purple-400" : "text-amber-500/80")} /> : <Folder size={14} className={cn(isSelected ? "text-purple-400" : "text-amber-500/80")} />}
-        
+
         <span className="text-xs font-bold truncate flex-1">
           {folder.name}
         </span>
-        
+
         <div className="opacity-0 group-hover/folder:opacity-100 flex items-center gap-0.5 transition-opacity">
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onCreateSubfolder(folder.id); }}
             className="p-1 hover:text-indigo-400 hover:bg-indigo-500/10 rounded"
             title={t('warehouse.new_subfolder')}
+            data-testid="warehouse-new-subfolder-btn"
           >
             <FolderPlus size={10} />
           </button>

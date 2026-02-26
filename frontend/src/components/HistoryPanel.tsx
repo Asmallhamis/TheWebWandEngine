@@ -31,14 +31,17 @@ export function HistoryPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-80 bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] z-[300] flex flex-col animate-in slide-in-from-right duration-300">
+    <div
+      className="fixed inset-y-0 right-0 w-80 bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] z-[300] flex flex-col animate-in slide-in-from-right duration-300"
+      data-testid="history-panel"
+    >
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40">
         <div className="flex items-center gap-2">
           <History size={18} className="text-indigo-400" />
           <h2 className="text-sm font-black uppercase tracking-widest">{t('history.title')}</h2>
         </div>
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="p-2 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
           title={t('history.close')}
         >
@@ -88,7 +91,7 @@ export function HistoryPanel({
               </button>
             ))}
           </div>
-          
+
           {/* Current State Indicator */}
           {(activeTab.past?.length > 0 || activeTab.future?.length > 0) && (
             <div className="px-4 py-4 bg-indigo-600/20 border-l-4 border-l-indigo-500 border-y border-white/10 sticky top-0 z-10 backdrop-blur-md">

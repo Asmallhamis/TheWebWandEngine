@@ -28,7 +28,7 @@ interface ShotNode {
 const buildShotTree = (evalNode: EvalNode, states: ShotState[]): ShotNode[] => {
   const shotMap = new Map<number, ShotNode>();
   states.forEach(s => shotMap.set(s.id, { state: s, children: [] }));
-  
+
   const roots: ShotNode[] = [];
   const seenIds = new Set<number>();
 
@@ -52,7 +52,7 @@ const buildShotTree = (evalNode: EvalNode, states: ShotState[]): ShotNode[] => {
   };
 
   traverse(evalNode, null);
-  
+
   states.forEach(s => {
     if (!seenIds.has(s.id)) {
       const orphan = shotMap.get(s.id);
@@ -103,8 +103,8 @@ const areStatesEqual = (a: Record<string, any>[], b: Record<string, any>[]): boo
 };
 
 // 递归渲染射击树
-const ShotTree: React.FC<{ 
-  nodes: ShotNode[], 
+const ShotTree: React.FC<{
+  nodes: ShotNode[],
   hoveredShotId: { cast: number, id: number } | null,
   currentCast: number,
   isRoot?: boolean
@@ -121,19 +121,19 @@ const ShotTree: React.FC<{
               )}
             </div>
 
-            <ShotStateCard 
-              state={node.state} 
-              isHighlighted={hoveredShotId?.cast === currentCast && hoveredShotId?.id === node.state.id} 
+            <ShotStateCard
+              state={node.state}
+              isHighlighted={hoveredShotId?.cast === currentCast && hoveredShotId?.id === node.state.id}
             />
-            
+
             {/* 子节点渲染 */}
             {node.children.length > 0 && (
               <div className="flex flex-col gap-6 relative">
                 <div className="flex flex-col gap-6 ml-0 shrink-0">
-                  <ShotTree 
-                    nodes={node.children} 
-                    hoveredShotId={hoveredShotId} 
-                    currentCast={currentCast} 
+                  <ShotTree
+                    nodes={node.children}
+                    hoveredShotId={hoveredShotId}
+                    currentCast={currentCast}
                     isRoot={false}
                   />
                 </div>
@@ -270,7 +270,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
     <div className="mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
       {/* Overall Spell Counts Section */}
       {sortedOverallCounts.length > 0 && (
-        <section>
+        <section data-testid="eval-overall-counts">
           <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
             <span className="w-1.5 h-1.5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] rounded-full"></span>
             {t('evaluator.overall_counts')}
@@ -280,7 +280,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
               const spell = spellDb[id];
               const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
               return (
-                <div key={id} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0.5 rounded-md transition-all group/count">
+                <div key={id} data-testid={`eval-overall-count-item-${id}`} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0.5 rounded-md transition-all group/count">
                   {spell ? (
                     <img src={getIconUrl(spell.icon, false)} alt={id} className="w-5 h-5 image-pixelated" />
                   ) : (
@@ -309,7 +309,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
             {t('evaluator.shot_states')}
           </h3>
         </div>
-        
+
         <div className="space-y-6">
           {castGroups.map(group => {
             const isRange = group.start !== group.end;
@@ -318,7 +318,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 
             return (
               <div key={group.start} className="space-y-4">
-                <div 
+                <div
                   className="flex items-center gap-2 cursor-pointer group/h"
                   onClick={() => setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
                 >
@@ -330,9 +330,9 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       <span className="text-[7px] font-bold bg-amber-500/20 px-1 rounded">{t('evaluator.repeat_merged')}</span>
                     )}
                   </div>
-                  
+
                   {isRange && isVisible && (
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setUserShowAllCasts(prev => ({ ...prev, [group.start]: !isShowingAll }));
@@ -356,10 +356,10 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       <div className="flex items-start gap-8">
                         <CastStatsPanel group={group} spellDb={spellDb} />
                         <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
-                          <ShotTree 
-                            nodes={buildShotTree(group.node, group.states)} 
-                            hoveredShotId={hoveredShotId} 
-                            currentCast={group.start} 
+                          <ShotTree
+                            nodes={buildShotTree(group.node, group.states)}
+                            hoveredShotId={hoveredShotId}
+                            currentCast={group.start}
                             isRoot={true}
                           />
                         </div>
@@ -371,7 +371,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                         const cNode = data.tree.children?.[cNum - 1];
                         const cStates = data.states.filter(s => s.cast === cNum);
                         const cCounts = data.cast_counts?.[cNum.toString()] || {};
-                        
+
                         if (!cNode) return null;
 
                         return (
@@ -381,10 +381,10 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             </div>
                             <CastStatsPanel group={{ counts: cCounts, states: cStates, node: cNode } as any} spellDb={spellDb} />
                             <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
-                              <ShotTree 
-                                nodes={buildShotTree(cNode, cStates)} 
-                                hoveredShotId={hoveredShotId} 
-                                currentCast={cNum} 
+                              <ShotTree
+                                nodes={buildShotTree(cNode, cStates)}
+                                hoveredShotId={hoveredShotId}
+                                currentCast={cNum}
                                 isRoot={true}
                               />
                             </div>
@@ -417,7 +417,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 
             return (
               <div key={group.start} className="bg-zinc-950/30 rounded-lg border border-white/5 overflow-hidden">
-                <div 
+                <div
                   className="px-4 py-2 bg-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors group/treeh"
                   onClick={() => setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
                 >
@@ -426,9 +426,9 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                       {isRange ? `Cast #${group.start} - #${group.end}` : `Cast #${group.start}`}
                     </span>
                     <span className="text-[8px] text-zinc-600 font-mono">{t('evaluator.nodes_count')}: {complexity}</span>
-                    
+
                     {isRange && isVisible && (
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setUserShowAllCasts(prev => ({ ...prev, [group.start]: !isShowingAll }));
@@ -447,7 +447,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                     {isVisible ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </div>
                 </div>
-                
+
                 {isVisible && (
                   <div className="p-6 space-y-12 animate-in fade-in slide-in-from-top-1 duration-200">
                     {(!isRange || !isShowingAll) ? (
@@ -456,15 +456,15 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                         <CastStatsPanel group={group} spellDb={spellDb} />
                         <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                           <div className="w-fit">
-                            <TreeNode 
-                              node={group.node} 
-                              spellDb={spellDb} 
-                              isRoot={true} 
-                              onHover={onHoverSlots} 
+                            <TreeNode
+                              node={group.node}
+                              spellDb={spellDb}
+                              isRoot={true}
+                              onHover={onHoverSlots}
                               onHoverShotId={(sid) => setHoveredShotId(sid ? { cast: group.start, id: sid } : null)}
-                              markedSlots={markedSlots} 
-                              showIndices={isAltPressed || settings.showIndices} 
-                              absoluteToOrdinal={absoluteToOrdinal} 
+                              markedSlots={markedSlots}
+                              showIndices={isAltPressed || settings.showIndices}
+                              absoluteToOrdinal={absoluteToOrdinal}
                             />
                           </div>
                         </div>
@@ -475,7 +475,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                         const cNum = group.start + i;
                         const cNode = data.tree.children?.[cNum - 1];
                         const cCounts = data.cast_counts?.[cNum.toString()] || {};
-                        
+
                         if (!cNode) return null;
 
                         return (
@@ -486,15 +486,15 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             <CastStatsPanel group={{ counts: cCounts } as any} spellDb={spellDb} />
                             <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                               <div className="w-fit">
-                                <TreeNode 
-                                  node={cNode} 
-                                  spellDb={spellDb} 
-                                  isRoot={true} 
-                                  onHover={onHoverSlots} 
+                                <TreeNode
+                                  node={cNode}
+                                  spellDb={spellDb}
+                                  isRoot={true}
+                                  onHover={onHoverSlots}
                                   onHoverShotId={(sid) => setHoveredShotId(sid ? { cast: cNum, id: sid } : null)}
-                                  markedSlots={markedSlots} 
-                                  showIndices={isAltPressed || settings.showIndices} 
-                                  absoluteToOrdinal={absoluteToOrdinal} 
+                                  markedSlots={markedSlots}
+                                  showIndices={isAltPressed || settings.showIndices}
+                                  absoluteToOrdinal={absoluteToOrdinal}
                                 />
                               </div>
                             </div>
@@ -517,17 +517,19 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> }> = React.memo(({ group, spellDb }) => {
   const { t, i18n } = useTranslation();
   const sortedCastCounts = Object.entries(group.counts || {}).sort(([, a], [, b]) => (b as number) - (a as number));
-  
+
   // 获取本轮施法的最终数据（直接解析工具计算好的 extra 字符串，这是最准确的）
   const extra = group.node?.extra || "";
   // 使用更健壮的正则，支持不同空格和大小写
   const cdMatch = extra.match(/CastDelay:\s*(-?[\d\.]+)/i);
   const rtMatch = extra.match(/Recharge:\s*(-?[\d\.]+)/i);
   const manaMatch = extra.match(/ΔMana:\s*(-?[\d\.]+)/i);
-  
+  const recoilMatch = extra.match(/Recoil:\s*(-?[\d\.]+)/i);
+
   const castDelay = cdMatch ? cdMatch[1] : null;
   const recharge = rtMatch ? rtMatch[1] : null;
   const manaDrain = manaMatch ? manaMatch[1] : null;
+  const recoil = recoilMatch ? recoilMatch[1] : null;
 
   if (sortedCastCounts.length === 0) return null;
   return (
@@ -563,7 +565,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> 
       </div>
 
       {/* 最终结算结果：直接搬运自工具的 extra 字段 */}
-      {(castDelay || recharge || manaDrain) && (
+      {(castDelay || recharge || manaDrain || recoil) && (
         <div className="pt-3 border-t border-white/5 space-y-2">
           <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest flex items-center gap-1.5">
             <div className="w-1 h-1 bg-blue-500/50 rounded-full"></div>
@@ -594,6 +596,14 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> 
                 </span>
               </div>
             )}
+            {recoil && (
+              <div className="flex justify-between items-center bg-rose-500/5 px-2 py-1 rounded border border-rose-500/10">
+                <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">{t('evaluator.recoil')}</span>
+                <span className={`text-[10px] font-mono font-black ${Number(recoil) > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {recoil}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -617,31 +627,31 @@ const ShotStateCard: React.FC<{ state: ShotState, isHighlighted?: boolean }> = R
         {Object.entries(state.stats)
           .filter(([key]) => !['reload_time', 'fire_rate_wait'].includes(key))
           .map(([key, value]) => {
-          let color = "text-zinc-300";
-          if (typeof value === 'number') {
-            if (['spread_degrees', 'recoil', 'delay'].includes(key)) {
-              color = value > 0 ? "text-red-400" : value < 0 ? "text-emerald-400" : "text-zinc-300";
-            } else if (key.includes('damage') || key === 'speed_multiplier') {
-              color = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-zinc-300";
+            let color = "text-zinc-300";
+            if (typeof value === 'number') {
+              if (['spread_degrees', 'recoil', 'delay'].includes(key)) {
+                color = value > 0 ? "text-red-400" : value < 0 ? "text-emerald-400" : "text-zinc-300";
+              } else if (key.includes('damage') || key === 'speed_multiplier') {
+                color = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-zinc-300";
+              }
             }
-          }
-          return (
-            <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
-              <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
-              <span className={color}>
-                {value}
-              </span>
-            </div>
-          );
-        })}
+            return (
+              <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
+                <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
+                <span className={color}>
+                  {value}
+                </span>
+              </div>
+            );
+          })}
       </div>
     </div>
   );
 });
 
-const TreeNode: React.FC<{ 
-  node: EvalNode; 
-  spellDb: Record<string, SpellInfo>; 
+const TreeNode: React.FC<{
+  node: EvalNode;
+  spellDb: Record<string, SpellInfo>;
   isRoot?: boolean;
   onHover?: (indices: number[] | null) => void;
   onHoverShotId?: (id: number | null) => void;
@@ -653,7 +663,7 @@ const TreeNode: React.FC<{
   const isCast = node.name.startsWith('Cast #') || node.name === 'Wand';
   const spell = spellDb[node.name];
   const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : node.name;
-  
+
   const iconUrl = spell ? getIconUrl(spell.icon, false) : null;
   const isMarked = node.index && node.index.some(idx => markedSlots.includes(idx));
 
@@ -666,7 +676,7 @@ const TreeNode: React.FC<{
             <div className="w-6 h-px bg-zinc-800 shrink-0"></div>
           )}
 
-          <div 
+          <div
             onMouseEnter={() => {
               node.index && onHover?.(node.index);
               node.shot_id && onHoverShotId?.(node.shot_id);
@@ -690,7 +700,7 @@ const TreeNode: React.FC<{
                   {displayName}
                 </span>
               )}
-              
+
               {node.count > 1 && (
                 <span className="text-[10px] font-black bg-indigo-500 text-white px-1 rounded shadow-sm">
                   x{node.count}
@@ -723,21 +733,21 @@ const TreeNode: React.FC<{
         {node.children && node.children.length > 0 && (
           <div className="flex flex-col gap-3 relative">
             {/* 这里的连接线容器确保了深度嵌套时不会坍缩 */}
-              <div className="flex flex-col gap-3 ml-0 shrink-0">
-                {node.children.map((child, i) => (
-                  <div key={i} className="flex items-start">
-                    <TreeNode 
-                      node={child} 
-                      spellDb={spellDb} 
-                      onHover={onHover} 
-                      onHoverShotId={onHoverShotId}
-                      markedSlots={markedSlots} 
-                      showIndices={showIndices} 
-                      absoluteToOrdinal={absoluteToOrdinal} 
-                    />
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-col gap-3 ml-0 shrink-0">
+              {node.children.map((child, i) => (
+                <div key={i} className="flex items-start">
+                  <TreeNode
+                    node={child}
+                    spellDb={spellDb}
+                    onHover={onHover}
+                    onHoverShotId={onHoverShotId}
+                    markedSlots={markedSlots}
+                    showIndices={showIndices}
+                    absoluteToOrdinal={absoluteToOrdinal}
+                  />
+                </div>
+              ))}
+            </div>
             {/* 垂直分支线 */}
             {node.children.length > 1 && (
               <div className="absolute left-0 top-[23px] bottom-[23px] w-px bg-zinc-800"></div>

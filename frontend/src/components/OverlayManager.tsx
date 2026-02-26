@@ -8,19 +8,19 @@ import { HistoryPanel } from './HistoryPanel';
 import { ModManagerPanel } from './ModManagerPanel';
 import { WandWarehouse } from './WandWarehouse';
 import { FloatingDragModeToggle } from './FloatingDragModeToggle';
-import { 
+import { useUIStore } from '../store/useUIStore';
+import {
   SpellInfo,
-  PickerConfig, 
-  SpellDb, 
+  PickerConfig,
+  SpellDb,
   WandData,
-  SpellStats, 
-  AppSettings, 
-  Tab, 
-  Conflict, 
-  WarehouseWand, 
-  WarehouseFolder, 
-  SmartTag, 
-  AppNotification,
+  SpellStats,
+  AppSettings,
+  Tab,
+  Conflict,
+  WarehouseWand,
+  WarehouseFolder,
+  SmartTag,
   DragSource,
   MousePos
 } from '../types';
@@ -41,13 +41,14 @@ interface OverlayManagerProps {
   setPickerExpandedGroups: React.Dispatch<React.SetStateAction<Set<number>>>;
   isConnected: boolean;
 
-  // Settings
-  isSettingsOpen: boolean;
-  setIsSettingsOpen: (open: boolean) => void;
+  // Settings / Data
   importAllData: (e: React.ChangeEvent<HTMLInputElement>) => void;
   exportAllData: () => void;
+  onReloadSpells?: () => Promise<void | boolean>;
+  onModBundleChange?: () => void;
+  onOpenSettings?: () => void;
 
-  // Tab Menu
+  // Tab Options
   tabMenu: { x: number; y: number; tabId: string } | null;
   setTabMenu: (menu: { x: number; y: number; tabId: string } | null) => void;
   tabs: Tab[];
@@ -60,47 +61,45 @@ interface OverlayManagerProps {
   activeTab: Tab;
   resolveConflict: (strategy: 'web' | 'game' | 'both', conflict: Conflict, tab: Tab) => void;
 
-  // History
-  isHistoryOpen: boolean;
-  setIsHistoryOpen: (open: boolean) => void;
+  // History & Actions
   spellDb: SpellDb;
   jumpToPast: (index: number) => void;
   jumpToFuture: (index: number) => void;
   undo: () => void;
   redo: () => void;
+  performAction: (updater: any, description: string) => void;
 
-  // Warehouse
-  isWarehouseOpen: boolean;
-  setIsWarehouseOpen: (open: boolean) => void;
+  // Warehouse Data
   warehouseWands: WarehouseWand[];
   setWarehouseWands: React.Dispatch<React.SetStateAction<WarehouseWand[]>>;
   warehouseFolders: WarehouseFolder[];
   setWarehouseFolders: React.Dispatch<React.SetStateAction<WarehouseFolder[]>>;
   smartTags: SmartTag[];
   setSmartTags: React.Dispatch<React.SetStateAction<SmartTag[]>>;
-  saveToWarehouse: (wand: any) => void;
-  performAction: (updater: any, description: string) => void;
-  activeTabId: string;
-  syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => void;
-  setNotification: (notif: AppNotification | null) => void;
-  setSelection: (selection: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
   pullBones: () => Promise<void>;
   pushBones: () => Promise<void>;
+
+  // Game Sync
+  activeTabId: string;
+  syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => void;
 
   // Interaction
   dragSource: DragSource | null;
   mousePos: MousePos;
   isDraggingFile: boolean;
-  onReloadSpells?: () => Promise<void | boolean>;
-  onModBundleChange?: () => void;
-  settingsCategoryOverride?: 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data' | null;
-  settingsExpandedBundleId?: string | null;
-  isModManagerOpen: boolean;
-  setIsModManagerOpen: (open: boolean) => void;
-  onOpenSettings?: () => void;
+  setSelection: (selection: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
+  // WandEditor 交互 props (用于智能标签编辑器)
+  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
+  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseUp: (slot: string, idx: number) => void;
+  handleSlotMouseEnter: (slot: string, idx: number) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  handleSlotMouseLeave: () => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
 }
 
-export function OverlayManager({
+export const OverlayManager = ({
   pickerConfig,
   setPickerConfig,
   pickerSearch,
@@ -113,10 +112,11 @@ export function OverlayManager({
   pickerExpandedGroups,
   setPickerExpandedGroups,
   isConnected,
-  isSettingsOpen,
-  setIsSettingsOpen,
   importAllData,
   exportAllData,
+  onReloadSpells,
+  onModBundleChange,
+  onOpenSettings,
   tabMenu,
   setTabMenu,
   tabs,
@@ -126,40 +126,44 @@ export function OverlayManager({
   conflict,
   activeTab,
   resolveConflict,
-  isHistoryOpen,
-  setIsHistoryOpen,
   spellDb,
   jumpToPast,
   jumpToFuture,
   undo,
   redo,
-  isWarehouseOpen,
-  setIsWarehouseOpen,
+  performAction,
   warehouseWands,
   setWarehouseWands,
   warehouseFolders,
   setWarehouseFolders,
   smartTags,
   setSmartTags,
-  performAction,
+  pullBones,
+  pushBones,
   activeTabId,
   syncWand,
-  setNotification,
   dragSource,
   mousePos,
   isDraggingFile,
   setSelection,
-  onReloadSpells,
-  onModBundleChange,
-  settingsCategoryOverride,
-  settingsExpandedBundleId,
-  pullBones,
-  pushBones,
-  isModManagerOpen,
-  setIsModManagerOpen,
-  onOpenSettings,
-}: OverlayManagerProps) {
+  selection,
+  hoveredSlot,
+  handleSlotMouseDown,
+  handleSlotMouseUp,
+  handleSlotMouseEnter,
+  handleSlotMouseMove,
+  handleSlotMouseLeave,
+  openPicker,
+}: OverlayManagerProps) => {
   const { t } = useTranslation();
+  const {
+    isSettingsOpen, setIsSettingsOpen,
+    isHistoryOpen, setIsHistoryOpen,
+    isWarehouseOpen, setIsWarehouseOpen,
+    isModManagerOpen, setIsModManagerOpen,
+    settingsCategoryOverride, settingsExpandedBundleId,
+    showNotification
+  } = useUIStore();
 
   return (
     <>
@@ -186,7 +190,7 @@ export function OverlayManager({
         onExport={exportAllData}
         onReloadSpells={onReloadSpells}
         onModBundleChange={onModBundleChange}
-        initialCategory={settingsCategoryOverride}
+        initialCategory={settingsCategoryOverride as any}
         initialExpandedBundleId={settingsExpandedBundleId}
       />
 
@@ -333,8 +337,19 @@ export function OverlayManager({
           if (activeTab.isRealtime) {
             syncWand(nextSlot, w as any);
           }
-          setNotification({ msg: t('app.notification.imported_wand_success', { name: w.name }), type: 'success' });
+          showNotification(t('app.notification.imported_wand_success', { name: w.name }), 'success');
         }}
+        selection={selection}
+        hoveredSlot={hoveredSlot}
+        dragSource={dragSource}
+        handleSlotMouseDown={handleSlotMouseDown}
+        handleSlotMouseUp={handleSlotMouseUp}
+        handleSlotMouseEnter={handleSlotMouseEnter}
+        handleSlotMouseMove={handleSlotMouseMove}
+        handleSlotMouseLeave={handleSlotMouseLeave}
+        openPicker={openPicker}
+        setSelection={setSelection}
+        setSettings={setSettings}
       />
 
       <FloatingDragModeToggle settings={settings} setSettings={setSettings} />
@@ -363,6 +378,4 @@ export function OverlayManager({
       )}
     </>
   );
-}
-
-export default OverlayManager;
+};

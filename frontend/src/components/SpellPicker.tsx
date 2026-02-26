@@ -90,8 +90,9 @@ export function SpellPicker({
   if (!pickerConfig) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" onClick={onClose}>
+    <div className="fixed inset-0 z-[700] overflow-hidden" onClick={onClose}>
       <div
+        data-testid="spell-picker"
         className="absolute glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col max-h-[600px] animate-in slide-in-from-top-4 duration-200 overflow-hidden"
         style={{
           top: Math.min(pickerConfig.y, window.innerHeight - 520),
@@ -106,11 +107,12 @@ export function SpellPicker({
             autoFocus
             placeholder={t('settings.title') === 'Settings' ? 'Search spells...' : '搜索法术...'}
             className="bg-transparent flex-1 text-sm outline-none placeholder:text-zinc-600"
+            data-testid="spell-picker-input"
             value={pickerSearch}
             onChange={e => setPickerSearch(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Escape') onClose();
-              
+
               // 空格和回车选词
               if (e.key === 'Enter' || (e.key === ' ' && pickerSearch !== '')) {
                 if (pickerSearch === '' && flatSpells.length === 0) {
@@ -186,14 +188,15 @@ export function SpellPicker({
                       <button
                         key={s.id}
                         onClick={() => pickSpell(s.id, false)}
-                        style={{ 
-                          height: settings.pickerRowHeight, 
+                        style={{
+                          height: settings.pickerRowHeight,
                           width: settings.pickerRowHeight,
-                          backgroundColor: typeConfig?.color || 'rgba(255,255,255,0.05)' 
+                          backgroundColor: typeConfig?.color || 'rgba(255,255,255,0.05)'
                         }}
-                        className={`aspect-square hover:bg-white/10 border rounded flex items-center justify-center transition-all group overflow-hidden ${
-                          isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10 shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'border-white/5'
-                        }`}
+                        className={`aspect-square hover:bg-white/10 border rounded flex items-center justify-center transition-all group overflow-hidden ${isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10 shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'border-white/5'
+                          }`}
+                        data-testid="spell-picker-item"
+                        data-spell-id={s.id}
                         title={tooltip}
                       >
                         <div className="relative w-full h-full flex items-center justify-center">
@@ -248,15 +251,16 @@ export function SpellPicker({
                           <button
                             key={s.id}
                             onClick={() => pickSpell(s.id, false)}
-                            style={{ 
-                              height: settings.pickerRowHeight, 
+                            style={{
+                              height: settings.pickerRowHeight,
                               width: settings.pickerRowHeight,
-                              backgroundColor: typeConfig?.color || 'rgba(0,0,0,0.2)' 
+                              backgroundColor: typeConfig?.color || 'rgba(0,0,0,0.2)'
                             }}
-                            className={`aspect-square hover:bg-black/40 border rounded flex items-center justify-center transition-all group overflow-hidden ${
-                              isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10 shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'border-white/5'
-                            }`}
+                            className={`aspect-square hover:bg-black/40 border rounded flex items-center justify-center transition-all group overflow-hidden ${isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10 shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'border-white/5'
+                              }`}
                             title={tooltip}
+                            data-testid="spell-picker-item"
+                            data-spell-id={s.id}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
                               <img src={getIconUrl(s.icon, isConnected)} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
@@ -305,7 +309,7 @@ export function SpellPicker({
                         const typeConfig = settings.spellTypes.find(t => t.id === s.type);
                         const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
                         const tooltip = `${displayName}${s.aliases ? ` (${s.aliases})` : ''}\nID: ${s.id}`;
-                        
+
                         // Calculate global index for this spell in non-search mode
                         let globalIdx = spellStats.overall.length;
                         for (let i = 0; i < gIdx; i++) {
@@ -318,15 +322,16 @@ export function SpellPicker({
                           <button
                             key={s.id}
                             onClick={() => pickSpell(s.id, false)}
-                            style={{ 
-                              height: settings.pickerRowHeight, 
+                            style={{
+                              height: settings.pickerRowHeight,
                               width: settings.pickerRowHeight,
                               backgroundColor: typeConfig?.color || 'rgba(0,0,0,0.2)'
                             }}
-                            className={`aspect-square hover:bg-black/40 border rounded flex items-center justify-center transition-all group overflow-hidden ${
-                              isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10' : 'border-white/5'
-                            }`}
+                            className={`aspect-square hover:bg-black/40 border rounded flex items-center justify-center transition-all group overflow-hidden ${isSelected ? 'ring-2 ring-white border-transparent scale-110 z-10' : 'border-white/5'
+                              }`}
                             title={tooltip}
+                            data-testid="spell-picker-item"
+                            data-spell-id={s.id}
                           >
                             <img src={getIconUrl(s.icon, isConnected)} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
                           </button>
