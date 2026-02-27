@@ -272,6 +272,16 @@ local function render_json(src, engine_data, out)
 		table.insert(out, tostring(shot_id))
 	end
 
+	if src.iteration then
+		table.insert(out, ",\"iteration\":")
+		table.insert(out, tostring(src.iteration))
+	end
+
+	if src.recursion then
+		table.insert(out, ",\"recursion\":")
+		table.insert(out, tostring(src.recursion))
+	end
+
 	src.count = src.count or 1
 	table.insert(out, ",\"count\":")
 	table.insert(out, tostring(src.count))

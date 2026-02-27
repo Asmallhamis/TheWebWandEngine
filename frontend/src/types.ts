@@ -113,6 +113,8 @@ export interface EvalNode {
   extra: string;
   index: number[];
   shot_id?: number;
+  iteration?: number;
+  recursion?: number;
   children: EvalNode[];
 }
 

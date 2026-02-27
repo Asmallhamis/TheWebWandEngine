@@ -321,7 +321,15 @@ function M.initialise_engine(text_formatter, options)
 			local new = function(...)
 				---@cast clone action
 				local old_node = M.cur_node
-				local new_node = { name = v.id, children = {}, index = clone.deck_index }
+				local recursion_val = select(1, ...)
+				local iteration_val = select(2, ...)
+				local new_node = { 
+					name = v.id, 
+					children = {}, 
+					index = clone.deck_index,
+					iteration = iteration_val,
+					recursion = (type(recursion_val) == "number" and recursion_val > 0) and recursion_val or nil,
+				}
 				M.counts[v.id] = (M.counts[v.id] or 0) + 1
 				M.cast_counts[M.cur_cast_num] = M.cast_counts[M.cur_cast_num] or {}
 				M.cast_counts[M.cur_cast_num][v.id] = (M.cast_counts[M.cur_cast_num][v.id] or 0) + 1

@@ -28,6 +28,8 @@
 /frontend/build/
 /frontend/.eslintcache
 /frontend/.DS_Store
+/frontend/playwright-report/
+/frontend/test-results/
 
 # 核心算法引擎 (GPL-3.0)
 # Core Algorithm Engine

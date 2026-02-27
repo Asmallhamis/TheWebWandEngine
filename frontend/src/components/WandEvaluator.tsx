@@ -713,6 +713,36 @@ const TreeNode: React.FC<{
                 </div>
               )}
 
+              {node.iteration !== undefined && (
+                <div
+                  className="absolute -top-1.5 font-black z-30"
+                  style={{
+                    right: node.shot_id ? '18px' : '-2px',
+                    color: '#a78bfa',
+                    fontSize: '9px',
+                    textShadow: '0 0 4px rgba(0,0,0,0.9)',
+                  }}
+                  title={`Iteration: ${node.iteration}`}
+                >
+                  {node.iteration}
+                </div>
+              )}
+
+              {node.recursion !== undefined && (
+                <div
+                  className="absolute -top-1.5 font-black z-30"
+                  style={{
+                    left: '-2px',
+                    color: '#34d399',
+                    fontSize: '9px',
+                    textShadow: '0 0 4px rgba(0,0,0,0.9)',
+                  }}
+                  title={`Recursion: ${node.recursion}`}
+                >
+                  {node.recursion}
+                </div>
+              )}
+
               {showIndices && node.index && node.index.length > 0 && (
                 <div className="absolute -bottom-1.5 -right-1 text-cyan-400 text-[10px] font-black z-20 scale-110 drop-shadow-[0_0_2px_rgba(0,0,0,0.8)]">
                   {node.index.map(idx => absoluteToOrdinal?.[idx] || idx).join(',')}
