@@ -51,7 +51,8 @@ export const useSettings = () => {
       warehouseFolderHeight: 200,
       wikiLanguage: 'en',
       stopAtRecharge: true,
-      perks: {}
+      perks: {},
+      recursionIterationDisplay: 'labeled'
     };
     if (saved) {
       try {

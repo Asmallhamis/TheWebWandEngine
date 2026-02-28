@@ -4,6 +4,7 @@ import { toPng } from 'html-to-image';
 import { WandData, SpellInfo, AppSettings } from '../types';
 import { PropInput } from './Common';
 import { getIconUrl, getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
+import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useTranslation } from 'react-i18next';
 
 interface WandEditorProps {
@@ -813,6 +814,21 @@ export function WandEditor({
                           alt=""
                           title={`Always Cast: ${displayName}\nID: ${sid}\n(Alt+Click to remove)`}
                         />
+                      ) : sid ? (
+                        <div className="w-10 h-10 flex flex-col items-center justify-center overflow-hidden px-0.5" title={(() => {
+                          const info = getUnknownSpellInfo(sid);
+                          return info?.mod_id
+                            ? t('editor.unknown_spell_tip_with_mod', { id: sid, mod: info.mod_id })
+                            : t('editor.unknown_spell_tip', { id: sid });
+                        })()}>
+                          {(() => {
+                            const info = getUnknownSpellInfo(sid);
+                            return info?.mod_id
+                              ? <span className="text-cyan-400/80 text-[8px] font-bold leading-none truncate max-w-full">@{info.mod_id}</span>
+                              : <span className="text-orange-400 text-xs font-black leading-none">?</span>;
+                          })()}
+                          <span className="text-orange-400/70 text-[8px] font-mono leading-tight text-center break-all line-clamp-2 max-w-full">{sid}</span>
+                        </div>
                       ) : (
                         <span className="text-amber-500/20 text-xs">?</span>
                       )}
@@ -926,7 +942,7 @@ export function WandEditor({
                     }}
                     className={`
                       w-full h-full rounded-lg border flex items-center justify-center relative group/cell transition-all active:scale-95
-                      ${isLocked ? 'bg-black/40 border-transparent opacity-10' : `bg-zinc-800/80 border-white/5 shadow-inner hover:bg-zinc-700/80 ${settings.editorDragMode === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+                      ${isLocked ? 'bg-black/40 border-transparent opacity-10' : `${sid && !spell ? 'bg-orange-950/30 border-orange-500/30 shadow-inner hover:bg-orange-900/30' : 'bg-zinc-800/80 border-white/5 shadow-inner hover:bg-zinc-700/80'} ${settings.editorDragMode === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
                       ${isSelected ? 'ring-2 ring-indigo-500 ring-inset bg-indigo-500/40 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] z-10 scale-[1.02]' : ''}
                       ${isHovered && dragSource && settings.dragSpellMode === 'noita_swap' ? 'border-indigo-500 bg-indigo-500/30 scale-105 z-20' : 'hover:border-indigo-500/50'}
                     `}
@@ -985,6 +1001,34 @@ export function WandEditor({
                           );
                         })()}
 
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newSpells = { ...(data.spells || {}) };
+                            const newSpellUses = { ...(data.spell_uses || {}) };
+                            delete newSpells[idx];
+                            delete newSpellUses[idx];
+                            updateWand(slot, { spells: newSpells, spell_uses: newSpellUses });
+                          }}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity z-10 pointer-events-auto shadow-lg"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : sid && !isLocked ? (
+                      <div className="relative w-full h-full flex flex-col items-center justify-center pointer-events-none overflow-hidden p-0.5" title={(() => {
+                        const info = getUnknownSpellInfo(sid);
+                        return info?.mod_id
+                          ? t('editor.unknown_spell_tip_with_mod', { id: sid, mod: info.mod_id })
+                          : t('editor.unknown_spell_tip', { id: sid });
+                      })()}>
+                        {(() => {
+                          const info = getUnknownSpellInfo(sid);
+                          return info?.mod_id
+                            ? <span className="text-cyan-400/80 text-[9px] font-bold leading-none truncate max-w-full">@{info.mod_id}</span>
+                            : <span className="text-orange-400 text-sm font-black leading-none">?</span>;
+                        })()}
+                        <span className="text-orange-400/70 text-[9px] font-mono leading-tight text-center break-all line-clamp-2 max-w-full">{sid}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

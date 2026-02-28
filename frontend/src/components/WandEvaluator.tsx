@@ -465,6 +465,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                               markedSlots={markedSlots}
                               showIndices={isAltPressed || settings.showIndices}
                               absoluteToOrdinal={absoluteToOrdinal}
+                              settings={settings}
                             />
                           </div>
                         </div>
@@ -495,6 +496,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                                   markedSlots={markedSlots}
                                   showIndices={isAltPressed || settings.showIndices}
                                   absoluteToOrdinal={absoluteToOrdinal}
+                                  settings={settings}
                                 />
                               </div>
                             </div>
@@ -658,7 +660,8 @@ const TreeNode: React.FC<{
   markedSlots: number[];
   showIndices: boolean;
   absoluteToOrdinal: Record<number, number> | null;
-}> = React.memo(({ node, spellDb, isRoot, onHover, onHoverShotId, markedSlots, showIndices, absoluteToOrdinal }) => {
+  settings: AppSettings;
+}> = React.memo(({ node, spellDb, isRoot, onHover, onHoverShotId, markedSlots, showIndices, absoluteToOrdinal, settings }) => {
   const { i18n } = useTranslation();
   const isCast = node.name.startsWith('Cast #') || node.name === 'Wand';
   const spell = spellDb[node.name];
@@ -713,33 +716,33 @@ const TreeNode: React.FC<{
                 </div>
               )}
 
-              {node.iteration !== undefined && (
+              {node.iteration !== undefined && settings.recursionIterationDisplay !== 'none' && (
                 <div
                   className="absolute -top-1.5 font-black z-30"
                   style={{
                     right: node.shot_id ? '18px' : '-2px',
                     color: '#a78bfa',
-                    fontSize: '9px',
+                    fontSize: '10px',
                     textShadow: '0 0 4px rgba(0,0,0,0.9)',
                   }}
                   title={`Iteration: ${node.iteration}`}
                 >
-                  {node.iteration}
+                  {settings.recursionIterationDisplay === 'labeled' ? `i${node.iteration}` : node.iteration}
                 </div>
               )}
 
-              {node.recursion !== undefined && (
+              {node.recursion !== undefined && settings.recursionIterationDisplay !== 'none' && (
                 <div
                   className="absolute -top-1.5 font-black z-30"
                   style={{
                     left: '-2px',
                     color: '#34d399',
-                    fontSize: '9px',
+                    fontSize: '10px',
                     textShadow: '0 0 4px rgba(0,0,0,0.9)',
                   }}
                   title={`Recursion: ${node.recursion}`}
                 >
-                  {node.recursion}
+                  {settings.recursionIterationDisplay === 'labeled' ? `r${node.recursion}` : node.recursion}
                 </div>
               )}
 
@@ -774,6 +777,7 @@ const TreeNode: React.FC<{
                     markedSlots={markedSlots}
                     showIndices={showIndices}
                     absoluteToOrdinal={absoluteToOrdinal}
+                    settings={settings}
                   />
                 </div>
               ))}

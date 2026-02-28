@@ -464,6 +464,35 @@ export function SettingsModal({
                     </div>
                   </div>
                 )}
+                {isMatch(t('settings.recursion_iteration_display')) && (
+                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.recursion_iteration_display')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.recursion_iteration_display_desc')}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { id: 'none', name: t('settings.recursion_iteration_display_none') },
+                        { id: 'simple', name: t('settings.recursion_iteration_display_simple') },
+                        { id: 'labeled', name: t('settings.recursion_iteration_display_labeled') },
+                      ].map(mode => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setSettings(s => ({ ...s, recursionIterationDisplay: mode.id as any }))}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all ${settings.recursionIterationDisplay === mode.id ? 'bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/20' : 'bg-black/20 border-white/5 hover:bg-white/5'}`}
+                        >
+                          <span className={`text-[11px] font-bold ${settings.recursionIterationDisplay === mode.id ? 'text-indigo-400' : 'text-zinc-300'}`}>{mode.name}</span>
+                          {settings.recursionIterationDisplay === mode.id && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

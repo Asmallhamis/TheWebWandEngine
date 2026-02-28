@@ -105,6 +105,7 @@ export interface AppSettings {
   wikiLanguage: 'en' | 'zh';
   stopAtRecharge: boolean;
   perks: Record<string, number>;
+  recursionIterationDisplay: 'none' | 'simple' | 'labeled';
 }
 
 export interface EvalNode {

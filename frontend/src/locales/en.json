@@ -248,7 +248,12 @@
     "mod_bundle_active_mods": "Mods active",
     "manage_mods": "Manage Mods",
     "enable_all_mods": "Enable All",
-    "disable_all_mods": "Disable All"
+    "disable_all_mods": "Disable All",
+    "recursion_iteration_display": "Recursion & Iteration Display",
+    "recursion_iteration_display_desc": "Set how recursion (r) and iteration (i) levels are displayed in the execution tree.",
+    "recursion_iteration_display_none": "Hide",
+    "recursion_iteration_display_simple": "Numbers Only (1, 2...)",
+    "recursion_iteration_display_labeled": "With Labels (r1, i1)"
   },
   "mod_manager": {
     "title": "Mod Environment Management",
@@ -371,7 +376,10 @@
     "speed": "Speed",
     "always_cast_slots": "Always Cast Slots",
     "modify_uses_tip": "Click to modify charges (Alt+Click to set to 0, click again to restore)",
-    "enter_sprite_path": "Enter wand sprite path (data/ui_gfx/items/...)"
+    "enter_sprite_path": "Enter wand sprite path (data/ui_gfx/items/...)",
+    "unknown_spell": "Unknown Spell",
+    "unknown_spell_tip": "Spell ID: {{id}}\nThis spell is not loaded (possibly from a disabled mod)\nEvaluation results may be inaccurate",
+    "unknown_spell_tip_with_mod": "Spell ID: {{id}}\nFrom mod: {{mod}}\nThis mod is not enabled, evaluation may be inaccurate"
   },
   "conflict": {
     "title": "Sync Conflict Detected",

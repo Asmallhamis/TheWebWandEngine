@@ -4,30 +4,46 @@ import { SpellInfo } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { getActiveModBundle } from '../lib/modStorage';
 
+// 模块级缓存：所有 bundle 法术（无论是否启用），供组件直接查询
+let _allKnownSpellsRef: Record<string, SpellInfo> = {};
+
+/** 查询未知法术的信息（主要用于获取 mod_id），不经过 props 传递 */
+export function getUnknownSpellInfo(sid: string): SpellInfo | null {
+  return _allKnownSpellsRef[sid] || null;
+}
+
 export const useSpellDb = (isConnected: boolean) => {
   const { t, i18n } = useTranslation();
   const [spellDb, setSpellDb] = useState<Record<string, SpellInfo>>({});
+  // 包含 ModBundle 中所有法术（无论是否启用），用于未知法术回退查询
+  const [allKnownSpells, setAllKnownSpells] = useState<Record<string, SpellInfo>>({});
   const preloadedRef = (import.meta as any).env?.PROD ? { current: false } : { current: false };
 
   const fetchSpellDb = useCallback(async () => {
     let modSpells: Record<string, SpellInfo> = {};
+    let allBundleSpells: Record<string, SpellInfo> = {};
     let bundleExists = false;
 
     try {
       const activeBundle = await getActiveModBundle();
       bundleExists = !!activeBundle;
       const hasActiveMods = !!(activeBundle && Array.isArray(activeBundle.active_mods) && activeBundle.active_mods.length > 0);
-      if (hasActiveMods && activeBundle && activeBundle.spells) {
+      if (activeBundle && activeBundle.spells) {
         const activeSet = new Set(activeBundle.active_mods || []);
         Object.entries(activeBundle.spells).forEach(([id, info]) => {
+          // 记录所有 bundle 法术（用于未知法术回退）
+          allBundleSpells[id] = { ...info, id };
           const modId = (info as SpellInfo).mod_id;
-          if (modId && !activeSet.has(modId)) return;
+          if (hasActiveMods && modId && !activeSet.has(modId)) return;
           modSpells[id] = { ...info, id, is_mod: true, icon: info.icon_base64 || info.icon };
         });
       }
     } catch (e) {
       console.error("Failed to load mod bundle from IndexedDB:", e);
     }
+
+    setAllKnownSpells(allBundleSpells);
+    _allKnownSpellsRef = allBundleSpells;
 
     const loadBaseFromStatic = async () => {
       const res = await fetch('./static_data/spells.json');
@@ -159,5 +175,5 @@ export const useSpellDb = (isConnected: boolean) => {
     fetchSpellDb();
   }, [fetchSpellDb]);
 
-  return { spellDb, spellNameToId, fetchSpellDb, syncGameSpells };
+  return { spellDb, allKnownSpells, spellNameToId, fetchSpellDb, syncGameSpells };
 };

@@ -248,7 +248,12 @@
     "mod_bundle_active_mods": "已启用",
     "manage_mods": "管理 Mod",
     "enable_all_mods": "全部启用",
-    "disable_all_mods": "全部停用"
+    "disable_all_mods": "全部停用",
+    "recursion_iteration_display": "递归与迭代显示",
+    "recursion_iteration_display_desc": "设置评估树中递归层级 (r) 和迭代层级 (i) 的显示方式。",
+    "recursion_iteration_display_none": "隐藏",
+    "recursion_iteration_display_simple": "仅数字 (1, 2...)",
+    "recursion_iteration_display_labeled": "带字母标签 (r1, i1)"
   },
   "mod_manager": {
     "title": "Mod 环境管理",
@@ -371,7 +376,10 @@
     "speed": "初速度乘数",
     "always_cast_slots": "始终施放槽位",
     "modify_uses_tip": "点击修改次数 (Alt+点击设为0, 再点击还原)",
-    "enter_sprite_path": "输入魔杖贴图路径 (data/ui_gfx/items/...)"
+    "enter_sprite_path": "输入魔杖贴图路径 (data/ui_gfx/items/...)",
+    "unknown_spell": "未知法术",
+    "unknown_spell_tip": "法术 ID: {{id}}\n该法术未被加载 (可能来自未启用的 Mod)\n评估结果可能不准确",
+    "unknown_spell_tip_with_mod": "法术 ID: {{id}}\n来自 Mod: {{mod}}\n该 Mod 未启用，评估结果可能不准确"
   },
   "conflict": {
     "title": "检测到同步冲突",
