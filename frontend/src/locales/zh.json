@@ -122,6 +122,7 @@
     "categories": {
       "general": "常规",
       "appearance": "外观",
+      "interaction": "交互",
       "wand": "法杖",
       "cast": "施法参数",
       "spell_types": "法术分类",
@@ -145,6 +146,8 @@
     "show_legacy_wand_button_desc": "在法杖卡片上显示一个 “W” 按钮，用于复制为 Wiki 上的老版 {{Wand}} 模板格式。",
     "delete_empty_slots": "Delete 键删除空格子",
     "delete_empty_slots_desc": "按下 Delete 键时，如果选中的格子已为空，则直接移除该槽位（减少法杖容量）。",
+    "ctrl_click_delete": "Ctrl+左键 删除法术",
+    "ctrl_click_delete_desc": "开启后，Ctrl+左键点击法术直接删除（保留格子），Ctrl+Shift+左键删除法术并移除格子（减少容量）。",
     "default_wand_stats": "默认数值模板",
     "unlimited_spells": "无限法术天赋 (Unlimited Spells)",
     "unlimited_spells_desc": "模拟拥有“无限法术”天赋的情况。注意：黑洞、治疗弹等法术依然有限。(由于目前bug,实际上这个设置并没有用,无论开关都只能ALT+鼠标左键设定黑洞治疗弹等 不能被无限法术天赋无限的 法术的次数)",
@@ -412,6 +415,7 @@
       "move_spells": "移动选中的法术 (抓取并放下)",
       "to_always_cast": "将法术转为“始终施法”",
       "modify_uses": "修改法术次数 (设为 0 模拟耗尽)",
+      "ctrl_click_delete": "删除法术 (需在设置中开启)",
       "show_indices": "临时显示所有法术位的序号",
       "toggle_warehouse": "快速打开/关闭魔杖仓库",
       "toggle_history": "快速打开/关闭操作历史面板"

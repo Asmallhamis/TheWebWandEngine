@@ -92,6 +92,7 @@ export interface AppSettings {
   showStatsInFrames: boolean;
   showLegacyWandButton: boolean;
   deleteEmptySlots: boolean;
+  ctrlClickDelete: boolean;
   exportHistory: boolean;
   embedMetadataInImage: boolean;
   pureSpellsExport: boolean;

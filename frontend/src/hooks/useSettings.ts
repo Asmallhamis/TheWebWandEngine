@@ -40,6 +40,7 @@ export const useSettings = () => {
       showStatsInFrames: true,
       showLegacyWandButton: false,
       deleteEmptySlots: true,
+      ctrlClickDelete: false,
       exportHistory: true,
       embedMetadataInImage: true,
       pureSpellsExport: false,

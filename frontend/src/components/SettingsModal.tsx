@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
   Search, Wand2, Activity, Layers, Database, Star, Package,
-  HelpCircle, Image as ImageIcon, Hand, RefreshCw
+  HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer
 } from 'lucide-react';
 import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
@@ -49,7 +49,7 @@ interface SettingsModalProps {
   initialExpandedBundleId?: string | null;
 }
 
-type Category = 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
+type Category = 'general' | 'appearance' | 'interaction' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
 
 export function SettingsModal({
   isOpen,
@@ -247,6 +247,7 @@ export function SettingsModal({
   const categories = [
     { id: 'general', name: t('settings.categories.general'), icon: <Settings size={16} /> },
     { id: 'appearance', name: t('settings.categories.appearance'), icon: <Layers size={16} /> },
+    { id: 'interaction', name: t('settings.categories.interaction'), icon: <MousePointer size={16} /> },
     { id: 'wand', name: t('settings.categories.wand'), icon: <Wand2 size={16} /> },
     { id: 'cast', name: t('settings.categories.cast'), icon: <Zap size={16} /> },
     { id: 'spell_types', name: t('settings.categories.spell_types'), icon: <Star size={16} /> },
@@ -416,6 +417,41 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.recursion_iteration_display')) && (
+                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.recursion_iteration_display')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.recursion_iteration_display_desc')}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { id: 'none', name: t('settings.recursion_iteration_display_none') },
+                        { id: 'simple', name: t('settings.recursion_iteration_display_simple') },
+                        { id: 'labeled', name: t('settings.recursion_iteration_display_labeled') },
+                      ].map(mode => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setSettings(s => ({ ...s, recursionIterationDisplay: mode.id as any }))}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all ${settings.recursionIterationDisplay === mode.id ? 'bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/20' : 'bg-black/20 border-white/5 hover:bg-white/5'}`}
+                        >
+                          <span className={`text-[11px] font-bold ${settings.recursionIterationDisplay === mode.id ? 'text-indigo-400' : 'text-zinc-300'}`}>{mode.name}</span>
+                          {settings.recursionIterationDisplay === mode.id && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* INTERACTION */}
+            {(searchQuery || activeCategory === 'interaction') && (
+              <div className="space-y-6">
                 {isMatch(t('settings.show_drag_mode_toggle')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
                     <div className="flex items-center gap-2">
@@ -464,33 +500,42 @@ export function SettingsModal({
                     </div>
                   </div>
                 )}
-                {isMatch(t('settings.recursion_iteration_display')) && (
-                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
+                {isMatch(t('settings.delete_empty_slots')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
                     <div className="flex items-center gap-2">
-                      <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400">
-                        <Activity size={16} />
+                      <div className="p-2 bg-red-500/10 rounded-lg text-red-400">
+                        <Trash2 size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-zinc-200">{t('settings.recursion_iteration_display')}</div>
-                        <div className="text-[10px] text-zinc-500">{t('settings.recursion_iteration_display_desc')}</div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.delete_empty_slots')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.delete_empty_slots_desc')}</div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-2">
-                      {[
-                        { id: 'none', name: t('settings.recursion_iteration_display_none') },
-                        { id: 'simple', name: t('settings.recursion_iteration_display_simple') },
-                        { id: 'labeled', name: t('settings.recursion_iteration_display_labeled') },
-                      ].map(mode => (
-                        <button
-                          key={mode.id}
-                          onClick={() => setSettings(s => ({ ...s, recursionIterationDisplay: mode.id as any }))}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-all ${settings.recursionIterationDisplay === mode.id ? 'bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/20' : 'bg-black/20 border-white/5 hover:bg-white/5'}`}
-                        >
-                          <span className={`text-[11px] font-bold ${settings.recursionIterationDisplay === mode.id ? 'text-indigo-400' : 'text-zinc-300'}`}>{mode.name}</span>
-                          {settings.recursionIterationDisplay === mode.id && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />}
-                        </button>
-                      ))}
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, deleteEmptySlots: !s.deleteEmptySlots }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.deleteEmptySlots ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.deleteEmptySlots ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                {isMatch(t('settings.ctrl_click_delete')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400">
+                        <MousePointer size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.ctrl_click_delete')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.ctrl_click_delete_desc')}</div>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, ctrlClickDelete: !s.ctrlClickDelete }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.ctrlClickDelete ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.ctrlClickDelete ? 'left-6' : 'left-1'}`} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -534,25 +579,6 @@ export function SettingsModal({
                       className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showLegacyWandButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showLegacyWandButton ? 'left-6' : 'left-1'}`} />
-                    </button>
-                  </div>
-                )}
-                {isMatch(t('settings.delete_empty_slots')) && (
-                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-red-500/10 rounded-lg text-red-400">
-                        <Trash2 size={16} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-zinc-200">{t('settings.delete_empty_slots')}</div>
-                        <div className="text-[10px] text-zinc-500">{t('settings.delete_empty_slots_desc')}</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, deleteEmptySlots: !s.deleteEmptySlots }))}
-                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.deleteEmptySlots ? 'bg-indigo-600' : 'bg-zinc-700'}`}
-                    >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.deleteEmptySlots ? 'left-6' : 'left-1'}`} />
                     </button>
                   </div>
                 )}
@@ -1246,6 +1272,7 @@ export function SettingsModal({
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <ShortcutItem keys={['Alt', 'L-Click']} label={t('guide.shortcuts.modify_uses')} />
+                <ShortcutItem keys={['Ctrl', 'L-Click']} label={t('guide.shortcuts.ctrl_click_delete')} />
                 <ShortcutItem keys={['Hold Alt']} label={t('guide.shortcuts.show_indices')} />
                 <ShortcutItem keys={['Ctrl', 'B']} label={t('guide.shortcuts.toggle_warehouse')} />
                 <ShortcutItem keys={['Ctrl', 'H']} label={t('guide.shortcuts.toggle_history')} />

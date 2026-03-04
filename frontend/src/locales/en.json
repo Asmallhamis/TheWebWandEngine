@@ -122,6 +122,7 @@
     "categories": {
       "general": "General",
       "appearance": "Appearance",
+      "interaction": "Interaction",
       "wand": "Wand",
       "cast": "Cast Parameters",
       "spell_types": "Spell Types",
@@ -145,6 +146,8 @@
     "show_legacy_wand_button_desc": "Show a 'W' button on wand cards to copy in the old {{Wand}} template format for the Wiki.",
     "delete_empty_slots": "Delete Key removes empty slots",
     "delete_empty_slots_desc": "When pressing Delete, if the slot is already empty, directly remove the slot (reduce capacity).",
+    "ctrl_click_delete": "Ctrl+Click to Delete Spell",
+    "ctrl_click_delete_desc": "When enabled, Ctrl+Click on a spell deletes it (keeps the slot). Ctrl+Shift+Click deletes the spell and removes the slot (reduces capacity).",
     "default_wand_stats": "Default Wand Stats",
     "unlimited_spells": "Unlimited Spells Perk",
     "unlimited_spells_desc": "Simulate having the 'Unlimited Spells' perk. Note: Black Hole, Healing Bolt, etc., still have limited charges. (Due to a current bug, you must Alt+Left Click to set charges for these non-unlimited spells regardless of this setting)",
@@ -412,6 +415,7 @@
       "move_spells": "Move selected spells (grab and drop)",
       "to_always_cast": "Convert spell to 'Always Cast'",
       "modify_uses": "Modify spell charges (set to 0 to simulate drained)",
+      "ctrl_click_delete": "Delete spell (enable in settings)",
       "show_indices": "Temporarily show all slot indices",
       "toggle_warehouse": "Quickly open/close wand warehouse",
       "toggle_history": "Quickly open/close history panel"

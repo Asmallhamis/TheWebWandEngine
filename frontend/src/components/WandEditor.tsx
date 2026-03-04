@@ -912,6 +912,45 @@ export function WandEditor({
                     }}
                     onMouseEnter={() => !isLocked && handleSlotMouseEnter(slot, i + 1)}
                     onClick={(e) => {
+                      // Ctrl+Click delete (if setting enabled)
+                      if (e.ctrlKey && settings.ctrlClickDelete && !e.altKey) {
+                        if (e.shiftKey) {
+                          // Ctrl+Shift+Click: remove slot (reduce capacity), works on empty slots too
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const slotIdx = i + 1;
+                          const newSpells: Record<string, string> = {};
+                          const newSpellUses: Record<string, number> = {};
+                          let nextIdx = 1;
+                          for (let j = 1; j <= data.deck_capacity; j++) {
+                            if (j === slotIdx) continue;
+                            if (data.spells[j.toString()]) {
+                              newSpells[nextIdx.toString()] = data.spells[j.toString()];
+                              if (data.spell_uses?.[j.toString()] !== undefined) {
+                                newSpellUses[nextIdx.toString()] = data.spell_uses[j.toString()];
+                              }
+                            }
+                            nextIdx++;
+                          }
+                          const newCap = Math.max(1, data.deck_capacity - 1);
+                          updateWand(slot, {
+                            spells: newSpells,
+                            spell_uses: newSpellUses,
+                            deck_capacity: newCap
+                          }, t('app.notification.delete_wand_slot'));
+                          return;
+                        } else if (sid) {
+                          // Ctrl+Click: delete spell only (keep slot)
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const newSpells = { ...data.spells };
+                          const newSpellUses = { ...(data.spell_uses || {}) };
+                          delete newSpells[idx];
+                          delete newSpellUses[idx];
+                          updateWand(slot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
+                          return;
+                        }
+                      }
                       if (e.altKey && spell) {
                         e.preventDefault();
                         e.stopPropagation();
