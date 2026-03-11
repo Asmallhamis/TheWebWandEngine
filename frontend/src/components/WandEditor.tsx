@@ -639,7 +639,10 @@ export function WandEditor({
     <div ref={wandRef} className={`px-6 py-6 bg-[#0c0c0e] border-t border-white/5 space-y-8 select-none ${hideAttributes ? 'pt-4 pb-4' : ''}`}>
       {!hideAttributes && <div className="flex items-start gap-8 attributes-container">
         <div
-          className="flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl min-w-[600px] wand-attributes-box"
+          className={`flex flex-wrap items-center bg-zinc-900/50 border border-white/5 rounded-xl p-1 pr-6 shadow-2xl wand-attributes-box ${settings.compactAttributes ? 'min-w-0' : 'min-w-[600px]'}`}
+          style={settings.wandAttributesScale && settings.wandAttributesScale !== 100 ? {
+            zoom: `${settings.wandAttributesScale}%`
+          } as React.CSSProperties : undefined}
           onMouseUp={() => handleSlotMouseUp(slot, -1000)}
         >
           {/* Wand Appearance Section */}

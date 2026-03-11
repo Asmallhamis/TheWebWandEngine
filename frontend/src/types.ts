@@ -107,6 +107,12 @@ export interface AppSettings {
   stopAtRecharge: boolean;
   perks: Record<string, number>;
   recursionIterationDisplay: 'none' | 'simple' | 'labeled';
+  mobilePickerMode: boolean;
+  disablePickerAutoFocus: boolean;
+  uiScale: number;
+  wandAttributesScale: number;
+  hideSyncButton: boolean;
+  compactAttributes: boolean;
 }
 
 export interface EvalNode {
@@ -124,6 +130,9 @@ export interface ShotState {
   id: number;
   cast: number;
   stats: Record<string, number | string>;
+  source_spell?: string;
+  trigger_type?: 'trigger' | 'timer' | 'death';
+  projectiles?: string[];
 }
 
 export interface EvalResponse {

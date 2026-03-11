@@ -256,7 +256,19 @@
     "recursion_iteration_display_desc": "设置评估树中递归层级 (r) 和迭代层级 (i) 的显示方式。",
     "recursion_iteration_display_none": "隐藏",
     "recursion_iteration_display_simple": "仅数字 (1, 2...)",
-    "recursion_iteration_display_labeled": "带字母标签 (r1, i1)"
+    "recursion_iteration_display_labeled": "带字母标签 (r1, i1)",
+    "mobile_picker_mode": "移动端法术选择器优化",
+    "mobile_picker_mode_desc": "启用后，法术选择器会始终显示在点击位置下方，并自动适配屏幕宽度，避免超出屏幕。",
+    "disable_picker_auto_focus": "禁止自动聚焦搜索框",
+    "disable_picker_auto_focus_desc": "启用后，打开法术选择器时不会自动聚焦搜索框（避免手机弹出输入法），需要手动点击搜索框才会唤出键盘。",
+    "ui_scale": "界面整体缩放",
+    "ui_scale_desc": "调整整个页面的缩放比例，缩小可以在手机上显示更多内容。",
+    "wand_attributes_scale": "法杖属性栏缩放",
+    "wand_attributes_scale_desc": "单独调整法杖属性编辑区域的大小，缩小后在小屏幕上更紧凑。",
+    "hide_sync_button": "隐藏同步按钮",
+    "hide_sync_button_desc": "隐藏顶部栏的游戏同步开关按钮，节省空间。在没有连接游戏的情况下（如手机端）推荐开启。",
+    "compact_attributes": "紧凑属性栏",
+    "compact_attributes_desc": "去掉法杖属性栏的最小宽度限制，让它可以自由缩小适应手机屏幕。"
   },
   "mod_manager": {
     "title": "Mod 环境管理",

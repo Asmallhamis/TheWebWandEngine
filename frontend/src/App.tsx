@@ -302,8 +302,16 @@ function App() {
     }
   };
 
+  const uiScale = settings.uiScale || 100;
+
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 overflow-hidden text-zinc-100 selection:bg-purple-500/30">
+    <div
+      className="flex flex-col bg-zinc-950 overflow-hidden text-zinc-100 selection:bg-purple-500/30"
+      style={uiScale !== 100 ? {
+        zoom: `${uiScale}%`,
+        height: `${100 / (uiScale / 100)}vh`
+      } : { height: '100vh' }}
+    >
       <Header
         tabs={tabs}
         activeTabId={activeTabId}
@@ -328,6 +336,7 @@ function App() {
         exportModBundle={exportModBundle}
         modBundleInfo={modBundleInfo}
         onOpenModManager={() => setIsModManagerOpen(true)}
+        settings={settings}
       />
 
       <main className="flex-1 flex overflow-hidden relative">

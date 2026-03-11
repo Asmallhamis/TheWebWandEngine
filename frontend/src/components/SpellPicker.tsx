@@ -93,18 +93,36 @@ export function SpellPicker({
     <div className="fixed inset-0 z-[700] overflow-hidden" onClick={onClose}>
       <div
         data-testid="spell-picker"
-        className="absolute glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col max-h-[600px] animate-in slide-in-from-top-4 duration-200 overflow-hidden"
-        style={{
-          top: Math.min(pickerConfig.y, window.innerHeight - 520),
-          left: Math.min(pickerConfig.x, window.innerWidth - 620),
-          width: Math.max(400, Math.min(window.innerWidth - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24))
-        }}
+        className={`glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-200 overflow-hidden ${settings.mobilePickerMode
+            ? 'absolute rounded-xl'
+            : 'absolute max-h-[600px]'
+          }`}
+        style={(() => {
+          const scale = (settings.uiScale || 100) / 100;
+          const adjX = pickerConfig.x / scale;
+          const adjY = pickerConfig.y / scale;
+
+          if (settings.mobilePickerMode) {
+            return {
+              top: adjY,
+              left: 4 / scale,
+              right: 4 / scale,
+              maxHeight: `calc(100% - ${adjY + (8 / scale)}px)`
+            };
+          }
+
+          return {
+            top: Math.min(adjY, (window.innerHeight / scale) - 520),
+            left: Math.min(adjX, (window.innerWidth / scale) - 620),
+            width: Math.max(400, Math.min((window.innerWidth / scale) - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24))
+          };
+        })()}
         onClick={e => e.stopPropagation()}
       >
         <div className="p-3 border-b border-white/5 flex items-center gap-2 bg-black/20">
           <Search size={14} className="text-zinc-500" />
           <input
-            autoFocus
+            autoFocus={!settings.disablePickerAutoFocus}
             placeholder={t('settings.title') === 'Settings' ? 'Search spells...' : '搜索法术...'}
             className="bg-transparent flex-1 text-sm outline-none placeholder:text-zinc-600"
             data-testid="spell-picker-input"

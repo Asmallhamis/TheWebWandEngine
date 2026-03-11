@@ -107,8 +107,9 @@ const ShotTree: React.FC<{
   nodes: ShotNode[],
   hoveredShotId: { cast: number, id: number } | null,
   currentCast: number,
+  spellDb: Record<string, SpellInfo>,
   isRoot?: boolean
-}> = ({ nodes, hoveredShotId, currentCast, isRoot }) => {
+}> = ({ nodes, hoveredShotId, currentCast, spellDb, isRoot }) => {
   return (
     <div className="flex flex-col gap-6">
       {nodes.map((node) => (
@@ -123,6 +124,7 @@ const ShotTree: React.FC<{
 
             <ShotStateCard
               state={node.state}
+              spellDb={spellDb}
               isHighlighted={hoveredShotId?.cast === currentCast && hoveredShotId?.id === node.state.id}
             />
 
@@ -134,6 +136,7 @@ const ShotTree: React.FC<{
                     nodes={node.children}
                     hoveredShotId={hoveredShotId}
                     currentCast={currentCast}
+                    spellDb={spellDb}
                     isRoot={false}
                   />
                 </div>
@@ -360,6 +363,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             nodes={buildShotTree(group.node, group.states)}
                             hoveredShotId={hoveredShotId}
                             currentCast={group.start}
+                            spellDb={spellDb}
                             isRoot={true}
                           />
                         </div>
@@ -385,6 +389,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                                 nodes={buildShotTree(cNode, cStates)}
                                 hoveredShotId={hoveredShotId}
                                 currentCast={cNum}
+                                spellDb={spellDb}
                                 isRoot={true}
                               />
                             </div>
@@ -451,9 +456,8 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                 {isVisible && (
                   <div className="p-6 space-y-12 animate-in fade-in slide-in-from-top-1 duration-200">
                     {(!isRange || !isShowingAll) ? (
-                      // 预览模式或单轮：显示统计 + 树
-                      <div className="flex items-start gap-8">
-                        <CastStatsPanel group={group} spellDb={spellDb} />
+                      // 预览模式或单轮：显示树
+                      <div>
                         <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                           <div className="w-fit">
                             <TreeNode
@@ -480,11 +484,10 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                         if (!cNode) return null;
 
                         return (
-                          <div key={cNum} className="flex items-start gap-8 opacity-90 hover:opacity-100 transition-opacity">
-                            <div className="shrink-0 w-12 pt-4">
+                          <div key={cNum} className="opacity-90 hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-2 mb-2">
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
-                            <CastStatsPanel group={{ counts: cCounts } as any} spellDb={spellDb} />
                             <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
                               <div className="w-fit">
                                 <TreeNode
@@ -613,39 +616,85 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> 
   );
 });
 
-const ShotStateCard: React.FC<{ state: ShotState, isHighlighted?: boolean }> = React.memo(({ state, isHighlighted }) => {
+const TRIGGER_TYPE_STYLES: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  trigger: { color: 'text-blue-400', bg: 'bg-blue-500/15', border: 'border-blue-500/30', label: 'T' },
+  timer: { color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30', label: 'Tm' },
+  death: { color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/30', label: 'D' },
+};
+
+const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, SpellInfo>, isHighlighted?: boolean }> = React.memo(({ state, spellDb, isHighlighted }) => {
   const { t } = useTranslation();
+  const sourceSpell = state.source_spell && spellDb ? spellDb[state.source_spell] : null;
+  const triggerStyle = state.trigger_type ? TRIGGER_TYPE_STYLES[state.trigger_type] : null;
+  const projectiles = state.projectiles; // engine-level projectile entities
   return (
-    <div className={`flex-shrink-0 w-56 p-3 bg-zinc-900/50 border rounded-md transition-all duration-300 group/state ${isHighlighted ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10' : 'border-white/5 hover:border-blue-500/30'}`}>
-      <div className={`text-[10px] font-mono font-bold mb-3 border-b border-white/5 pb-1.5 flex justify-between items-center uppercase tracking-tighter ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
-            {state.id}
+    <div className="relative">
+      {/* A类: Source spell icon — OUTSIDE the card (top-left offset) */}
+      {sourceSpell && (
+        <div
+          className="absolute -top-3 -left-3 z-20 flex items-center gap-0.5"
+          title={state.source_spell}
+        >
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${triggerStyle ? triggerStyle.border : 'border-zinc-600'} bg-zinc-900 shadow-lg`}>
+            <img src={getIconUrl(sourceSpell.icon, false)} alt={state.source_spell || ''} className="w-4 h-4 image-pixelated" />
           </div>
+          {triggerStyle && (
+            <span className={`text-[7px] font-black px-1 py-0.5 rounded border ${triggerStyle.color} ${triggerStyle.bg} ${triggerStyle.border} bg-zinc-900 shadow-lg`}>
+              {triggerStyle.label}
+            </span>
+          )}
         </div>
-        <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[8px] text-zinc-600 transition-opacity`}>{t('evaluator.shot_state_label')}</span>
-      </div>
-      <div className="space-y-1.5">
-        {Object.entries(state.stats)
-          .filter(([key]) => !['reload_time', 'fire_rate_wait'].includes(key))
-          .map(([key, value]) => {
-            let color = "text-zinc-300";
-            if (typeof value === 'number') {
-              if (['spread_degrees', 'recoil', 'delay'].includes(key)) {
-                color = value > 0 ? "text-red-400" : value < 0 ? "text-emerald-400" : "text-zinc-300";
-              } else if (key.includes('damage') || key === 'speed_multiplier') {
-                color = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-zinc-300";
-              }
-            }
-            return (
-              <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
-                <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
-                <span className={color}>
-                  {value}
-                </span>
+      )}
+      <div className={`flex-shrink-0 w-56 p-3 bg-zinc-900/50 border rounded-md transition-all duration-300 group/state ${isHighlighted ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10' : 'border-white/5 hover:border-blue-500/30'}`}>
+        <div className={`text-[10px] font-mono font-bold mb-3 border-b border-white/5 pb-1.5 flex justify-between items-center uppercase tracking-tighter ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
+              {state.id}
+            </div>
+            {/* B类: Projectiles in this shot — INSIDE the card header (engine-level, only real entities) */}
+            {projectiles && projectiles.length > 0 && spellDb && (
+              <div className="flex items-center gap-0.5 flex-wrap">
+                {projectiles.map((spellId, i) => {
+                  const spell = spellDb[spellId];
+                  return spell ? (
+                    <img
+                      key={`${spellId}-${i}`}
+                      src={getIconUrl(spell.icon, false)}
+                      alt={spellId}
+                      title={spellId}
+                      className="w-5 h-5 image-pixelated"
+                    />
+                  ) : (
+                    <div key={`${spellId}-${i}`} className="w-5 h-5 bg-zinc-800 rounded flex items-center justify-center text-[7px] text-zinc-500 font-mono" title={spellId}>?</div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )}
+          </div>
+          <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[8px] text-zinc-600 transition-opacity`}>{t('evaluator.shot_state_label')}</span>
+        </div>
+        <div className="space-y-1.5">
+          {Object.entries(state.stats)
+            .filter(([key]) => !['reload_time', 'fire_rate_wait'].includes(key))
+            .map(([key, value]) => {
+              let color = "text-zinc-300";
+              if (typeof value === 'number') {
+                if (['spread_degrees', 'recoil', 'delay'].includes(key)) {
+                  color = value > 0 ? "text-red-400" : value < 0 ? "text-emerald-400" : "text-zinc-300";
+                } else if (key.includes('damage') || key === 'speed_multiplier') {
+                  color = value > 0 ? "text-emerald-400" : value < 0 ? "text-red-400" : "text-zinc-300";
+                }
+              }
+              return (
+                <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
+                  <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
+                  <span className={color}>
+                    {value}
+                  </span>
+                </div>
+              );
+            })}
+        </div>
       </div>
     </div>
   );

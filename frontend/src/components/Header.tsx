@@ -1,6 +1,6 @@
 import React from 'react';
 import { Cpu, Activity, Layers, X, Plus, RefreshCw, Lock, Unlock, Clipboard, Upload, Download, Settings, Library, Package } from 'lucide-react';
-import { Tab, WandData } from '../types';
+import { Tab, WandData, AppSettings } from '../types';
 import { useTranslation } from 'react-i18next';
 
 interface HeaderProps {
@@ -27,6 +27,7 @@ interface HeaderProps {
   exportModBundle?: () => Promise<void>;
   modBundleInfo: { active: number; total: number };
   onOpenModManager: () => void;
+  settings: AppSettings;
 }
 
 export function Header({
@@ -52,7 +53,8 @@ export function Header({
   syncGameSpells,
   exportModBundle,
   modBundleInfo,
-  onOpenModManager
+  onOpenModManager,
+  settings
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
@@ -119,6 +121,7 @@ export function Header({
       <div className="flex-1" />
 
       <div className="flex items-center gap-1.5 pr-4 pb-1">
+        {!settings.hideSyncButton && (<>
         <button
           onClick={() => pullData(true)}
           onContextMenu={(e) => { e.preventDefault(); pushData(); }}
@@ -146,6 +149,7 @@ export function Header({
         </button>
 
         <div className="h-4 w-[1px] bg-white/10 mx-2" />
+        </>)}
 
         <button onClick={addWand} className="neo-button bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20">
           <Plus size={14} /> {t('nav.new_wand')}

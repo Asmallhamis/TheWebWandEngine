@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
   Search, Wand2, Activity, Layers, Database, Star, Package,
-  HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer
+  HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer, Smartphone
 } from 'lucide-react';
 import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
@@ -284,7 +284,7 @@ export function SettingsModal({
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold transition-all ${activeCategory === cat.id && !searchQuery ? 'bg-indigo-500/10 text-white' : 'text-zinc-500 hover:bg-white/5'}`}
               >
                 {cat.icon}
-                <span className="hidden sm:inline">{cat.name}</span>
+                <span>{cat.name}</span>
               </button>
             ))}
           </nav>
@@ -295,7 +295,7 @@ export function SettingsModal({
               className="w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold text-zinc-500 hover:bg-white/5 transition-all"
             >
               <HelpCircle size={14} className="text-amber-500" />
-              <span className="hidden sm:inline">{t('guide.button')}</span>
+              <span>{t('guide.button')}</span>
             </button>
           </div>
         </div>
@@ -396,6 +396,45 @@ export function SettingsModal({
                       <input type="range" min="0" max="20" step="2" value={settings.editorSpellGap} onChange={e => setSettings(s => ({ ...s, editorSpellGap: parseInt(e.target.value) || 0 }))} className="flex-1 accent-indigo-500" />
                       <span className="text-xs font-mono font-bold text-indigo-400 w-8">{settings.editorSpellGap}</span>
                     </div>
+                  </div>
+                )}
+                {isMatch(t('settings.ui_scale')) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.ui_scale')} ({settings.uiScale || 100}%)</label>
+                    <div className="text-[9px] text-zinc-600 italic">{t('settings.ui_scale_desc')}</div>
+                    <div className="flex items-center gap-4">
+                      <input type="range" min="30" max="150" step="5" value={settings.uiScale || 100} onChange={e => setSettings(s => ({ ...s, uiScale: parseInt(e.target.value) || 100 }))} className="flex-1 accent-cyan-500" />
+                      <span className="text-xs font-mono font-bold text-cyan-400 w-12">{settings.uiScale || 100}%</span>
+                    </div>
+                  </div>
+                )}
+                {isMatch(t('settings.wand_attributes_scale')) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.wand_attributes_scale')} ({settings.wandAttributesScale || 100}%)</label>
+                    <div className="text-[9px] text-zinc-600 italic">{t('settings.wand_attributes_scale_desc')}</div>
+                    <div className="flex items-center gap-4">
+                      <input type="range" min="50" max="100" step="5" value={settings.wandAttributesScale || 100} onChange={e => setSettings(s => ({ ...s, wandAttributesScale: parseInt(e.target.value) || 100 }))} className="flex-1 accent-teal-500" />
+                      <span className="text-xs font-mono font-bold text-teal-400 w-12">{settings.wandAttributesScale || 100}%</span>
+                    </div>
+                  </div>
+                )}
+                {isMatch(t('settings.compact_attributes')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                        <Wand2 size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.compact_attributes')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.compact_attributes_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, compactAttributes: !s.compactAttributes }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.compactAttributes ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.compactAttributes ? 'left-6' : 'left-1'}`} />
+                    </button>
                   </div>
                 )}
                 {isMatch(t('settings.hide_labels')) && (
@@ -535,6 +574,63 @@ export function SettingsModal({
                       className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.ctrlClickDelete ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.ctrlClickDelete ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                {isMatch(t('settings.mobile_picker_mode')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                        <Smartphone size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.mobile_picker_mode')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.mobile_picker_mode_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, mobilePickerMode: !s.mobilePickerMode }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.mobilePickerMode ? 'bg-cyan-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.mobilePickerMode ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                {isMatch(t('settings.disable_picker_auto_focus')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-teal-500/10 rounded-lg text-teal-400">
+                        <Search size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.disable_picker_auto_focus')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.disable_picker_auto_focus_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, disablePickerAutoFocus: !s.disablePickerAutoFocus }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.disablePickerAutoFocus ? 'bg-teal-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.disablePickerAutoFocus ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                {isMatch(t('settings.hide_sync_button')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-green-500/10 rounded-lg text-green-400">
+                        <RefreshCw size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.hide_sync_button')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.hide_sync_button_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, hideSyncButton: !s.hideSyncButton }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideSyncButton ? 'bg-green-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideSyncButton ? 'left-6' : 'left-1'}`} />
                     </button>
                   </div>
                 )}

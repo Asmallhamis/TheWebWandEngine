@@ -256,7 +256,19 @@
     "recursion_iteration_display_desc": "Set how recursion (r) and iteration (i) levels are displayed in the execution tree.",
     "recursion_iteration_display_none": "Hide",
     "recursion_iteration_display_simple": "Numbers Only (1, 2...)",
-    "recursion_iteration_display_labeled": "With Labels (r1, i1)"
+    "recursion_iteration_display_labeled": "With Labels (r1, i1)",
+    "mobile_picker_mode": "Mobile Spell Picker",
+    "mobile_picker_mode_desc": "Position the spell picker below the clicked cell and fit it to screen width, preventing it from going off-screen on small displays.",
+    "disable_picker_auto_focus": "Disable Picker Auto-Focus",
+    "disable_picker_auto_focus_desc": "Prevent auto-focusing the search input when opening the spell picker (avoids mobile keyboard popup). Tap the search box manually to type.",
+    "ui_scale": "UI Scale",
+    "ui_scale_desc": "Adjust the overall page zoom. Reducing this shows more content on small screens.",
+    "wand_attributes_scale": "Wand Attributes Scale",
+    "wand_attributes_scale_desc": "Adjust the size of the wand attributes panel independently for a more compact layout.",
+    "hide_sync_button": "Hide Sync Button",
+    "hide_sync_button_desc": "Hide the game sync toggle button in the header bar to save space. Recommended on mobile or when not connecting to the game.",
+    "compact_attributes": "Compact Attributes",
+    "compact_attributes_desc": "Remove the minimum width constraint on the wand attributes panel, allowing it to shrink freely on small screens."
   },
   "mod_manager": {
     "title": "Mod Environment Management",

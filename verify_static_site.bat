@@ -32,4 +32,4 @@ echo ======================================================
 echo.
 
 cd ..\ghpages
-python -m http.server 15042
+python -m http.server 15042 --bind 0.0.0.0

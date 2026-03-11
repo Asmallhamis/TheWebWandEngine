@@ -8,6 +8,7 @@ const LEGACY_SETTINGS_KEY = 'wand2h_settings';
 export const useSettings = () => {
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem(SETTINGS_KEY) || localStorage.getItem(LEGACY_SETTINGS_KEY);
+    const isMobileDevice = typeof window !== 'undefined' && (window.innerWidth < 768 || ('ontouchstart' in window && window.innerWidth < 1024));
     const defaults: AppSettings = {
       commonLimit: 20,
       categoryLimit: 20,
@@ -53,7 +54,13 @@ export const useSettings = () => {
       wikiLanguage: 'en',
       stopAtRecharge: true,
       perks: {},
-      recursionIterationDisplay: 'labeled'
+      recursionIterationDisplay: 'labeled',
+      mobilePickerMode: isMobileDevice,
+      disablePickerAutoFocus: isMobileDevice,
+      uiScale: isMobileDevice ? 60 : 100,
+      wandAttributesScale: 100,
+      hideSyncButton: isMobileDevice,
+      compactAttributes: isMobileDevice
     };
     if (saved) {
       try {
