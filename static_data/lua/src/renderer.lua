@@ -401,7 +401,33 @@ local function render_combined_json(calls, engine_data, text_formatter)
 			table.insert(out, (tonumber(v[2]) and v[2] or ("\"" .. v[2] .. "\"")))
 			if i ~= #diff then table.insert(out, ",") end
 		end
-		table.insert(out, "}}")
+		table.insert(out, "}")
+		-- Append source_spell and trigger_type if available
+		local source_spell = engine_data.shot_source_spells and engine_data.shot_source_spells[shot]
+		if source_spell then
+			table.insert(out, ",\"source_spell\":\"")
+			table.insert(out, source_spell)
+			table.insert(out, "\"")
+		end
+		local trigger_type = engine_data.shot_trigger_types and engine_data.shot_trigger_types[shot]
+		if trigger_type then
+			table.insert(out, ",\"trigger_type\":\"")
+			table.insert(out, trigger_type)
+			table.insert(out, "\"")
+		end
+		-- Append projectiles list (actual projectile entities spawned in this shot)
+		local proj_list = engine_data.shot_projectiles and engine_data.shot_projectiles[shot]
+		if proj_list and #proj_list > 0 then
+			table.insert(out, ",\"projectiles\":[")
+			for pi, spell_id in ipairs(proj_list) do
+				table.insert(out, "\"")
+				table.insert(out, spell_id)
+				table.insert(out, "\"")
+				if pi ~= #proj_list then table.insert(out, ",") end
+			end
+			table.insert(out, "]")
+		end
+		table.insert(out, "}")
 		if num ~= #shot_nums_to_refs then table.insert(out, ",") end
 	end
 	table.insert(out, "],\"counts\":{")
