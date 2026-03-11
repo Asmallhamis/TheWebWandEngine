@@ -333,8 +333,9 @@ function M.initialise_engine(text_formatter, options)
 	-- Only projectile spells (not copy/modifier/utility) trigger this.
 	local _BeginProjectile = BeginProjectile
 	function BeginProjectile(entity_filename, ...)
-		if M.cur_shot_ref and M.cur_parent then
-			local proj_list = M.shot_projectiles[M.cur_shot_ref]
+		local target_shot = (M.active_shots and #M.active_shots > 0) and M.active_shots[#M.active_shots] or root_shot
+		if target_shot and M.cur_parent then
+			local proj_list = M.shot_projectiles[target_shot]
 			if proj_list then
 				local spell_id = M.cur_parent.name
 				-- Avoid duplicates
@@ -356,15 +357,16 @@ function M.initialise_engine(text_formatter, options)
 		M.reload_time = reload_time
 	end
 
-	--[[local _draw_shot = draw_shot
+	local _draw_shot = draw_shot
 	function draw_shot(...)
-		local v = { _draw_shot(...) }
 		local args = { ... }
 		local shot = args[1]
-		shot.state.wand_tree_mana = mana - shot.state.wand_tree_initial_mana
-		shot.state.wand_tree_initial_mana = nil
-		return unpack(v)
-	end]]
+		if not M.active_shots then M.active_shots = {} end
+		table.insert(M.active_shots, shot)
+		local res = { _draw_shot(...) }
+		table.remove(M.active_shots)
+		return unpack(res)
+	end
 
 	M.translations = {}
 	for _, v in ipairs(actions) do
@@ -497,6 +499,7 @@ local function reset_wand(options, text_formatter, spells)
 	M.shot_trigger_types = {}
 	M.shot_projectiles = {}
 	M.cur_shot_ref = nil
+	M.active_shots = {}
 	M.pending_trigger_type = nil
 
 	_clear_deck(false)
