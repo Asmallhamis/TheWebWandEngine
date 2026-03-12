@@ -186,6 +186,8 @@ export const OverlayManager = ({
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         setSettings={setSettings}
+        spellDb={spellDb}
+        isConnected={isConnected}
         onImport={importAllData}
         onExport={exportAllData}
         onReloadSpells={onReloadSpells}

@@ -6,7 +6,7 @@ import { PropInput } from './Common';
 import { getIconUrl, getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
 import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useTranslation } from 'react-i18next';
-import { detectPatterns, BUILTIN_SCHEME, type PatternMatch } from '../lib/spellPatterns';
+import { detectPatterns, getMergedRules, type PatternMatch } from '../lib/spellPatterns';
 
 interface WandEditorProps {
   slot: string;
@@ -176,17 +176,15 @@ export function WandEditor({
   // 法术模式检测 (一分链等)
   const patternMatches = React.useMemo(() => {
     if (!data.spells) return [] as PatternMatch[];
-    // 目前始终使用内置方案；未来可根据 settings.activeMarkingSchemeId 切换
-    return detectPatterns(data.spells, data.deck_capacity, BUILTIN_SCHEME.rules);
-  }, [data.spells, data.deck_capacity]);
+    const rules = getMergedRules(settings.userMarkingRules).filter(r => r.enabled);
+    return detectPatterns(data.spells, data.deck_capacity, rules);
+  }, [data.spells, data.deck_capacity, settings.userMarkingRules]);
 
   // 预计算每个槽位对应的 PatternMatch (用于渲染和双击)
   const slotMatchMap = React.useMemo(() => {
     const map: Record<number, PatternMatch> = {};
     for (const m of patternMatches) {
-      for (let i = m.startIdx; i <= m.endIdx; i++) {
-        map[i] = m;
-      }
+      for (const idx of m.indices) map[idx] = m;
     }
     return map;
   }, [patternMatches]);

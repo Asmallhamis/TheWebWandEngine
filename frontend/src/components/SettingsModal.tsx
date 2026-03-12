@@ -4,11 +4,13 @@ import {
   Search, Wand2, Activity, Layers, Database, Star, Package,
   HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer, Smartphone
 } from 'lucide-react';
-import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig } from '../types';
+import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig, SpellInfo, SpellMarkingRule } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
+import { getIconUrl } from '../lib/evaluatorAdapter';
+import { getMergedRules, normalizeSpellId, parsePatternText, serializePattern } from '../lib/spellPatterns';
 
 // 天赋图标路径映射 (全部使用 public/perk_icons/ 下的静态资源)
 const PERK_ICON_MAP: Record<string, string> = {
@@ -41,6 +43,8 @@ interface SettingsModalProps {
   onClose: () => void;
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  spellDb: Record<string, SpellInfo>;
+  isConnected: boolean;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport: () => void;
   onReloadSpells?: () => Promise<void | boolean>;
@@ -56,6 +60,8 @@ export function SettingsModal({
   onClose,
   settings,
   setSettings,
+  spellDb,
+  isConnected,
   onImport,
   onExport,
   onReloadSpells,
@@ -68,6 +74,11 @@ export function SettingsModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [showHelp, setShowHelp] = useState(false);
   const [expandedBundleId, setExpandedBundleId] = useState<string | null>(null);
+  const [expandedMarkingRuleId, setExpandedMarkingRuleId] = useState<string | null>(null);
+  const [patternDrafts, setPatternDrafts] = useState<Record<string, string>>({});
+  const [patternErrors, setPatternErrors] = useState<Record<string, string>>({});
+  const [pickerState, setPickerState] = useState<{ ruleId: string; slotIndex: number } | null>(null);
+  const [pickerSearch, setPickerSearch] = useState('');
   const { t } = useTranslation();
 
   const loadModBundles = async () => {
@@ -98,6 +109,121 @@ export function SettingsModal({
   }, [initialExpandedBundleId, isOpen]);
 
   if (!isOpen || !settings) return null;
+
+  const mergedMarkingRules = getMergedRules(settings.userMarkingRules);
+
+  const upsertUserRule = (rule: SpellMarkingRule) => {
+    setSettings(prev => {
+      const list = Array.isArray(prev.userMarkingRules) ? [...prev.userMarkingRules] : [];
+      const idx = list.findIndex(r => r.id === rule.id);
+      if (idx >= 0) list[idx] = { ...list[idx], ...rule };
+      else list.push(rule);
+      return { ...prev, userMarkingRules: list };
+    });
+  };
+
+  const removeUserRule = (ruleId: string) => {
+    setSettings(prev => {
+      const list = Array.isArray(prev.userMarkingRules) ? prev.userMarkingRules.filter(r => r.id !== ruleId) : [];
+      return { ...prev, userMarkingRules: list };
+    });
+  };
+
+  const handlePatternChange = (rule: SpellMarkingRule, value: string) => {
+    setPatternDrafts(prev => ({ ...prev, [rule.id]: value }));
+    const parsed = parsePatternText(value);
+    if (parsed.error) {
+      setPatternErrors(prev => ({ ...prev, [rule.id]: parsed.error }));
+      return;
+    }
+    setPatternErrors(prev => {
+      const next = { ...prev };
+      delete next[rule.id];
+      return next;
+    });
+    upsertUserRule({ ...rule, pattern: parsed.pattern, isBuiltIn: !!rule.isBuiltIn });
+  };
+
+  const updateRulePattern = (rule: SpellMarkingRule, pattern: SpellMarkingRule['pattern']) => {
+    upsertUserRule({ ...rule, pattern, isBuiltIn: !!rule.isBuiltIn });
+    setPatternDrafts(prev => ({ ...prev, [rule.id]: serializePattern(pattern) }));
+    setPatternErrors(prev => {
+      const next = { ...prev };
+      delete next[rule.id];
+      return next;
+    });
+  };
+
+  const addAlternative = (rule: SpellMarkingRule, slotIndex: number, alt: string) => {
+    const normalized = normalizeSpellId(alt);
+    if (!normalized) return;
+    const pattern = rule.pattern.map(slot => ({ ...slot, alternatives: [...slot.alternatives] }));
+    if (!pattern[slotIndex]) pattern[slotIndex] = { alternatives: [] };
+    if (!pattern[slotIndex].alternatives.includes(normalized)) {
+      pattern[slotIndex].alternatives.push(normalized);
+      updateRulePattern(rule, pattern);
+    }
+    setPickerSearch('');
+  };
+
+  const removeAlternative = (rule: SpellMarkingRule, slotIndex: number, alt: string) => {
+    const pattern = rule.pattern.map(slot => ({ ...slot, alternatives: [...slot.alternatives] }));
+    if (!pattern[slotIndex]) return;
+    pattern[slotIndex].alternatives = pattern[slotIndex].alternatives.filter(a => a !== alt);
+    if (pattern[slotIndex].alternatives.length === 0) {
+      pattern.splice(slotIndex, 1);
+    }
+    updateRulePattern(rule, pattern);
+  };
+
+  const addSlot = (rule: SpellMarkingRule) => {
+    const pattern = rule.pattern.map(slot => ({ ...slot, alternatives: [...slot.alternatives] }));
+    pattern.push({ alternatives: [] });
+    updateRulePattern(rule, pattern);
+    setPickerState({ ruleId: rule.id, slotIndex: pattern.length - 1 });
+    setPickerSearch('');
+  };
+
+  const removeSlot = (rule: SpellMarkingRule, slotIndex: number) => {
+    const pattern = rule.pattern.map(slot => ({ ...slot, alternatives: [...slot.alternatives] }));
+    if (!pattern[slotIndex]) return;
+    pattern.splice(slotIndex, 1);
+    updateRulePattern(rule, pattern);
+  };
+
+  const findSpellResults = (query: string) => {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) return Object.values(spellDb).slice(0, 30);
+    const results = Object.values(spellDb).filter(s => {
+      return (
+        s.id.toLowerCase().includes(q) ||
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.en_name || '').toLowerCase().includes(q) ||
+        (s.pinyin || '').toLowerCase().includes(q) ||
+        (s.pinyin_initials || '').toLowerCase().includes(q) ||
+        (s.aliases || '').toLowerCase().includes(q)
+      );
+    });
+    return results.slice(0, 30);
+  };
+
+  const createNewRule = () => {
+    const id = `rule_${Date.now()}`;
+    const rule: SpellMarkingRule = {
+      id,
+      name: t('settings.spell_marking_new_rule'),
+      pattern: [{ alternatives: ['DIVIDE_*'] }],
+      matchMode: 'contains',
+      minRepeat: 2,
+      ignoreEmpty: false,
+      color: '#22c55e',
+      label: '',
+      enabled: true
+    };
+    upsertUserRule(rule);
+    setExpandedMarkingRuleId(id);
+    setPatternDrafts(prev => ({ ...prev, [id]: serializePattern(rule.pattern) }));
+  };
 
   const handleImportModBundle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -454,6 +580,240 @@ export function SettingsModal({
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
                     </button>
+                  </div>
+                )}
+                {isMatch(t('settings.spell_marking_title')) && (
+                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
+                        <Star size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.spell_marking_title')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.spell_marking_desc')}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {mergedMarkingRules.map(rule => {
+                        const patternText = patternDrafts[rule.id] ?? serializePattern(rule.pattern);
+                        const hasError = !!patternErrors[rule.id];
+                        return (
+                          <div key={rule.id} className="bg-black/20 p-3 rounded-lg border border-white/5">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: rule.color }} />
+                                <div className="text-xs font-bold text-zinc-200 truncate">{rule.name}</div>
+                                {rule.isBuiltIn && (
+                                  <span className="text-[10px] text-zinc-500">{t('settings.spell_marking_builtin')}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => upsertUserRule({ ...rule, enabled: !rule.enabled, isBuiltIn: !!rule.isBuiltIn })}
+                                  className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${rule.enabled ? 'bg-amber-500' : 'bg-zinc-700'}`}
+                                >
+                                  <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${rule.enabled ? 'left-6' : 'left-1'}`} />
+                                </button>
+                                <button
+                                  onClick={() => setExpandedMarkingRuleId(expandedMarkingRuleId === rule.id ? null : rule.id)}
+                                  className="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 border border-white/10"
+                                >
+                                  {expandedMarkingRuleId === rule.id ? t('settings.spell_marking_collapse') : t('settings.spell_marking_edit')}
+                                </button>
+                                {!rule.isBuiltIn && (
+                                  <button
+                                    onClick={() => removeUserRule(rule.id)}
+                                    className="px-2 py-1 text-[10px] rounded bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30"
+                                  >
+                                    {t('settings.spell_marking_delete')}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-zinc-500 mt-1">
+                              {patternText || t('settings.spell_marking_empty')}
+                              {' · '}
+                              {rule.matchMode}
+                              {rule.matchMode === 'repeat' ? ` x${rule.minRepeat || 2}` : ''}
+                              {' · '}
+                              {rule.ignoreEmpty ? t('settings.spell_marking_ignore_empty_on') : t('settings.spell_marking_ignore_empty_off')}
+                            </div>
+                            {expandedMarkingRuleId === rule.id && (
+                              <div className="mt-3 grid grid-cols-1 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input
+                                    value={rule.name}
+                                    onChange={e => upsertUserRule({ ...rule, name: e.target.value, isBuiltIn: !!rule.isBuiltIn })}
+                                    className="px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
+                                    placeholder={t('settings.spell_marking_name')}
+                                  />
+                                  <input
+                                    value={rule.label || ''}
+                                    onChange={e => upsertUserRule({ ...rule, label: e.target.value, isBuiltIn: !!rule.isBuiltIn })}
+                                    className="px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
+                                    placeholder={t('settings.spell_marking_label')}
+                                  />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 items-center">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-zinc-400">{t('settings.spell_marking_color')}</span>
+                                    <input
+                                      type="color"
+                                      value={rule.color}
+                                      onChange={e => upsertUserRule({ ...rule, color: e.target.value, isBuiltIn: !!rule.isBuiltIn })}
+                                      className="w-8 h-6 bg-transparent border border-white/10 rounded"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <span className="text-[10px] text-zinc-400">{t('settings.spell_marking_mode')}</span>
+                                    <select
+                                      value={rule.matchMode}
+                                      onChange={e => upsertUserRule({ ...rule, matchMode: e.target.value as any, isBuiltIn: !!rule.isBuiltIn })}
+                                      className="px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
+                                    >
+                                      <option value="contains">contains</option>
+                                      <option value="exact">exact</option>
+                                      <option value="repeat">repeat</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                {rule.matchMode === 'repeat' && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-zinc-400">{t('settings.spell_marking_min_repeat')}</span>
+                                    <input
+                                      type="number"
+                                      min="2"
+                                      value={rule.minRepeat || 2}
+                                      onChange={e => upsertUserRule({ ...rule, minRepeat: Math.max(2, parseInt(e.target.value) || 2), isBuiltIn: !!rule.isBuiltIn })}
+                                      className="w-16 px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[10px] text-zinc-400">{t('settings.spell_marking_ignore_empty')}</div>
+                                  <button
+                                    onClick={() => upsertUserRule({ ...rule, ignoreEmpty: !rule.ignoreEmpty, isBuiltIn: !!rule.isBuiltIn })}
+                                    className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${rule.ignoreEmpty ? 'bg-amber-500' : 'bg-zinc-700'}`}
+                                  >
+                                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${rule.ignoreEmpty ? 'left-6' : 'left-1'}`} />
+                                  </button>
+                                </div>
+                                <div className="space-y-1">
+                                  <input
+                                    value={patternText}
+                                    onChange={e => handlePatternChange(rule, e.target.value)}
+                                    className={`px-2 py-1 text-[11px] rounded bg-black/30 border ${hasError ? 'border-red-500/60' : 'border-white/10'}`}
+                                    placeholder={t('settings.spell_marking_pattern')}
+                                  />
+                                  {hasError && (
+                                    <div className="text-[10px] text-red-400">{t('settings.spell_marking_pattern_error')}</div>
+                                  )}
+                                  <div className="text-[10px] text-zinc-500">{t('settings.spell_marking_pattern_help')}</div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="text-[10px] text-zinc-400">{t('settings.spell_marking_slots')}</div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {rule.pattern.map((slot, slotIndex) => (
+                                      <div key={`${rule.id}_${slotIndex}`} className="bg-black/30 border border-white/10 rounded-md px-2 py-1">
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                          {slot.alternatives.length === 0 && (
+                                            <div className="text-[10px] text-zinc-500">{t('settings.spell_marking_empty_slot')}</div>
+                                          )}
+                                          {slot.alternatives.map(alt => {
+                                            const info = spellDb[alt];
+                                            return (
+                                              <div key={alt} className="flex items-center gap-1 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">
+                                                {info ? (
+                                                  <img src={getIconUrl(info.icon, isConnected)} className="w-4 h-4 image-pixelated" alt="" />
+                                                ) : (
+                                                  <div className="w-4 h-4 rounded bg-zinc-700" />
+                                                )}
+                                                <span className="text-[10px] text-zinc-200">{alt}</span>
+                                                <button
+                                                  onClick={() => removeAlternative(rule, slotIndex, alt)}
+                                                  className="text-[10px] text-zinc-400 hover:text-red-300"
+                                                >
+                                                  ×
+                                                </button>
+                                              </div>
+                                            );
+                                          })}
+                                          <button
+                                            onClick={() => {
+                                              setPickerState({ ruleId: rule.id, slotIndex });
+                                              setPickerSearch('');
+                                            }}
+                                            className="text-[10px] text-zinc-400 hover:text-zinc-200 px-1"
+                                          >
+                                            {t('settings.spell_marking_add_alt')}
+                                          </button>
+                                          <button
+                                            onClick={() => removeSlot(rule, slotIndex)}
+                                            className="text-[10px] text-zinc-500 hover:text-red-300 px-1"
+                                          >
+                                            {t('settings.spell_marking_remove_slot')}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    <button
+                                      onClick={() => addSlot(rule)}
+                                      className="text-[10px] text-zinc-300 px-2 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10"
+                                    >
+                                      {t('settings.spell_marking_add_slot')}
+                                    </button>
+                                  </div>
+                                  {pickerState && pickerState.ruleId === rule.id && (
+                                    <div className="mt-2 bg-black/40 border border-white/10 rounded-lg p-2">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <input
+                                          value={pickerSearch}
+                                          onChange={e => setPickerSearch(e.target.value)}
+                                          className="flex-1 px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
+                                          placeholder={t('settings.spell_marking_picker_search')}
+                                        />
+                                        <button
+                                          onClick={() => setPickerState(null)}
+                                          className="text-[10px] text-zinc-400 hover:text-zinc-200"
+                                        >
+                                          {t('settings.spell_marking_picker_close')}
+                                        </button>
+                                      </div>
+                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-1 max-h-44 overflow-auto">
+                                        {findSpellResults(pickerSearch).map(spell => (
+                                          <button
+                                            key={spell.id}
+                                            onClick={() => addAlternative(rule, pickerState.slotIndex, spell.id)}
+                                            className="flex items-center gap-2 px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 border border-white/10 text-left"
+                                          >
+                                            <img src={getIconUrl(spell.icon, isConnected)} className="w-4 h-4 image-pixelated" alt="" />
+                                            <span className="truncate">{spell.name || spell.id}</span>
+                                          </button>
+                                        ))}
+                                        {pickerSearch.trim() && (
+                                          <button
+                                            onClick={() => addAlternative(rule, pickerState.slotIndex, pickerSearch.trim())}
+                                            className="flex items-center gap-2 px-2 py-1 text-[10px] rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left text-amber-200"
+                                          >
+                                            <span className="truncate">{t('settings.spell_marking_add_custom', { value: pickerSearch.trim() })}</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <button
+                        onClick={createNewRule}
+                        className="w-full px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-zinc-300"
+                      >
+                        {t('settings.spell_marking_add')}
+                      </button>
+                    </div>
                   </div>
                 )}
                 {isMatch(t('settings.recursion_iteration_display')) && (

@@ -65,6 +65,31 @@ export interface SpellGroupConfig {
   color?: string;
 }
 
+/** 模式中的单个槽位匹配器 */
+export interface PatternSlot {
+  /** 候选法术 ID，任一匹配即可。支持前缀通配: 'DIVIDE_*' */
+  alternatives: string[];
+}
+
+export interface SpellMarkingRule {
+  id: string;
+  name: string;
+  /** 模式槽位序列 */
+  pattern: PatternSlot[];
+  matchMode: 'exact' | 'repeat' | 'contains';
+  /** repeat 模式下最少重复次数 */
+  minRepeat: number;
+  /** 是否跳过空格子 */
+  ignoreEmpty: boolean;
+  /** 标记颜色 (CSS 色值) */
+  color: string;
+  /** 可选标签文字 */
+  label?: string;
+  enabled: boolean;
+  /** 内置规则不可删除，可编辑、可禁用 */
+  isBuiltIn?: boolean;
+}
+
 export interface AppSettings {
   commonLimit: number;
   categoryLimit: number;
@@ -114,7 +139,7 @@ export interface AppSettings {
   hideSyncButton: boolean;
   compactAttributes: boolean;
   triggerVisualizationMode: 'standard' | 'wanddbg';
-  activeMarkingSchemeId?: string;
+  userMarkingRules?: SpellMarkingRule[];
 }
 
 export interface EvalNode {

@@ -61,7 +61,8 @@ export const useSettings = () => {
       wandAttributesScale: 100,
       hideSyncButton: isMobileDevice,
       compactAttributes: isMobileDevice,
-      triggerVisualizationMode: 'standard'
+      triggerVisualizationMode: 'standard',
+      userMarkingRules: []
     };
     if (saved) {
       try {
