@@ -268,7 +268,14 @@
     "hide_sync_button": "Hide Sync Button",
     "hide_sync_button_desc": "Hide the game sync toggle button in the header bar to save space. Recommended on mobile or when not connecting to the game.",
     "compact_attributes": "Compact Attributes",
-    "compact_attributes_desc": "Remove the minimum width constraint on the wand attributes panel, allowing it to shrink freely on small screens."
+    "compact_attributes_desc": "Remove the minimum width constraint on the wand attributes panel, allowing it to shrink freely on small screens.",
+    "trigger_visualization_mode": "Trigger Visualization Mode",
+    "trigger_visualization_mode_desc": "Set how spells with triggers are displayed in the shot states and tree. 'WandDBG' mode uses composite icons.",
+    "trigger_visualization_mode_standard": "Standard (Explicit)",
+    "trigger_visualization_mode_wanddbg": "WandDBG (Placeholder, incomplete)",
+    "spell_marking_title": "Spell Marking",
+    "spell_marking_desc": "Automatically detect patterns (e.g. Divide Chains) in the spell editor and highlight them. This is an example scheme; user-defined rules coming soon.",
+    "divide_chain": "Divide Chain"
   },
   "mod_manager": {
     "title": "Mod Environment Management",

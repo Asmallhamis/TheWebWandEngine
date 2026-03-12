@@ -485,6 +485,34 @@ export function SettingsModal({
                     </div>
                   </div>
                 )}
+                {isMatch(t('settings.trigger_visualization_mode')) && (
+                  <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                        <ImageIcon size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.trigger_visualization_mode')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.trigger_visualization_mode_desc')}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { id: 'standard', name: t('settings.trigger_visualization_mode_standard') },
+                        { id: 'wanddbg', name: t('settings.trigger_visualization_mode_wanddbg') },
+                      ].map(mode => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setSettings(s => ({ ...s, triggerVisualizationMode: mode.id as any }))}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all ${settings.triggerVisualizationMode === mode.id ? 'bg-blue-500/10 border-blue-500/50 ring-1 ring-blue-500/20' : 'bg-black/20 border-white/5 hover:bg-white/5'}`}
+                        >
+                          <span className={`text-[11px] font-bold ${settings.triggerVisualizationMode === mode.id ? 'text-blue-400' : 'text-zinc-300'}`}>{mode.name}</span>
+                          {settings.triggerVisualizationMode === mode.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

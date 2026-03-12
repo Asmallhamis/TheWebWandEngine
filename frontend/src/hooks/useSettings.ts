@@ -60,7 +60,8 @@ export const useSettings = () => {
       uiScale: isMobileDevice ? 60 : 100,
       wandAttributesScale: 100,
       hideSyncButton: isMobileDevice,
-      compactAttributes: isMobileDevice
+      compactAttributes: isMobileDevice,
+      triggerVisualizationMode: 'standard'
     };
     if (saved) {
       try {

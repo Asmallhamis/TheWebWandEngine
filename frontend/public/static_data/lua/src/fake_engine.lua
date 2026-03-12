@@ -286,12 +286,22 @@ function M.initialise_engine(text_formatter, options)
 		local uv = { _create_shot(...) }
 		local v = uv[1]
 		M.nodes_to_shot_ref[M.cur_parent] = v
+		M.cur_shot_ref = v
 		M.shot_refs_to_nums[v] = { 
 			disp = M.cur_shot_num, 
 			real = M.cur_shot_num,
 			cast = M.cur_cast_num,
 			id_in_cast = M.cur_shot_in_cast_num
 		}
+		-- Track source spell and trigger type for this shot
+		if M.cur_parent and M.cur_parent.name then
+			M.shot_source_spells[v] = M.cur_parent.name
+		end
+		if M.pending_trigger_type then
+			M.shot_trigger_types[v] = M.pending_trigger_type
+			M.pending_trigger_type = nil
+		end
+		M.shot_projectiles[v] = {}
 		M.cur_shot_num = M.cur_shot_num + 1
 		M.cur_shot_in_cast_num = M.cur_shot_in_cast_num + 1
 		-- v.state.wand_tree_initial_mana = mana
@@ -299,19 +309,64 @@ function M.initialise_engine(text_formatter, options)
 		return unpack(uv)
 	end
 
+	-- Hook trigger functions to track trigger type
+	local _add_projectile_trigger_timer = add_projectile_trigger_timer
+	function add_projectile_trigger_timer(...)
+		M.pending_trigger_type = "timer"
+		return _add_projectile_trigger_timer(...)
+	end
+
+	local _add_projectile_trigger_hit_world = add_projectile_trigger_hit_world
+	function add_projectile_trigger_hit_world(...)
+		M.pending_trigger_type = "trigger"
+		return _add_projectile_trigger_hit_world(...)
+	end
+
+	local _add_projectile_trigger_death = add_projectile_trigger_death
+	function add_projectile_trigger_death(...)
+		M.pending_trigger_type = "death"
+		return _add_projectile_trigger_death(...)
+	end
+
+	-- Hook BeginProjectile to track actual projectile entities per shot
+	-- This is the engine-level callback called when a real projectile entity is spawned.
+	-- Only projectile spells (not copy/modifier/utility) trigger this.
+	local _BeginProjectile = BeginProjectile
+	function BeginProjectile(entity_filename, ...)
+		local target_shot = (M.active_shots and #M.active_shots > 0) and M.active_shots[#M.active_shots] or root_shot
+		if target_shot and M.cur_parent then
+			local proj_list = M.shot_projectiles[target_shot]
+			if proj_list then
+				local spell_id = M.cur_parent.name
+				-- Avoid duplicates
+				local found = false
+				for _, v in ipairs(proj_list) do
+					if v == spell_id then found = true; break end
+				end
+				if not found then
+					table.insert(proj_list, spell_id)
+				end
+			end
+		end
+		if _BeginProjectile then
+			return _BeginProjectile(entity_filename, ...)
+		end
+	end
+
 	function StartReload(reload_time)
 		M.reload_time = reload_time
 	end
 
-	--[[local _draw_shot = draw_shot
+	local _draw_shot = draw_shot
 	function draw_shot(...)
-		local v = { _draw_shot(...) }
 		local args = { ... }
 		local shot = args[1]
-		shot.state.wand_tree_mana = mana - shot.state.wand_tree_initial_mana
-		shot.state.wand_tree_initial_mana = nil
-		return unpack(v)
-	end]]
+		if not M.active_shots then M.active_shots = {} end
+		table.insert(M.active_shots, shot)
+		local res = { _draw_shot(...) }
+		table.remove(M.active_shots)
+		return unpack(res)
+	end
 
 	M.translations = {}
 	for _, v in ipairs(actions) do
@@ -440,6 +495,12 @@ local function reset_wand(options, text_formatter, spells)
 	M.counts = {}
 	---@type table<integer, table<string, integer>>
 	M.cast_counts = {}
+	M.shot_source_spells = {}
+	M.shot_trigger_types = {}
+	M.shot_projectiles = {}
+	M.cur_shot_ref = nil
+	M.active_shots = {}
+	M.pending_trigger_type = nil
 
 	_clear_deck(false)
 	for _, v in ipairs(spells) do

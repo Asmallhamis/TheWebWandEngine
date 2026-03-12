@@ -6,6 +6,7 @@ import { PropInput } from './Common';
 import { getIconUrl, getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
 import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useTranslation } from 'react-i18next';
+import { detectPatterns, BUILTIN_SCHEME, type PatternMatch } from '../lib/spellPatterns';
 
 interface WandEditorProps {
   slot: string;
@@ -171,6 +172,24 @@ export function WandEditor({
     }
     return map;
   }, [data.spells, data.deck_capacity]);
+
+  // 法术模式检测 (一分链等)
+  const patternMatches = React.useMemo(() => {
+    if (!data.spells) return [] as PatternMatch[];
+    // 目前始终使用内置方案；未来可根据 settings.activeMarkingSchemeId 切换
+    return detectPatterns(data.spells, data.deck_capacity, BUILTIN_SCHEME.rules);
+  }, [data.spells, data.deck_capacity]);
+
+  // 预计算每个槽位对应的 PatternMatch (用于渲染和双击)
+  const slotMatchMap = React.useMemo(() => {
+    const map: Record<number, PatternMatch> = {};
+    for (const m of patternMatches) {
+      for (let i = m.startIdx; i <= m.endIdx; i++) {
+        map[i] = m;
+      }
+    }
+    return map;
+  }, [patternMatches]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1016,6 +1035,24 @@ export function WandEditor({
                               {isMarked && (
                                 <div className="absolute inset-0 border-2 border-amber-500 rounded-lg shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10 pointer-events-none" />
                               )}
+
+                              {/* 法术模式标记 (一分链等) - 底部色条 */}
+                              {slotMatchMap[i + 1] && (() => {
+                                const pm = slotMatchMap[i + 1];
+                                const isStart = i + 1 === pm.startIdx;
+                                const isEnd = i + 1 === pm.endIdx;
+                                return (
+                                  <div
+                                    className="absolute bottom-0 left-0 right-0 h-[3px] z-20 pointer-events-none"
+                                    style={{
+                                      backgroundColor: pm.color,
+                                      borderRadius: `${isStart ? '0 0 0 4px' : '0'} ${isEnd ? '0 0 4px 0' : '0'}`,
+                                      boxShadow: `0 0 6px ${pm.color}80`,
+                                    }}
+                                    title={pm.label}
+                                  />
+                                );
+                              })()}
 
                               {isTriggered && (
                                 <div className="absolute bottom-0 left-0">

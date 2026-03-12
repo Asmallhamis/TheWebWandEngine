@@ -6,7 +6,7 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
 
 interface SpellPickerProps {
-  pickerConfig: { x: number; y: number; wandSlot: string; spellIdx: string; isAlwaysCast?: boolean } | null;
+  pickerConfig: { x: number; y: number; rowTop?: number; wandSlot: string; spellIdx: string; isAlwaysCast?: boolean } | null;
   onClose: () => void;
   pickerSearch: string;
   setPickerSearch: (s: string) => void;
@@ -114,7 +114,20 @@ export function SpellPicker({
           return {
             top: Math.min(adjY, (window.innerHeight / scale) - 520),
             left: Math.min(adjX, (window.innerWidth / scale) - 620),
-            width: Math.max(400, Math.min((window.innerWidth / scale) - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24))
+            width: Math.max(400, Math.min((window.innerWidth / scale) - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24)),
+            // 如果 clamp 后的 top 会挡住当前法术行，则翻转到行上方
+            ...(() => {
+              const clampedTop = Math.min(adjY, (window.innerHeight / scale) - 520);
+              const rowTopAdj = pickerConfig.rowTop !== undefined ? pickerConfig.rowTop / scale : undefined;
+              if (rowTopAdj !== undefined && clampedTop < rowTopAdj) {
+                // 翻转：Picker 底部对齐到行的上方
+                return {
+                  top: 'auto' as any,
+                  bottom: (window.innerHeight / scale) - rowTopAdj + 4
+                };
+              }
+              return {};
+            })()
           };
         })()}
         onClick={e => e.stopPropagation()}

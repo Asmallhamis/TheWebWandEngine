@@ -108,8 +108,9 @@ const ShotTree: React.FC<{
   hoveredShotId: { cast: number, id: number } | null,
   currentCast: number,
   spellDb: Record<string, SpellInfo>,
-  isRoot?: boolean
-}> = ({ nodes, hoveredShotId, currentCast, spellDb, isRoot }) => {
+  isRoot?: boolean,
+  settings: AppSettings
+}> = ({ nodes, hoveredShotId, currentCast, spellDb, isRoot, settings }) => {
   return (
     <div className="flex flex-col gap-6">
       {nodes.map((node) => (
@@ -126,6 +127,7 @@ const ShotTree: React.FC<{
               state={node.state}
               spellDb={spellDb}
               isHighlighted={hoveredShotId?.cast === currentCast && hoveredShotId?.id === node.state.id}
+              settings={settings}
             />
 
             {/* 子节点渲染 */}
@@ -138,6 +140,7 @@ const ShotTree: React.FC<{
                     currentCast={currentCast}
                     spellDb={spellDb}
                     isRoot={false}
+                    settings={settings}
                   />
                 </div>
                 {/* 垂直分支线 */}
@@ -357,7 +360,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                     {(!isRange || !isShowingAll) ? (
                       // 预览模式或单轮：展示射击树
                       <div className="flex items-start gap-8">
-                        <CastStatsPanel group={group} spellDb={spellDb} />
+                        <CastStatsPanel group={group} spellDb={spellDb} settings={settings} />
                         <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
                           <ShotTree
                             nodes={buildShotTree(group.node, group.states)}
@@ -365,6 +368,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             currentCast={group.start}
                             spellDb={spellDb}
                             isRoot={true}
+                            settings={settings}
                           />
                         </div>
                       </div>
@@ -383,7 +387,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             <div className="shrink-0 w-12 pt-4">
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
-                            <CastStatsPanel group={{ counts: cCounts, states: cStates, node: cNode } as any} spellDb={spellDb} />
+                            <CastStatsPanel group={{ counts: cCounts, states: cStates, node: cNode } as any} spellDb={spellDb} settings={settings} />
                             <div className="flex-1 overflow-x-auto p-12 custom-scrollbar-mini">
                               <ShotTree
                                 nodes={buildShotTree(cNode, cStates)}
@@ -391,6 +395,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                                 currentCast={cNum}
                                 spellDb={spellDb}
                                 isRoot={true}
+                                settings={settings}
                               />
                             </div>
                           </div>
@@ -519,7 +524,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 };
 
 // 抽离出的子组件，保持主组件整洁
-const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> }> = React.memo(({ group, spellDb }) => {
+const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>, settings: AppSettings }> = React.memo(({ group, spellDb, settings }) => {
   const { t, i18n } = useTranslation();
   const sortedCastCounts = Object.entries(group.counts || {}).sort(([, a], [, b]) => (b as number) - (a as number));
 
@@ -545,7 +550,12 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo> 
           {t('evaluator.cast_stats')}
         </div>
         <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar-mini pr-2">
-          {sortedCastCounts.map(([id, count]) => {
+          {sortedCastCounts.filter(([id]) => {
+            if (settings.triggerVisualizationMode === 'wanddbg') {
+              return !(id.includes('TRIGGER') || id.includes('TIMER'));
+            }
+            return true;
+          }).map(([id, count]) => {
             const spell = spellDb[id];
             const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
             return (
@@ -622,39 +632,71 @@ const TRIGGER_TYPE_STYLES: Record<string, { color: string; bg: string; border: s
   death: { color: 'text-red-400', bg: 'bg-red-500/15', border: 'border-red-500/30', label: 'D' },
 };
 
-const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, SpellInfo>, isHighlighted?: boolean }> = React.memo(({ state, spellDb, isHighlighted }) => {
+const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, SpellInfo>, isHighlighted?: boolean, settings: AppSettings }> = React.memo(({ state, spellDb, isHighlighted, settings }) => {
   const { t } = useTranslation();
-  const sourceSpell = state.source_spell && spellDb ? spellDb[state.source_spell] : null;
+  const sourceSpellId = state.source_spell;
+  const sourceSpell = sourceSpellId && spellDb ? spellDb[sourceSpellId] : null;
   const triggerStyle = state.trigger_type ? TRIGGER_TYPE_STYLES[state.trigger_type] : null;
   const projectiles = state.projectiles; // engine-level projectile entities
+
+  // WandDBG Mode Logic:
+  // If we are in 'wanddbg' mode and the source spell is a trigger (ADD_TRIGGER, etc.),
+  // WandDBG actually shows the *modified* spell (the one that was discarded and copied) as the caster,
+  // overlaid with the trigger badge.
+  // In our engine, the projectiles[0] is often that modified spell.
+  
+  let mainIconSpellId = sourceSpellId;
+  let mainIcon = sourceSpell?.icon;
+  
+  if (settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && projectiles && projectiles.length > 0) {
+    // If the source is an add_trigger, and we have projectiles, the first projectile is the "payload"
+    // We use its icon to represent the "triggered spell"
+    const payloadSpell = spellDb?.[projectiles[0]];
+    if (payloadSpell) {
+      mainIconSpellId = projectiles[0];
+      mainIcon = payloadSpell.icon;
+    }
+  }
+
   return (
     <div className="relative">
-      {/* A类: Source spell icon — OUTSIDE the card (top-left offset) */}
-      {sourceSpell && (
+      {/* A类: Source spell icon — OUTSIDE the card (Centered on top-left vertex) */}
+      {mainIcon && (
         <div
-          className="absolute -top-3 -left-3 z-20 flex items-center gap-0.5"
-          title={state.source_spell}
+          className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 z-30 flex items-center"
+          title={mainIconSpellId}
         >
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${triggerStyle ? triggerStyle.border : 'border-zinc-600'} bg-zinc-900 shadow-lg`}>
-            <img src={getIconUrl(sourceSpell.icon, false)} alt={state.source_spell || ''} className="w-4 h-4 image-pixelated" />
+          <div className={`relative w-7 h-7 rounded bg-zinc-900 border ${triggerStyle ? triggerStyle.border + ' ' + triggerStyle.bg : 'border-zinc-700'} shadow-2xl flex items-center justify-center p-0.5`}>
+            <img src={getIconUrl(mainIcon, false)} alt={mainIconSpellId || ''} className="w-5 h-5 image-pixelated" />
+            
+            {/* Filter: If we are showin the payload icon, the trigger badge goes on top */}
+            {settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && (
+              <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-sm border ${triggerStyle.border} ${triggerStyle.bg} flex items-center justify-center shadow-md animate-in fade-in zoom-in duration-300`}>
+                <span className={`text-[6px] font-black ${triggerStyle.color}`}>
+                  {triggerStyle.label}
+                </span>
+              </div>
+            )}
           </div>
-          {triggerStyle && (
-            <span className={`text-[7px] font-black px-1 py-0.5 rounded border ${triggerStyle.color} ${triggerStyle.bg} ${triggerStyle.border} bg-zinc-900 shadow-lg`}>
+          
+          {/* Explicit mode: Show the trigger label next to the icon */}
+          {settings.triggerVisualizationMode === 'standard' && triggerStyle && (
+            <div className={`ml-1 px-1 py-0.5 rounded border text-[7px] font-black shadow-lg ${triggerStyle.color} ${triggerStyle.bg} ${triggerStyle.border} bg-zinc-900 animate-in slide-in-from-left-1 duration-300`}>
               {triggerStyle.label}
-            </span>
+            </div>
           )}
         </div>
       )}
       <div className={`flex-shrink-0 w-56 p-3 bg-zinc-900/50 border rounded-md transition-all duration-300 group/state ${isHighlighted ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10' : 'border-white/5 hover:border-blue-500/30'}`}>
         <div className={`text-[10px] font-mono font-bold mb-3 border-b border-white/5 pb-1.5 flex justify-between items-center uppercase tracking-tighter ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
           <div className="flex items-center gap-2">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
-              {state.id}
-            </div>
-            {/* B类: Projectiles in this shot — INSIDE the card header (engine-level, only real entities) */}
+            {/* B类: Projectiles in this shot — INSIDE the card header (Moved to extreme left) */}
             {projectiles && projectiles.length > 0 && spellDb && (
               <div className="flex items-center gap-0.5 flex-wrap">
-                {projectiles.map((spellId, i) => {
+                {(settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && projectiles.length > 0
+                  ? projectiles.slice(1) // Hide the payload as it's now the "Caster" icon
+                  : projectiles
+                ).map((spellId, i) => {
                   const spell = spellDb[spellId];
                   return spell ? (
                     <img
@@ -670,6 +712,11 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
                 })}
               </div>
             )}
+            
+            {/* state.id (Moved away from top-left) */}
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
+              {state.id}
+            </div>
           </div>
           <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[8px] text-zinc-600 transition-opacity`}>{t('evaluator.shot_state_label')}</span>
         </div>
@@ -745,13 +792,53 @@ const TreeNode: React.FC<{
             `}
           >
             <div className="flex items-center gap-2 min-w-[24px] justify-center">
-              {iconUrl ? (
-                <img src={iconUrl} alt={node.name} className="w-7 h-7 image-pixelated drop-shadow-md" title={displayName} />
-              ) : (
-                <span className="text-[10px] font-black font-mono text-zinc-400 px-1 whitespace-nowrap uppercase italic tracking-tighter">
-                  {displayName}
-                </span>
-              )}
+              {/* WandDBG visual magic: if this is a trigger and in wanddbg mode, show payload icon */}
+              {(() => {
+                let currentIconUrl = iconUrl;
+                let currentDisplayName = displayName;
+                let currentSpellId = node.name;
+                let badge = null;
+
+                if (settings.triggerVisualizationMode === 'wanddbg' && node.children && node.children.length > 0) {
+                   const spellMeta = spellDb[node.name];
+                   // How do we know it's a trigger? We can check its ID or metadata if available.
+                   // For now, checking if it has children and is a known trigger ID pattern
+                   if (node.name.includes('TRIGGER') || node.name.includes('TIMER')) {
+                      // It's a trigger modifier. Find the first spell child.
+                      const payloadNode = node.children.find(c => spellDb[c.name]);
+                      if (payloadNode) {
+                         const payloadSpell = spellDb[payloadNode.name];
+                         currentIconUrl = getIconUrl(payloadSpell.icon, false);
+                         currentDisplayName = (i18n.language.startsWith('en') && payloadSpell.en_name ? payloadSpell.en_name : payloadSpell.name);
+                         currentSpellId = payloadNode.name;
+                         
+                         // Determine badge
+                         let badgeText = 'T';
+                         if (node.name.includes('TIMER')) badgeText = 'Tm';
+                         if (node.name.includes('DEATH')) badgeText = 'D';
+                         
+                         badge = (
+                            <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-sm border border-blue-400/50 bg-blue-600 flex items-center justify-center shadow-md z-10">
+                              <span className="text-[6px] font-black text-white">{badgeText}</span>
+                            </div>
+                         );
+                      }
+                   }
+                }
+
+                return (
+                  <div className="relative">
+                    {currentIconUrl ? (
+                      <img src={currentIconUrl} alt={currentSpellId} className="w-7 h-7 image-pixelated drop-shadow-md" title={currentDisplayName} />
+                    ) : (
+                      <span className="text-[10px] font-black font-mono text-zinc-400 px-1 whitespace-nowrap uppercase italic tracking-tighter">
+                        {currentDisplayName}
+                      </span>
+                    )}
+                    {badge}
+                  </div>
+                );
+              })()}
 
               {node.count > 1 && (
                 <span className="text-[10px] font-black bg-indigo-500 text-white px-1 rounded shadow-sm">

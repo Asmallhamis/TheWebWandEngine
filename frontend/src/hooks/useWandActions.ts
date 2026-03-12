@@ -143,11 +143,35 @@ export const useWandActions = (params: {
 
   const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => {
     let x, y, initialSearch = '';
+    let rowTop: number | undefined;
 
     if (e && 'currentTarget' in e && e.currentTarget) {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      x = rect.left;
-      y = rect.bottom + 8;
+      const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      x = cellRect.left;
+
+      // 尝试找到所在 grid 行的底部，使 Picker 不遮挡当前行的法术
+      const cell = e.currentTarget as HTMLElement;
+      // cell 是内部 div，它的 parent (.aspect-square) 才是实际的 grid item
+      const gridItem = cell.parentElement;
+      const gridParent = cell.closest('.grid');
+      if (gridParent && gridItem) {
+        const gridItemRect = gridItem.getBoundingClientRect();
+        // 找到与当前格子在同一行（top 值相同）的所有格子，取最大 bottom
+        const siblings = Array.from(gridParent.children);
+        const myTop = gridItemRect.top;
+        let rowBottom = gridItemRect.bottom;
+        for (const sib of siblings) {
+          const sibRect = (sib as HTMLElement).getBoundingClientRect();
+          // 视为同一行：top 差值在 2px 以内
+          if (Math.abs(sibRect.top - myTop) < 2) {
+            rowBottom = Math.max(rowBottom, sibRect.bottom);
+          }
+        }
+        y = rowBottom + 4;
+        rowTop = myTop;
+      } else {
+        y = cellRect.bottom + 8;
+      }
     } else {
       const manual = e as { x: number, y: number, initialSearch?: string };
       x = manual.x;
@@ -159,7 +183,8 @@ export const useWandActions = (params: {
       wandSlot,
       spellIdx,
       x,
-      y
+      y,
+      ...(rowTop !== undefined ? { rowTop } : {})
     });
     setPickerSearch(initialSearch);
     setPickerExpandedGroups(new Set());

@@ -113,6 +113,8 @@ export interface AppSettings {
   wandAttributesScale: number;
   hideSyncButton: boolean;
   compactAttributes: boolean;
+  triggerVisualizationMode: 'standard' | 'wanddbg';
+  activeMarkingSchemeId?: string;
 }
 
 export interface EvalNode {
@@ -175,6 +177,7 @@ export interface PickerConfig {
   spellIdx: string;
   x: number;
   y: number;
+  rowTop?: number;
   isAlwaysCast?: boolean;
 }
 

@@ -268,7 +268,14 @@
     "hide_sync_button": "隐藏同步按钮",
     "hide_sync_button_desc": "隐藏顶部栏的游戏同步开关按钮，节省空间。在没有连接游戏的情况下（如手机端）推荐开启。",
     "compact_attributes": "紧凑属性栏",
-    "compact_attributes_desc": "去掉法杖属性栏的最小宽度限制，让它可以自由缩小适应手机屏幕。"
+    "compact_attributes_desc": "去掉法杖属性栏的最小宽度限制，让它可以自由缩小适应手机屏幕。",
+    "trigger_visualization_mode": "触发显示模式",
+    "trigger_visualization_mode_desc": "设置带触发/定时/到时触发的法术在射击详情和执行树中的显示方式。WandDBG 模式会将触发图标贴在法术图标上。",
+    "trigger_visualization_mode_standard": "标准 (独立显示)",
+    "trigger_visualization_mode_wanddbg": "WandDBG 模式 (占位符, 尚未完成)",
+    "spell_marking_title": "法术标记",
+    "spell_marking_desc": "自动检测法术编辑区中的特定模式（如一分链）并可视化标记。这是示例方案，未来将支持用户自定义规则。",
+    "divide_chain": "一分链"
   },
   "mod_manager": {
     "title": "Mod 环境管理",

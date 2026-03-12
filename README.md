@@ -146,7 +146,8 @@ cd frontend && npm install && npm run dev
 在开发过程中，以下项目提供了巨大的灵感和参考：
 - **[Component Explorer](https://github.com/dextercd/Noita-Component-Explorer)**: 核心组件字段解析参考。
 - **[Spell Lab Shugged](https://github.com/shoozzzh/Spell-Lab-Shugged)**: 优秀的法杖编辑工具，为本项目提供了 UI 交互灵感。
-- **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 优秀的法杖编辑工具，本项目参考了其 UI 设计并使用了部分代码。。
+- **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 优秀的法杖编辑工具，本项目参考了其 UI 设计并使用了部分代码。
+- **[WandDBG](https://github.com/kaliuresis/WandDBG)**: 著名的 Noita 魔杖调试器。本项目在核心评估器逻辑及法术触发可视化方案的设计上深度借鉴了该项目的思路。
 - **[KuroLeaf's Noita Aliases](https://noita.wiki.gg/zh/wiki/User:KuroLeaf/aliases.csv)**: 拼音搜索的别名对照数据支持。
 - **AI 辅助编程**: 本项目的大部分代码（包括前端 React 架构、后端 Python 服务及部分 Lua 逻辑）由 AI 辅助编写而成。
 

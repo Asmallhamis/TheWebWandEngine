@@ -174,7 +174,7 @@ function App() {
   }, [setSettingsCategoryOverride, setSettingsExpandedBundleId]);
 
   // Picker State
-  const [pickerConfig, setPickerConfig] = useState<{ wandSlot: string; spellIdx: string; x: number; y: number; } | null>(null);
+  const [pickerConfig, setPickerConfig] = useState<{ wandSlot: string; spellIdx: string; x: number; y: number; rowTop?: number; } | null>(null);
 
   const {
     pickerSearch, setPickerSearch,

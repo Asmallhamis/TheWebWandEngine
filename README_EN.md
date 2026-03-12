@@ -109,6 +109,7 @@ The following projects provided significant inspiration and reference during dev
 - **[Component Explorer](https://github.com/dextercd/Noita-Component-Explorer)**: Reference for core component field parsing.
 - **[Spell Lab Shugged](https://github.com/shoozzzh/Spell-Lab-Shugged)**: Excellent wand editing tool that inspired many UI interactions.
 - **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: Excellent wand editing tool; this project referenced its UI design and used some of its code.
+- **[WandDBG](https://github.com/kaliuresis/WandDBG)**: The famous Noita wand debugger. This project deeply referenced its ideas for the core evaluator logic and spell trigger visualization.
 - **[KuroLeaf's Noita Aliases](https://noita.wiki.gg/zh/wiki/User:KuroLeaf/aliases.csv)**: Alias data support for Pinyin search.
 - **AI-Assisted Development**: Most of the code in this project (including the frontend React architecture, backend Python services, and some Lua logic) was generated or co-authored with AI.
 
