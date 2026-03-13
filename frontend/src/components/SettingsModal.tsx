@@ -1322,6 +1322,25 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.show_spell_id')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                        <Package size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.show_spell_id')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.show_spell_id_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, showSpellId: !s.showSpellId }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.showSpellId ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.showSpellId ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
                 {isMatch(t('settings.perks_title')) && (
                   <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-lg space-y-3">
                     <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">

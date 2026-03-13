@@ -5,7 +5,8 @@ import { Activity, Frame, Navigation, Lock, Unlock, Pin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import WandEvaluator from './WandEvaluator';
 import { SpellDock } from './SpellDock';
-import { WandEditor } from './WandEditor'; // Assuming WandEditor is imported
+import { WandEditor } from './WandEditor';
+import { CanvasTreeRenderer } from './CanvasTreeRenderer';
 
 export const WAND_COLORS: Record<string, { bg: string; border: string; text: string; shadow: string }> = {
   '1': { bg: 'bg-rose-500', border: 'border-rose-500/50', text: 'text-rose-500', shadow: 'shadow-[0_0_15px_rgba(243,62,118,0.8)]' },
@@ -304,16 +305,27 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                         defaultY={baseY}
                         onRename={handleRename}
                       >
-                        <WandEvaluator
-                          data={evalData.data}
-                          spellDb={spellDb}
-                          settings={settings}
-                          markedSlots={data.marked_slots}
-                          wandSpells={data.spells}
-                          deckCapacity={data.deck_capacity}
-                          renderMode="tree"
-                          isCanvas={true}
-                        />
+                        <div className="flex w-max h-max">
+                          {(() => {
+                            const absToOrdinal: Record<number, number> = {};
+                            let ordinal = 1;
+                            const deckCap = data.deck_capacity || 0;
+                            for (let i = 1; i <= deckCap; i++) {
+                              if (data.spells[i.toString()]) absToOrdinal[i] = ordinal++;
+                            }
+
+                            return (
+                              <CanvasTreeRenderer
+                                data={evalData.data.tree}
+                                spellDb={spellDb}
+                                settings={settings}
+                                showIndices={settings.showIndices}
+                                absoluteToOrdinal={absToOrdinal}
+                                markedSlots={data.marked_slots}
+                              />
+                            );
+                          })()}
+                        </div>
                       </DraggableNode>
                     )}
                   </React.Fragment>

@@ -773,7 +773,7 @@ const TreeNode: React.FC<{
   const { i18n } = useTranslation();
   const isCast = node.name.startsWith('Cast #') || node.name === 'Wand';
   const spell = spellDb[node.name];
-  const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : node.name;
+  const displayName = settings.showSpellId ? node.name : (spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : node.name);
 
   const iconUrl = spell ? getIconUrl(spell.icon, false) : null;
   const isMarked = node.index && node.index.some(idx => markedSlots.includes(idx));
@@ -803,7 +803,7 @@ const TreeNode: React.FC<{
               hover:scale-110 hover:z-20 hover:border-indigo-400 hover:bg-indigo-400/20
             `}
           >
-            <div className="flex items-center gap-2 min-w-[24px] justify-center">
+            <div className="flex items-center gap-2 justify-center">
               {/* WandDBG visual magic: if this is a trigger and in wanddbg mode, show payload icon */}
               {(() => {
                 let currentIconUrl = iconUrl;
@@ -838,12 +838,15 @@ const TreeNode: React.FC<{
                    }
                 }
 
+                const showText = settings.showSpellId || !currentIconUrl;
+
                 return (
-                  <div className="relative">
-                    {currentIconUrl ? (
+                  <div className="relative flex items-center gap-1">
+                    {currentIconUrl && (
                       <img src={currentIconUrl} alt={currentSpellId} className="w-7 h-7 image-pixelated drop-shadow-md" title={currentDisplayName} />
-                    ) : (
-                      <span className="text-[10px] font-black font-mono text-zinc-400 px-1 whitespace-nowrap uppercase italic tracking-tighter">
+                    )}
+                    {showText && (
+                      <span className="text-[10px] font-black font-mono text-zinc-400 px-1 whitespace-nowrap tracking-tighter">
                         {currentDisplayName}
                       </span>
                     )}

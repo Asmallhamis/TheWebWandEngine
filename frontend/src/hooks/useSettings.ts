@@ -62,7 +62,8 @@ export const useSettings = () => {
       hideSyncButton: isMobileDevice,
       compactAttributes: isMobileDevice,
       triggerVisualizationMode: 'standard',
-      userMarkingRules: []
+      userMarkingRules: [],
+      showSpellId: false
     };
     if (saved) {
       try {

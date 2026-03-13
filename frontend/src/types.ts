@@ -141,6 +141,7 @@ export interface AppSettings {
   triggerVisualizationMode: 'standard' | 'wanddbg';
   userMarkingRules?: SpellMarkingRule[];
   isCanvasMode?: boolean;
+  showSpellId: boolean;
 }
 
 export interface EvalNode {
