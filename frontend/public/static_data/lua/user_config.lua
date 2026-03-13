@@ -3,8 +3,8 @@
 
 ---@type options
 local user_config = {
-	noita_path = "/home/wand_crafter/Noita/",
-	data_path = "/home/wand_crafter/noitadata/",
+	noita_path = "E:/download/gggit/noitadata/",
+	data_path = "E:/download/gggit/noitadata/",
 }
 
 return user_config
