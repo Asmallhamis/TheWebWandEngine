@@ -1,0 +1,404 @@
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { TransformWrapper, TransformComponent, useControls } from 'react-zoom-pan-pinch';
+import { Tab, SpellDb, DragSource, WandData, AppSettings, EvalResponse } from '../types';
+import { Activity, Frame, Navigation, Lock, Unlock, Pin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import WandEvaluator from './WandEvaluator';
+import { SpellDock } from './SpellDock';
+import { WandEditor } from './WandEditor'; // Assuming WandEditor is imported
+
+export const WAND_COLORS: Record<string, { bg: string; border: string; text: string; shadow: string }> = {
+  '1': { bg: 'bg-rose-500', border: 'border-rose-500/50', text: 'text-rose-500', shadow: 'shadow-[0_0_15px_rgba(243,62,118,0.8)]' },
+  '2': { bg: 'bg-blue-500', border: 'border-blue-500/50', text: 'text-blue-500', shadow: 'shadow-[0_0_15px_rgba(59,130,246,0.8)]' },
+  '3': { bg: 'bg-emerald-500', border: 'border-emerald-500/50', text: 'text-emerald-500', shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.8)]' },
+  '4': { bg: 'bg-amber-500', border: 'border-amber-500/50', text: 'text-amber-500', shadow: 'shadow-[0_0_15px_rgba(245,158,11,0.8)]' },
+  '5': { bg: 'bg-purple-500', border: 'border-purple-500/50', text: 'text-purple-500', shadow: 'shadow-[0_0_15px_rgba(168,85,247,0.8)]' },
+};
+
+export const getWandColor = (slot: string) => WAND_COLORS[slot] || { bg: 'bg-indigo-500', border: 'border-indigo-500/50', text: 'text-indigo-500', shadow: 'shadow-[0_0_15px_rgba(99,102,241,0.8)]' };
+
+interface CanvasWorkspaceProps {
+  activeTab: Tab;
+  isConnected: boolean;
+  spellDb: SpellDb;
+  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
+  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
+  dragSource: DragSource | null;
+  clipboard: { type: 'wand'; data: WandData } | null;
+  updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
+  handleSlotMouseDown: (wandSlot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseUp: (wandSlot: string, idx: number) => void;
+  handleSlotMouseEnter: (wandSlot: string, idx: number) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, wandSlot: string, idx: number) => void;
+  handleSlotMouseLeave: () => void;
+  openPicker: (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  setSelection: (s: any) => void;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  evalResults: Record<string, { data: EvalResponse; id: number; loading?: boolean }>;
+  settings: AppSettings;
+  saveToWarehouse: (data: WandData) => void;
+  toggleExpand: (slot: string) => void;
+  deleteWand: (slot: string) => void;
+  copyWand: (slot: string) => void;
+  copyLegacyWand: (slot: string) => void;
+  pasteWand: (slot: string) => void;
+}
+
+interface DraggableNodeProps {
+  id: string;
+  defaultX: number;
+  defaultY: number;
+  title: string;
+  slotIndex: string;
+  colorDef: { bg: string; border: string; text: string; shadow: string };
+  onRename?: (newName: string) => void;
+  headerActions?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, slotIndex, colorDef, onRename, headerActions, children }) => {
+  const controls = useControls() as any;
+  const scale = controls.instance?.transformState?.scale || 1;
+  const [pos, setPos] = useState({ x: defaultX, y: defaultY });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(title);
+  const dragRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
+
+  useEffect(() => {
+    setEditValue(title);
+  }, [title]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { isDragging: true, lastX: e.clientX, lastY: e.clientY };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current.isDragging) return;
+    const dx = (e.clientX - dragRef.current.lastX) / scale;
+    const dy = (e.clientY - dragRef.current.lastY) / scale;
+    dragRef.current.lastX = e.clientX;
+    dragRef.current.lastY = e.clientY;
+    setPos(p => ({ x: p.x + dx, y: p.y + dy }));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    dragRef.current.isDragging = false;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRename) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      setIsEditing(false);
+      if (onRename && editValue.trim() !== title) {
+        onRename(editValue.trim() || `Wand ${slotIndex}`);
+      }
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setEditValue(title);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsEditing(false);
+    if (onRename && editValue.trim() !== title) {
+      onRename(editValue.trim() || `Wand ${slotIndex}`);
+    }
+  };
+
+  return (
+    <div 
+      id={id}
+      className={`absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
+      style={{ left: pos.x, top: pos.y, width: 'max-content' }}
+    >
+      <div 
+        className="cancel-pan flex items-center gap-3 mb-2 cursor-grab active:cursor-grabbing p-2 -m-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors select-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <div className={`cancel-pan w-4 h-4 rounded-full ${colorDef.bg} ${colorDef.shadow}`}></div>
+        {isEditing ? (
+          <input
+            autoFocus
+            className={`cancel-pan bg-transparent border-none outline-none text-xl font-black ${colorDef.text} px-2 py-0 uppercase tracking-widest min-w-[150px]`}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            onPointerDown={e => e.stopPropagation()}
+          />
+        ) : (
+          <h2 
+            className={`cancel-pan text-xl font-black ${colorDef.text} px-2 py-1 uppercase tracking-widest min-w-[100px] border border-transparent hover:border-white/20 hover:bg-white/5 rounded transition-all cursor-text mr-auto`}
+            onDoubleClick={handleDoubleClick}
+          >
+            {title} 
+          </h2>
+        )}
+        {headerActions && (
+          <div className="flex items-center gap-1 cancel-pan ml-2">
+            {headerActions}
+          </div>
+        )}
+      </div>
+      <div className="relative">
+        {children}
+      </div>
+      
+      {/* Absolute Badge for Slot Indicator */}
+      <div className={`absolute -bottom-3 -right-3 px-2 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-wider ${colorDef.text} shadow-lg pointer-events-none opacity-50`}>
+        #{slotIndex}
+      </div>
+    </div>
+  );
+};
+
+const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) => {
+  const { zoomToElement, centerView } = useControls();
+
+  return (
+    <div className="absolute top-4 left-4 z-50 glass-panel p-3 flex flex-col gap-2">
+      <div className="flex items-center gap-2 text-zinc-400 mb-1 px-1">
+        <Navigation size={14} className="text-emerald-400" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Navigator</span>
+      </div>
+      <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
+        {wands.map(slot => {
+          const colorDef = getWandColor(slot);
+          const data = activeTab.wands[slot];
+          const wandName = data?.appearance?.name || `Wand`;
+          
+          return (
+            <button
+              key={slot}
+              onClick={() => {
+                const el = document.getElementById(`canvas-stats-${slot}`);
+                if (el) zoomToElement(el, 1, 500);
+              }}
+              className="flex items-center justify-between gap-4 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-left transition-colors border border-transparent hover:border-white/10 w-full"
+            >
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${colorDef.bg} ${colorDef.shadow} shrink-0`}></div>
+                <span className="text-xs font-bold text-zinc-300 truncate max-w-[120px]">{wandName}</span>
+              </div>
+              <span className={`text-[9px] font-black opacity-50 ${colorDef.text}`}>#{slot}</span>
+            </button>
+          );
+        })}
+        {wands.length === 0 && (
+          <div className="text-xs text-zinc-600 px-2 py-1">No wands</div>
+        )}
+      </div>
+      <button
+        onClick={() => centerView(1, 500)}
+        className="mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg transition-colors border border-indigo-500/20"
+      >
+        <Frame size={14} />
+        <span className="text-[10px] font-bold uppercase">Reset View</span>
+      </button>
+    </div>
+  );
+};
+
+export function CanvasWorkspace(props: CanvasWorkspaceProps) {
+  const { activeTab, evalResults, spellDb, settings } = props;
+  const { t } = useTranslation();
+  
+  const wands = Object.keys(activeTab.wands || {}).sort();
+  const [pinnedWands, setPinnedWands] = useState<string[]>([]);
+  
+  const togglePinWand = (slot: string) => {
+    setPinnedWands(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]);
+  };
+
+  return (
+    <div className="flex-1 relative overflow-hidden bg-[#050505] inset-0 absolute">
+      {/* Infinite Canvas */}
+      <TransformWrapper
+        initialScale={1}
+        minScale={0.1}
+        maxScale={2}
+        limitToBounds={false}
+        centerOnInit={true}
+        doubleClick={{ disabled: true }}
+        wheel={{ step: 0.1 }}
+        panning={{ excluded: ['cancel-pan', 'panning-disabled'] }}
+      >
+        <Navigator wands={wands} activeTab={activeTab} />
+        
+        <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
+          <div className="relative w-[10000px] h-[10000px] pointer-events-none cyber-grid">
+            {/* Render Nodes */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-auto">
+              {wands.map((slot, index) => {
+                const data = activeTab.wands[slot];
+                const evalData = evalResults[`${activeTab.id}-${slot}`];
+                const colorDef = getWandColor(slot);
+                const wandName = data.appearance?.name || `Wand ${slot}`;
+                
+                const baseY = 5000 + (index * 1200) - ((wands.length * 1200) / 2); // Center the initial layout vertically
+
+                const handleRename = (newName: string) => {
+                  props.updateWand(slot, {
+                    appearance: {
+                      ...data.appearance,
+                      name: newName
+                    }
+                  });
+                };
+
+                return (
+                  <React.Fragment key={slot}>
+                    {/* Stats & States Node */}
+                    <DraggableNode 
+                      id={`canvas-stats-${slot}`}
+                      title={`${wandName} - Stats & Shot States`}
+                      slotIndex={slot}
+                      colorDef={colorDef}
+                      defaultX={3500}
+                      defaultY={baseY}
+                      onRename={handleRename}
+                    >
+                      {evalData && evalData.loading && (
+                        <div className="flex items-center gap-2 text-amber-500 animate-pulse">
+                          <Activity size={16} />
+                          <span className="text-sm font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
+                        </div>
+                      )}
+                      {evalData && evalData.data ? (
+                        <WandEvaluator
+                          data={evalData.data}
+                          spellDb={spellDb}
+                          settings={settings}
+                          markedSlots={data.marked_slots}
+                          wandSpells={data.spells}
+                          deckCapacity={data.deck_capacity}
+                          renderMode="stats"
+                          isCanvas={true}
+                        />
+                      ) : (
+                        <div className="text-zinc-600 italic px-4 py-8">No evaluation data. Modify wand or force analyze.</div>
+                      )}
+                    </DraggableNode>
+
+                    {/* Recursive Tree Node */}
+                    {evalData && evalData.data && (
+                      <DraggableNode 
+                        id={`canvas-tree-${slot}`}
+                        title={`${wandName} - Recursive Tree`}
+                        slotIndex={slot}
+                        colorDef={colorDef}
+                        defaultX={4800}
+                        defaultY={baseY}
+                        onRename={handleRename}
+                      >
+                        <WandEvaluator
+                          data={evalData.data}
+                          spellDb={spellDb}
+                          settings={settings}
+                          markedSlots={data.marked_slots}
+                          wandSpells={data.spells}
+                          deckCapacity={data.deck_capacity}
+                          renderMode="tree"
+                          isCanvas={true}
+                        />
+                      </DraggableNode>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {/* Render Pinned Wand Editors */}
+              {pinnedWands.map((slot, index) => {
+                const data = activeTab.wands[slot];
+                if (!data) return null;
+                const colorDef = getWandColor(slot);
+                const wandName = data.appearance?.name || `Wand ${slot}`;
+                const handleRename = (newName: string) => {
+                  props.updateWand(slot, {
+                    appearance: { ...data.appearance, name: newName }
+                  });
+                };
+                
+                return (
+                  <PinnedWandEditor 
+                    key={`editor-${slot}`}
+                    slot={slot}
+                    data={data}
+                    wandName={wandName}
+                    colorDef={colorDef}
+                    handleRename={handleRename}
+                    props={props}
+                    index={index}
+                  />
+                );
+              })}
+              
+              {wands.length === 0 && (
+                <div className="absolute top-[5000px] left-[5000px] -translate-x-1/2 -translate-y-1/2 text-zinc-700 text-xl font-black uppercase tracking-widest glass-panel p-12 rounded-3xl flex items-center justify-center pointer-events-none">
+                  Empty Workspace
+                </div>
+              )}
+            </div>
+          </div>
+        </TransformComponent>
+      </TransformWrapper>
+
+      {/* Bottom HUD Dock */}
+      <SpellDock {...props} wands={wands} pinnedWands={pinnedWands} togglePinWand={togglePinWand} />
+    </div>
+  );
+}
+
+// 独立的组件来管理 Pinned Editor 本地的锁定状态
+function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props, index }: any) {
+  const [isLocked, setIsLocked] = useState(true);
+  
+  return (
+    <DraggableNode 
+      id={`canvas-editor-${slot}`}
+      title={`${wandName} - Editor`}
+      slotIndex={slot}
+      colorDef={colorDef}
+      defaultX={2000}
+      defaultY={5000 + (index * 600)}
+      onRename={handleRename}
+      headerActions={
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsLocked(!isLocked); }}
+          className={`cancel-pan p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-black uppercase tracking-widest border ${isLocked ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} hover:bg-white/10`}
+          title={isLocked ? "Unlock Editor Mode" : "Lock Editor to Drag Mode"}
+        >
+          {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+          {isLocked ? 'Locked' : 'Editing'}
+        </button>
+      }
+    >
+      <div className={`relative transition-opacity duration-300 w-[1000px] ${isLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        <div className="absolute inset-0 bg-transparent -m-4 pointer-events-none cancel-pan"></div>
+        {/* We use an arbitrary wrapper large enough, and supply hideAttributes=true */}
+        <div className={isLocked ? '' : 'cancel-pan'}>
+          <WandEditor 
+             {...props}
+             slot={slot}
+             data={data}
+             hideAttributes={true}
+             hideAlwaysCast={false}
+          />
+        </div>
+      </div>
+    </DraggableNode>
+  );
+}
+

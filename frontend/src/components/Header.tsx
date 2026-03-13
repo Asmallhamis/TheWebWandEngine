@@ -28,6 +28,7 @@ interface HeaderProps {
   modBundleInfo: { active: number; total: number };
   onOpenModManager: () => void;
   settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
 }
 
 export function Header({
@@ -54,7 +55,8 @@ export function Header({
   exportModBundle,
   modBundleInfo,
   onOpenModManager,
-  settings
+  settings,
+  setSettings
 }: HeaderProps) {
   const { t } = useTranslation();
   return (
@@ -169,6 +171,15 @@ export function Header({
           data-testid="header-mod-manager-btn"
         >
           {modBundleInfo.active}/{modBundleInfo.total}
+        </button>
+        <button
+          onClick={() => {
+            setSettings(prev => ({ ...prev, isCanvasMode: !prev.isCanvasMode }));
+          }}
+          className={`p-2 transition-colors ${settings.isCanvasMode ? 'text-emerald-400 hover:text-emerald-300' : 'text-zinc-500 hover:text-white'}`}
+          title={settings.isCanvasMode ? "Switch to List View" : "Switch to Canvas View"}
+        >
+          <Layers size={18} />
         </button>
         <button
           onClick={() => setIsSettingsOpen(true)}

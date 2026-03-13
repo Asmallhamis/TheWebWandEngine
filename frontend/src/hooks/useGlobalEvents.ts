@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tab, WandData, AppSettings, AppNotification, DragSource, MousePos } from '../types';
+import { useUIStore } from '../store/useUIStore';
 
 interface UseGlobalEventsProps {
   activeTab: Tab;
@@ -23,9 +24,6 @@ interface UseGlobalEventsProps {
   setIsDraggingFile: (s: boolean) => void;
   setNotification: (n: AppNotification | null) => void;
   setTabMenu: (m: any) => void;
-
-  selectionRef: React.MutableRefObject<any>;
-  hoveredSlotRef: React.MutableRefObject<any>;
   
   importFromText: (text: string, forceTarget?: { slot: string, idx: number }) => Promise<boolean>;
   copyToClipboard: (isCut?: boolean) => Promise<void>;
@@ -55,8 +53,6 @@ export const useGlobalEvents = ({
   setIsDraggingFile,
   setNotification,
   setTabMenu,
-  selectionRef,
-  hoveredSlotRef,
   importFromText,
   copyToClipboard,
   pasteFromClipboard,
@@ -76,7 +72,8 @@ export const useGlobalEvents = ({
   useEffect(() => {
     const handleClose = (e: MouseEvent) => {
       setTabMenu(null);
-      if (!(e.target as HTMLElement).closest('.glass-card')) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.glass-card') && !target.closest('.glass-panel')) {
         setSelection(null);
       }
     };
@@ -123,7 +120,8 @@ export const useGlobalEvents = ({
           e.preventDefault();
           setIsWarehouseOpen(prev => !prev);
         } else if (e.key === 'a') {
-          const targetSlot = selectionRef.current?.wandSlot || Object.keys(activeTab.wands).find(slot => activeTab.expandedWands.has(slot));
+          const selection = useUIStore.getState().selection;
+          const targetSlot = selection?.wandSlot || Object.keys(activeTab.wands).find(slot => activeTab.expandedWands.has(slot));
           if (targetSlot) {
             e.preventDefault();
             const wand = activeTab.wands[targetSlot];
@@ -143,8 +141,8 @@ export const useGlobalEvents = ({
           pasteFromClipboard();
         }
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        const sel = selectionRef.current;
-        const hovered = hoveredSlotRef.current;
+        const sel = useUIStore.getState().selection;
+        const hovered = useUIStore.getState().hoveredSlot;
 
         let targetSlot: string | null = null;
         let targetIndices: number[] = [];
@@ -326,7 +324,7 @@ export const useGlobalEvents = ({
     activeTab, activeTabId, settings, spellDb, dragSource, 
     setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, 
     setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification,
-    selectionRef, hoveredSlotRef, importFromText, copyToClipboard, 
+    importFromText, copyToClipboard, 
     pasteFromClipboard, readMetadataFromPng, insertEmptySlot, updateWand, t
   ]);
 

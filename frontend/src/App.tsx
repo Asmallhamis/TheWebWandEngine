@@ -8,6 +8,7 @@ import { DEFAULT_WAND } from './constants';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { WandWorkspace } from './components/WandWorkspace';
+import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { OverlayManager } from './components/OverlayManager';
 import { useSettings } from './hooks/useSettings';
 import { useGlobalEvents } from './hooks/useGlobalEvents';
@@ -194,13 +195,16 @@ function App() {
     }, actionName, icons);
   }, [activeTab.isRealtime, performAction, syncWand, t]);
 
+  const setSelection = useUIStore(s => s.setSelection);
+  const selection = useUIStore(s => s.selection);
+  const dragSource = useUIStore(s => s.dragSource);
+  const setDragSource = useUIStore(s => s.setDragSource);
+  const hoveredSlot = useUIStore(s => s.hoveredSlot);
+
   const {
-    selection, setSelection, selectionRef,
     isSelecting, setIsSelecting,
-    dragSource, setDragSource,
     isDraggingFile, setIsDraggingFile,
     mousePos, setMousePos,
-    hoveredSlot, setHoveredSlot, hoveredSlotRef,
     handleSlotMouseDown, handleSlotMouseUp, handleSlotMouseEnter, handleSlotMouseMove, handleSlotMouseLeave,
     insertEmptySlot: _insertEmptySlot
   } = useInteraction({ activeTab, settings, performAction, syncWand });
@@ -214,13 +218,12 @@ function App() {
   const insertEmptySlot = () => _insertEmptySlot(updateWand);
 
   const { importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng } = useWandImport({
-    activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification: (n) => showNotification(n?.msg || '', n?.type), hoveredSlotRef, selectionRef
+    activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification: (n) => showNotification(n?.msg || '', n?.type)
   });
 
   useGlobalEvents({
     activeTab, activeTabId, tabs, settings, spellDb, dragSource, pickerConfig, notification,
     setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification: (n) => showNotification(n?.msg || '', n?.type), setTabMenu,
-    selectionRef, hoveredSlotRef,
     importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng,
     insertEmptySlot, updateWand
   });
@@ -337,36 +340,67 @@ function App() {
         modBundleInfo={modBundleInfo}
         onOpenModManager={() => setIsModManagerOpen(true)}
         settings={settings}
+        setSettings={setSettings}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
-        <WandWorkspace
-          activeTab={activeTab}
-          isConnected={isConnected}
-          spellDb={spellDb}
-          selection={selection}
-          hoveredSlot={hoveredSlot}
-          dragSource={dragSource}
-          clipboard={clipboard}
-          toggleExpand={toggleExpand}
-          deleteWand={deleteWand}
-          copyWand={copyWand}
-          copyLegacyWand={copyLegacyWand}
-          pasteWand={pasteWand}
-          updateWand={updateWand}
-          requestEvaluation={requestEvaluation}
-          handleSlotMouseDown={handleSlotMouseDown}
-          handleSlotMouseUp={handleSlotMouseUp}
-          handleSlotMouseEnter={handleSlotMouseEnter}
-          handleSlotMouseMove={handleSlotMouseMove}
-          handleSlotMouseLeave={handleSlotMouseLeave}
-          openPicker={openPicker}
-          setSelection={setSelection}
-          setSettings={setSettings}
-          evalResults={evalResults}
-          settings={settings}
-          saveToWarehouse={saveToWarehouse}
-        />
+        {settings.isCanvasMode ? (
+          <CanvasWorkspace
+            activeTab={activeTab}
+            isConnected={isConnected}
+            spellDb={spellDb}
+            selection={selection}
+            hoveredSlot={hoveredSlot}
+            dragSource={dragSource}
+            clipboard={clipboard}
+            toggleExpand={toggleExpand}
+            deleteWand={deleteWand}
+            copyWand={copyWand}
+            copyLegacyWand={copyLegacyWand}
+            pasteWand={pasteWand}
+            updateWand={updateWand}
+            requestEvaluation={requestEvaluation}
+            handleSlotMouseDown={handleSlotMouseDown}
+            handleSlotMouseUp={handleSlotMouseUp}
+            handleSlotMouseEnter={handleSlotMouseEnter}
+            handleSlotMouseMove={handleSlotMouseMove}
+            handleSlotMouseLeave={handleSlotMouseLeave}
+            openPicker={openPicker}
+            setSelection={setSelection}
+            setSettings={setSettings}
+            evalResults={evalResults}
+            settings={settings}
+            saveToWarehouse={saveToWarehouse}
+          />
+        ) : (
+          <WandWorkspace
+            activeTab={activeTab}
+            isConnected={isConnected}
+            spellDb={spellDb}
+            selection={selection}
+            hoveredSlot={hoveredSlot}
+            dragSource={dragSource}
+            clipboard={clipboard}
+            toggleExpand={toggleExpand}
+            deleteWand={deleteWand}
+            copyWand={copyWand}
+            copyLegacyWand={copyLegacyWand}
+            pasteWand={pasteWand}
+            updateWand={updateWand}
+            requestEvaluation={requestEvaluation}
+            handleSlotMouseDown={handleSlotMouseDown}
+            handleSlotMouseUp={handleSlotMouseUp}
+            handleSlotMouseEnter={handleSlotMouseEnter}
+            handleSlotMouseMove={handleSlotMouseMove}
+            handleSlotMouseLeave={handleSlotMouseLeave}
+            openPicker={openPicker}
+            setSelection={setSelection}
+            setSettings={setSettings}
+            evalResults={evalResults}
+            settings={settings}
+            saveToWarehouse={saveToWarehouse}
+          />
+        )}
 
         <OverlayManager
           pickerConfig={pickerConfig}

@@ -14,10 +14,12 @@ interface Props {
   spellDb: Record<string, SpellInfo>;
   onHoverSlots?: (indices: number[] | null) => void;
   onHoverShotId?: (id: number | null) => void;
-  settings: AppSettings;
   markedSlots?: number[];
   wandSpells?: Record<string, string>;
   deckCapacity?: number;
+  renderMode?: 'all' | 'stats' | 'tree';
+  isCanvas?: boolean;
+  settings: AppSettings;
 }
 
 interface ShotNode {
@@ -156,7 +158,7 @@ const ShotTree: React.FC<{
   );
 };
 
-const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity }) => {
+const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity, renderMode = 'all', isCanvas = false }) => {
   const { t, i18n } = useTranslation();
   const [userExpandedCasts, setUserExpandedCasts] = useState<Record<number, boolean>>({});
   const [userShowAllCasts, setUserShowAllCasts] = useState<Record<number, boolean>>({}); // 控制是否展开合并的每一轮
@@ -273,14 +275,16 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
   }, [data, settings.groupIdenticalCasts]);
 
   return (
-    <div className="mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500">
+    <div className={isCanvas ? "space-y-6" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500"}>
       {/* Overall Spell Counts Section */}
-      {sortedOverallCounts.length > 0 && (
+      {(renderMode === 'all' || renderMode === 'stats') && sortedOverallCounts.length > 0 && (
         <section data-testid="eval-overall-counts">
-          <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
-            <span className="w-1.5 h-1.5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] rounded-full"></span>
-            {t('evaluator.overall_counts')}
-          </h3>
+          {!isCanvas && (
+            <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
+              <span className="w-1.5 h-1.5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] rounded-full"></span>
+              {t('evaluator.overall_counts')}
+            </h3>
+          )}
           <div className="flex flex-wrap gap-2 opacity-60 grayscale-[0.5] hover:opacity-100 hover:grayscale-0 transition-all duration-300">
             {sortedOverallCounts.map(([id, count]) => {
               const spell = spellDb[id];
@@ -308,15 +312,18 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
       )}
 
       {/* Shot States Section */}
-      <section>
-        <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between mb-4">
-          <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
-            <span className="w-1.5 h-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] rounded-full"></span>
-            {t('evaluator.shot_states')}
-          </h3>
-        </div>
+      {(renderMode === 'all' || renderMode === 'stats') && (
+        <section>
+          {!isCanvas && (
+            <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between mb-4">
+              <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
+                <span className="w-1.5 h-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] rounded-full"></span>
+                {t('evaluator.shot_states')}
+              </h3>
+            </div>
+          )}
 
-        <div className="space-y-6">
+          <div className="space-y-6">
           {castGroups.map(group => {
             const isRange = group.start !== group.end;
             const isVisible = userExpandedCasts[group.start] ?? true; // 状态详情默认可见
@@ -408,30 +415,34 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
             );
           })}
         </div>
-      </section>
+        </section>
+      )}
 
       {/* Tree Flowchart Section */}
-      <section>
-        <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
-          <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] rounded-full"></span>
-          {t('evaluator.execution_flow')}
-        </h3>
-        <div className="space-y-4">
-          {castGroups.map((group) => {
-            const complexity = countNodes(group.node);
-            const isRange = group.start !== group.end;
-            // 递归树默认根据复杂度折叠，但在合并模式下，首项默认展开以供预览
-            const isAutoFolded = shouldDefaultFold && group.start > 1;
-            const isVisible = userExpandedCasts[group.start] ?? !isAutoFolded;
-            const isShowingAll = userShowAllCasts[group.start] ?? false;
+      {(renderMode === 'all' || renderMode === 'tree') && (
+        <section>
+          {!isCanvas && (
+            <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
+              <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] rounded-full"></span>
+              {t('evaluator.execution_flow')}
+            </h3>
+          )}
+          <div className="space-y-4">
+            {castGroups.map((group) => {
+              const complexity = countNodes(group.node);
+              const isRange = group.start !== group.end;
+              // 递归树默认根据复杂度折叠，但在合并模式下，首项默认展开以供预览
+              const isAutoFolded = shouldDefaultFold && group.start > 1;
+              const isVisible = isCanvas ? true : (userExpandedCasts[group.start] ?? !isAutoFolded);
+              const isShowingAll = userShowAllCasts[group.start] ?? false;
 
-            return (
-              <div key={group.start} className="bg-zinc-950/30 rounded-lg border border-white/5 overflow-hidden">
-                <div
-                  className="px-4 py-2 bg-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors group/treeh"
-                  onClick={() => setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
-                >
-                  <div className="flex items-center gap-3">
+              return (
+                <div key={group.start} className="bg-zinc-950/30 rounded-lg border border-white/5 overflow-hidden">
+                  <div
+                    className={`px-4 py-2 bg-white/5 flex items-center justify-between transition-colors group/treeh ${isCanvas ? '' : 'cursor-pointer hover:bg-white/10'}`}
+                    onClick={() => !isCanvas && setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
+                  >
+                    <div className="flex items-center gap-3">
                     <span className={`text-[10px] font-black uppercase ${isRange ? 'text-amber-500' : 'text-emerald-500'}`}>
                       {isRange ? `Cast #${group.start} - #${group.end}` : `Cast #${group.start}`}
                     </span>
@@ -519,6 +530,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
           })}
         </div>
       </section>
+      )}
     </div>
   );
 };
@@ -559,7 +571,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>,
             const spell = spellDb[id];
             const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
             return (
-              <div key={id} className="flex items-center gap-2 bg-zinc-900/60 border border-white/5 pl-1 pr-2 py-1 rounded transition-all">
+              <div key={id} className="flex items-center gap-2 glass pl-1 pr-2 py-1 rounded transition-all hover:bg-white/10">
                 {spell ? (
                   <img src={getIconUrl(spell.icon, false)} alt={id} className="w-6 h-6 image-pixelated" />
                 ) : (
@@ -588,7 +600,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>,
           </div>
           <div className="grid grid-cols-1 gap-1">
             {castDelay && (
-              <div className="flex justify-between items-center bg-blue-500/5 px-2 py-1 rounded border border-blue-500/10">
+              <div className="flex justify-between items-center bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
                 <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">{t('evaluator.cast_delay')}</span>
                 <span className="text-[10px] font-mono font-black text-blue-400">
                   {castDelay}f
@@ -596,7 +608,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>,
               </div>
             )}
             {recharge && Number(recharge) > 0 && (
-              <div className="flex justify-between items-center bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10">
+              <div className="flex justify-between items-center bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
                 <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">{t('evaluator.recharge_time')}</span>
                 <span className="text-[10px] font-mono font-black text-amber-500">
                   {recharge}f
@@ -604,7 +616,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>,
               </div>
             )}
             {manaDrain && (
-              <div className="flex justify-between items-center bg-purple-500/5 px-2 py-1 rounded border border-purple-500/10 mt-1">
+              <div className="flex justify-between items-center bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20 mt-1">
                 <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-tighter">{t('evaluator.mana_drain')}</span>
                 <span className="text-[10px] font-mono font-black text-purple-400">
                   {manaDrain}
@@ -687,7 +699,7 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
           )}
         </div>
       )}
-      <div className={`flex-shrink-0 w-56 p-3 bg-zinc-900/50 border rounded-md transition-all duration-300 group/state ${isHighlighted ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10' : 'border-white/5 hover:border-blue-500/30'}`}>
+      <div className={`flex-shrink-0 w-56 p-3 glass-card transition-all duration-300 group/state ${isHighlighted ? 'glow-border-active scale-105 z-10' : 'hover:glow-border'}`}>
         <div className={`text-[10px] font-mono font-bold mb-3 border-b border-white/5 pb-1.5 flex justify-between items-center uppercase tracking-tighter ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
           <div className="flex items-center gap-2">
             {/* B类: Projectiles in this shot — INSIDE the card header (Moved to extreme left) */}

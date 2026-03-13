@@ -79,7 +79,7 @@ export function SettingsModal({
   const [patternErrors, setPatternErrors] = useState<Record<string, string>>({});
   const [pickerState, setPickerState] = useState<{ ruleId: string; slotIndex: number } | null>(null);
   const [pickerSearch, setPickerSearch] = useState('');
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const loadModBundles = async () => {
     try {
@@ -133,11 +133,11 @@ export function SettingsModal({
     setPatternDrafts(prev => ({ ...prev, [rule.id]: value }));
     const parsed = parsePatternText(value);
     if (parsed.error) {
-      setPatternErrors(prev => ({ ...prev, [rule.id]: parsed.error }));
+      setPatternErrors(prev => ({ ...prev, [rule.id]: parsed.error as string }));
       return;
     }
     setPatternErrors(prev => {
-      const next = { ...prev };
+      const next: Record<string, string> = { ...prev };
       delete next[rule.id];
       return next;
     });
@@ -779,23 +779,29 @@ export function SettingsModal({
                                           {t('settings.spell_marking_picker_close')}
                                         </button>
                                       </div>
-                                      <div className="grid grid-cols-2 md:grid-cols-3 gap-1 max-h-44 overflow-auto">
-                                        {findSpellResults(pickerSearch).map(spell => (
-                                          <button
-                                            key={spell.id}
-                                            onClick={() => addAlternative(rule, pickerState.slotIndex, spell.id)}
-                                            className="flex items-center gap-2 px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 border border-white/10 text-left"
-                                          >
-                                            <img src={getIconUrl(spell.icon, isConnected)} className="w-4 h-4 image-pixelated" alt="" />
-                                            <span className="truncate">{spell.name || spell.id}</span>
-                                          </button>
-                                        ))}
+                                      <div className="flex flex-wrap gap-1 max-h-72 overflow-auto p-1 bg-black/20 rounded-lg">
+                                        {findSpellResults(pickerSearch).map(spell => {
+                                          const displayName = i18n.language.startsWith('en') && spell.en_name
+                                            ? spell.en_name
+                                            : (spell.name || spell.id);
+                                          const tooltip = `${displayName}\nID: ${spell.id}`;
+                                          return (
+                                            <button
+                                              key={spell.id}
+                                              onClick={() => addAlternative(rule, pickerState.slotIndex, spell.id)}
+                                              className="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors shrink-0"
+                                              title={tooltip}
+                                            >
+                                              <img src={getIconUrl(spell.icon, isConnected)} className="w-7 h-7 image-pixelated" alt="" />
+                                            </button>
+                                          );
+                                        })}
                                         {pickerSearch.trim() && (
                                           <button
                                             onClick={() => addAlternative(rule, pickerState.slotIndex, pickerSearch.trim())}
-                                            className="flex items-center gap-2 px-2 py-1 text-[10px] rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left text-amber-200"
+                                            className="h-8 px-3 flex items-center justify-center text-[10px] rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200"
                                           >
-                                            <span className="truncate">{t('settings.spell_marking_add_custom', { value: pickerSearch.trim() })}</span>
+                                            {t('settings.spell_marking_add_custom', { value: pickerSearch.trim() })}
                                           </button>
                                         )}
                                       </div>

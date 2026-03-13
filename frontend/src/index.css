@@ -25,11 +25,29 @@
 
 @layer components {
   .glass {
-    @apply backdrop-blur-md border border-white/5 bg-black/40;
+    @apply backdrop-blur-xl border border-white/5 bg-zinc-950/60 shadow-lg;
   }
 
   .glass-card {
-    @apply rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-xl shadow-2xl transition-all duration-300;
+    @apply rounded-2xl border border-white/10 bg-zinc-900/50 backdrop-blur-xl shadow-2xl transition-all duration-300;
+  }
+
+  .glass-panel {
+    @apply border border-white/5 bg-black/60 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)] rounded-xl;
+  }
+  
+  .glow-border {
+    @apply border border-fuchsia-500/30 shadow-[0_0_15px_rgba(217,70,239,0.2)];
+  }
+  
+  .glow-border-active {
+    @apply border border-fuchsia-400 shadow-[0_0_20px_rgba(217,70,239,0.5)];
+  }
+  
+  .cyber-grid {
+    background-size: 40px 40px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   }
 
   .neo-button {

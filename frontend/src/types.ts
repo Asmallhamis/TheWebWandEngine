@@ -140,6 +140,7 @@ export interface AppSettings {
   compactAttributes: boolean;
   triggerVisualizationMode: 'standard' | 'wanddbg';
   userMarkingRules?: SpellMarkingRule[];
+  isCanvasMode?: boolean;
 }
 
 export interface EvalNode {

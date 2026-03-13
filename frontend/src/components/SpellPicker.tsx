@@ -209,7 +209,7 @@ export function SpellPicker({
                     <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">搜索结果 (按匹配度排序)</span>
                   </div>
                 )}
-                <div className={`flex flex-wrap gap-1.5 px-1 ${settings.hideLabels ? 'mb-4' : ''}`}>
+                <div className={`flex flex-wrap gap-1 px-1 ${settings.hideLabels ? 'mb-4' : ''}`}>
                   {searchResults[0].map((s: SpellInfo, idx: number) => {
                     const typeConfig = settings.spellTypes.find(t => t.id === s.type);
                     const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
@@ -231,7 +231,7 @@ export function SpellPicker({
                         title={tooltip}
                       >
                         <div className="relative w-full h-full flex items-center justify-center">
-                          <img src={getIconUrl(s.icon, isConnected)} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                          <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
                           {idx < 9 && (
                             <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                               {idx + 1}
@@ -272,7 +272,7 @@ export function SpellPicker({
                         )}
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 px-0.5">
+                    <div className="flex flex-wrap gap-1 px-0.5">
                       {spellStats.overall.map((s: SpellInfo, idx: number) => {
                         const typeConfig = settings.spellTypes.find(t => t.id === s.type);
                         const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
@@ -294,7 +294,7 @@ export function SpellPicker({
                             data-spell-id={s.id}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
-                              <img src={getIconUrl(s.icon, isConnected)} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                              <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
                               {!pickerSearch && idx < 9 && (
                                 <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                                   {idx + 1}
@@ -335,7 +335,7 @@ export function SpellPicker({
                         )}
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 px-0.5">
+                    <div className="flex flex-wrap gap-1 px-0.5">
                       {spellStats.categories[gIdx].map((s: SpellInfo, idx: number) => {
                         const typeConfig = settings.spellTypes.find(t => t.id === s.type);
                         const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
@@ -364,7 +364,7 @@ export function SpellPicker({
                             data-testid="spell-picker-item"
                             data-spell-id={s.id}
                           >
-                            <img src={getIconUrl(s.icon, isConnected)} className="w-7 h-7 image-pixelated group-hover:scale-110" alt="" />
+                            <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
                           </button>
                         );
                       })}

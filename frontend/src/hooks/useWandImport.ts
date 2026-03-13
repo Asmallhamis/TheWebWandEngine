@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { SpellInfo, WandData, Tab, AppSettings, HistoryItem, WarehouseWand, AppNotification } from '../types';
 import { DEFAULT_WAND } from '../constants';
 import { spritePathToWikiName, wikiNameToSpritePath } from '../lib/evaluatorAdapter';
+import { useUIStore } from '../store/useUIStore';
 
 export const readMetadataFromPng = async (file: File): Promise<string | null> => {
   return new Promise((resolve) => {
@@ -67,8 +68,6 @@ interface UseWandImportProps {
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
   setActiveTabId: (id: string) => void;
   setNotification: (n: AppNotification | null) => void;
-  hoveredSlotRef: React.MutableRefObject<{ wandSlot: string, idx: number, isRightHalf: boolean } | null>;
-  selectionRef: React.MutableRefObject<{ wandSlot: string, indices: number[], startIdx: number } | null>;
 }
 
 export const useWandImport = ({
@@ -83,9 +82,7 @@ export const useWandImport = ({
   syncWand,
   setTabs,
   setActiveTabId,
-  setNotification,
-  hoveredSlotRef,
-  selectionRef
+  setNotification
 }: UseWandImportProps) => {
 
   const areWandsIdentical = useCallback((w1: WandData, w2: WandData) => {
@@ -120,7 +117,8 @@ export const useWandImport = ({
       const spellsStr = url.searchParams.get('spells');
       if (spellsStr) {
         const ids = spellsStr.split(',').filter(s => !!s);
-        const targetSlot = forceTarget?.slot || (hoveredSlotRef.current?.wandSlot) || (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
+        const hoveredSlot = useUIStore.getState().hoveredSlot;
+        const targetSlot = forceTarget?.slot || (hoveredSlot?.wandSlot) || (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
         const nextWand = {
           ...DEFAULT_WAND,
           mana_max: parseFloat(url.searchParams.get('mana_max') || '400'),
@@ -154,9 +152,12 @@ export const useWandImport = ({
     let targetWandSlot = forceTarget?.slot;
     let startIdx = forceTarget?.idx;
 
-    if (!targetWandSlot && hoveredSlotRef.current) {
-      targetWandSlot = hoveredSlotRef.current.wandSlot;
-      const hIdx = hoveredSlotRef.current.idx;
+    const hoveredSlot = useUIStore.getState().hoveredSlot;
+    const selection = useUIStore.getState().selection;
+
+    if (!targetWandSlot && hoveredSlot) {
+      targetWandSlot = hoveredSlot.wandSlot;
+      const hIdx = hoveredSlot.idx;
       if (hIdx < 0) {
         // Paste into Always Cast
         const acIdx = (-hIdx) - 1;
@@ -169,7 +170,7 @@ export const useWandImport = ({
             const next = { ...prev };
             const w = { ...next[targetWandSlot!] };
             const newAC = [...(w.always_cast || [])];
-            const insertPos = acIdx + (hoveredSlotRef.current!.isRightHalf ? 1 : 0);
+            const insertPos = acIdx + (hoveredSlot.isRightHalf ? 1 : 0);
             newAC.splice(insertPos, 0, ...spellsList);
             w.always_cast = newAC;
             next[targetWandSlot!] = w;
@@ -180,10 +181,10 @@ export const useWandImport = ({
         }
         return false;
       }
-      startIdx = hIdx + (hoveredSlotRef.current.isRightHalf ? 1 : 0);
-    } else if (!targetWandSlot && selectionRef.current) {
-      targetWandSlot = selectionRef.current.wandSlot;
-      startIdx = Math.min(...selectionRef.current.indices);
+      startIdx = hIdx + (hoveredSlot.isRightHalf ? 1 : 0);
+    } else if (!targetWandSlot && selection) {
+      targetWandSlot = selection.wandSlot;
+      startIdx = Math.min(...selection.indices);
     }
 
     if (!targetWandSlot || !startIdx) {
@@ -430,14 +431,14 @@ export const useWandImport = ({
       updateWand(targetWandSlot, { spells: finalSpellsObj, deck_capacity: newCapacity }, t('app.notification.insert_spell_sequence'), newSpellsList.filter(s => s));
       return true;
     }
-  }, [spellDb, settings, activeTabId, activeTab, spellNameToId, performAction, syncWand, t, updateWand, hoveredSlotRef, selectionRef]);
+  }, [spellDb, settings, activeTabId, activeTab, spellNameToId, performAction, syncWand, t, updateWand]);
 
   const copyToClipboard = useCallback(async (isCut = false) => {
     let wandSlot: string;
     let indices: number[];
 
-    const sel = selectionRef.current;
-    const hovered = hoveredSlotRef.current;
+    const sel = useUIStore.getState().selection;
+    const hovered = useUIStore.getState().hoveredSlot;
 
     if (sel && hovered && hovered.wandSlot === sel.wandSlot && sel.indices.includes(hovered.idx)) {
       wandSlot = sel.wandSlot;
@@ -507,7 +508,7 @@ export const useWandImport = ({
         updateWand(wandSlot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.cut_spell'), sequence.filter(s => s));
       }
     }
-  }, [activeTab, selectionRef, hoveredSlotRef, t, setNotification, updateWand]);
+  }, [activeTab, t, setNotification, updateWand]);
 
   const pasteFromClipboard = useCallback(async (forceTarget?: { slot: string, idx: number }) => {
     try {

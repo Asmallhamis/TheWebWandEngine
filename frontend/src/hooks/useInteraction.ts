@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WandData, Tab, AppSettings } from '../types';
 import { DEFAULT_WAND } from '../constants';
+import { useUIStore } from '../store/useUIStore';
 
 export const useInteraction = (params: {
   activeTab: Tab;
@@ -12,19 +13,17 @@ export const useInteraction = (params: {
   const { activeTab, settings, performAction, syncWand } = params;
   const { t } = useTranslation();
 
-  // --- Interaction State ---
-  const [selection, setSelection] = useState<{ wandSlot: string, indices: number[], startIdx: number } | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [dragSource, setDragSource] = useState<{ wandSlot: string, idx: number, sid: string } | null>(null);
+  const setSelection = useUIStore(state => state.setSelection);
+  const setDragSource = useUIStore(state => state.setDragSource);
+  const setHoveredSlot = useUIStore(state => state.setHoveredSlot);
+
+  const isSelectingRef = useRef(false);
+  const setIsSelecting = useCallback((val: boolean) => {
+    isSelectingRef.current = val;
+  }, []);
+
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [hoveredSlot, setHoveredSlot] = useState<{ wandSlot: string, idx: number, isRightHalf: boolean } | null>(null);
-
-  const hoveredSlotRef = useRef(hoveredSlot);
-  useEffect(() => { hoveredSlotRef.current = hoveredSlot; }, [hoveredSlot]);
-
-  const selectionRef = useRef(selection);
-  useEffect(() => { selectionRef.current = selection; }, [selection]);
 
   // --- Mouse Handlers ---
   const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false) => {
@@ -43,9 +42,10 @@ export const useInteraction = (params: {
     if (idx < 0) return;
     setIsSelecting(true);
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
-  }, [activeTab.wands, settings.editorDragMode]);
+  }, [activeTab.wands, settings.editorDragMode, setDragSource, setSelection]);
 
   const handleSlotMouseUp = useCallback((wandSlot: string, idx: number) => {
+    const dragSource = useUIStore.getState().dragSource;
     if (dragSource) {
       const sourceWandSlot = dragSource.wandSlot;
       const sourceIdx = dragSource.idx;
@@ -80,9 +80,10 @@ export const useInteraction = (params: {
             newAC.push(sid);
           } else {
             const acIdx = (-targetIdx) - 1;
-            const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot &&
-              hoveredSlotRef.current?.idx === targetIdx &&
-              hoveredSlotRef.current?.isRightHalf;
+            const stateHoveredSlot = useUIStore.getState().hoveredSlot;
+            const isRightHalf = stateHoveredSlot?.wandSlot === targetWandSlot &&
+              stateHoveredSlot?.idx === targetIdx &&
+              stateHoveredSlot?.isRightHalf;
             newAC.splice(acIdx + (isRightHalf ? 1 : 0), 0, sid);
           }
           targetWand.always_cast = newAC;
@@ -123,9 +124,10 @@ export const useInteraction = (params: {
             targetWand.deck_capacity = targetIdx;
           }
         } else if (settings.dragSpellMode === '20260222') {
-          const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot &&
-            hoveredSlotRef.current?.idx === targetIdx &&
-            hoveredSlotRef.current?.isRightHalf;
+          const stateHoveredSlot = useUIStore.getState().hoveredSlot;
+          const isRightHalf = stateHoveredSlot?.wandSlot === targetWandSlot &&
+            stateHoveredSlot?.idx === targetIdx &&
+            stateHoveredSlot?.isRightHalf;
 
           const bIdx = isRightHalf ? targetIdx : targetIdx - 1;
           const cIdx = isRightHalf ? targetIdx + 1 : targetIdx;
@@ -195,9 +197,10 @@ export const useInteraction = (params: {
             }
           }
         } else {
-          const isRightHalf = hoveredSlotRef.current?.wandSlot === targetWandSlot &&
-            hoveredSlotRef.current?.idx === targetIdx &&
-            hoveredSlotRef.current?.isRightHalf;
+          const stateHoveredSlot = useUIStore.getState().hoveredSlot;
+          const isRightHalf = stateHoveredSlot?.wandSlot === targetWandSlot &&
+            stateHoveredSlot?.idx === targetIdx &&
+            stateHoveredSlot?.isRightHalf;
           const insertIdx = targetIdx + (isRightHalf ? 1 : 0);
 
           const maxIdx = Math.max(targetWand.deck_capacity, ...Object.keys(targetWand.spells).map(Number), sourceWandSlot === targetWandSlot ? sourceIdx : 0);
@@ -249,11 +252,12 @@ export const useInteraction = (params: {
       setDragSource(null);
     }
     setIsSelecting(false);
-  }, [dragSource, activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t]);
+  }, [activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t, setDragSource]);
 
 
   const handleSlotMouseEnter = useCallback((wandSlot: string, idx: number) => {
-    if (isSelecting && selection && selection.wandSlot === wandSlot) {
+    const selection = useUIStore.getState().selection;
+    if (isSelectingRef.current && selection && selection.wandSlot === wandSlot) {
       const start = selection.startIdx;
       const end = idx;
       const min = Math.min(start, end);
@@ -262,27 +266,30 @@ export const useInteraction = (params: {
       for (let i = min; i <= max; i++) newIndices.push(i);
       setSelection({ ...selection, indices: newIndices });
     }
-  }, [isSelecting, selection]);
+  }, [setSelection]);
 
   const handleSlotMouseMove = useCallback((e: React.MouseEvent, wandSlot: string, idx: number) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const isRightHalf = e.clientX > rect.left + rect.width / 2;
     setHoveredSlot({ wandSlot, idx, isRightHalf });
-  }, []);
+  }, [setHoveredSlot]);
 
   const handleSlotMouseLeave = useCallback(() => {
     setHoveredSlot(null);
-  }, []);
+  }, [setHoveredSlot]);
 
   const insertEmptySlot = useCallback((updateWand: any) => {
-    let targetWandSlot = hoveredSlotRef.current?.wandSlot;
-    let startIdx = (hoveredSlotRef.current && hoveredSlotRef.current.idx > 0)
-      ? (hoveredSlotRef.current.idx + (hoveredSlotRef.current.isRightHalf ? 1 : 0))
+    const stateHoveredSlot = useUIStore.getState().hoveredSlot;
+    const stateSelection = useUIStore.getState().selection;
+
+    let targetWandSlot = stateHoveredSlot?.wandSlot;
+    let startIdx = (stateHoveredSlot && stateHoveredSlot.idx > 0)
+      ? (stateHoveredSlot.idx + (stateHoveredSlot.isRightHalf ? 1 : 0))
       : null;
 
-    if (!targetWandSlot && selectionRef.current) {
-      targetWandSlot = selectionRef.current.wandSlot;
-      startIdx = Math.min(...selectionRef.current.indices.filter(i => i > 0));
+    if (!targetWandSlot && stateSelection) {
+      targetWandSlot = stateSelection.wandSlot;
+      startIdx = Math.min(...stateSelection.indices.filter(i => i > 0));
     }
 
     if (!targetWandSlot || startIdx === null || startIdx <= 0) return;
@@ -315,13 +322,17 @@ export const useInteraction = (params: {
   }, [activeTab.wands, t]);
 
   return {
-    selection, setSelection, selectionRef,
-    isSelecting, setIsSelecting,
-    dragSource, setDragSource,
-    isDraggingFile, setIsDraggingFile,
-    mousePos, setMousePos,
-    hoveredSlot, setHoveredSlot, hoveredSlotRef,
-    handleSlotMouseDown, handleSlotMouseUp, handleSlotMouseEnter, handleSlotMouseMove, handleSlotMouseLeave,
-    insertEmptySlot
+    isSelecting: isSelectingRef.current,
+    setIsSelecting,
+    isDraggingFile,
+    setIsDraggingFile,
+    mousePos,
+    setMousePos,
+    handleSlotMouseDown,
+    handleSlotMouseUp,
+    handleSlotMouseEnter,
+    handleSlotMouseMove,
+    handleSlotMouseLeave,
+    insertEmptySlot,
   };
 };
