@@ -23,7 +23,7 @@ interface WandCardProps {
   copyWand: (slot: string) => void;
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
-  updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;

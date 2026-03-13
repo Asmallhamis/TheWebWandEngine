@@ -20,7 +20,7 @@ export const useWandActions = (params: {
   setPickerConfig: (c: any) => void,
   setPickerSearch: (s: string) => void,
   setPickerExpandedGroups: (s: Set<number>) => void,
-  updateWand: (slot: string, data: Partial<WandData>, actionName?: string, icons?: string[]) => void
+  updateWand: (slot: string, data: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void
 }) => {
   const {
     tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard,

@@ -63,7 +63,7 @@ interface UseWandImportProps {
   settings: AppSettings;
   t: any;
   performAction: (action: (prevWands: Record<string, WandData>) => Record<string, WandData>, actionName?: string, icons?: string[], saveHistory?: boolean) => void;
-  updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => Promise<void>;
   setTabs: React.Dispatch<React.SetStateAction<Tab[]>>;
   setActiveTabId: (id: string) => void;
@@ -499,13 +499,15 @@ export const useWandImport = ({
       setNotification({ msg: isCut ? t('app.notification.cut_to_clipboard') : t('app.notification.copied_to_clipboard'), type: 'success' });
 
       if (isCut) {
-        const newSpells = { ...wand.spells };
-        const newSpellUses = { ...(wand.spell_uses || {}) };
-        indices.forEach(i => {
-          delete newSpells[i.toString()];
-          delete newSpellUses[i.toString()];
-        });
-        updateWand(wandSlot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.cut_spell'), sequence.filter(s => s));
+         updateWand(wandSlot, (curr) => {
+           const newSpells = { ...curr.spells };
+           const newSpellUses = { ...(curr.spell_uses || {}) };
+           indices.forEach(i => {
+             delete newSpells[i.toString()];
+             delete newSpellUses[i.toString()];
+           });
+           return { spells: newSpells, spell_uses: newSpellUses };
+         }, t('app.notification.cut_spell'), sequence.filter(s => s));
       }
     }
   }, [activeTab, t, setNotification, updateWand]);

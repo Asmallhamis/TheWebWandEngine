@@ -59,8 +59,11 @@ export const useWandEvaluator = (
       if (!wand) return;
 
       const key = `${activeTab.id}-${slot}`;
+      // Exclude non-logic fields that don't affect evaluation results
+      const { canvas_positions, appearance, marked_slots, ...logicWand } = wand;
+      
       const wandStateString = JSON.stringify({
-        wand,
+        wand: logicWand,
         numCasts: settings.numCasts,
         unlimited: settings.unlimitedSpells,
         ifHalf: settings.initialIfHalf,

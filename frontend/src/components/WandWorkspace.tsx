@@ -17,7 +17,7 @@ interface WandWorkspaceProps {
   copyWand: (slot: string) => void;
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
-  updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
   handleSlotMouseDown: (wandSlot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (wandSlot: string, idx: number) => void;

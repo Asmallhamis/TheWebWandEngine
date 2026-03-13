@@ -16,7 +16,7 @@ interface WandEditorProps {
   selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: { wandSlot: string; idx: number; sid: string } | null;
-  updateWand: (slot: string, partial: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
@@ -148,14 +148,15 @@ export function WandEditor({
 
       // 4. 删除键
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const sid = data.spells[currentIdx.toString()];
-        if (sid) {
-          const newSpells = { ...data.spells };
-          const newSpellUses = { ...(data.spell_uses || {}) };
+        updateWand(slot, (curr) => {
+          const sid = curr.spells[currentIdx.toString()];
+          if (!sid) return {};
+          const newSpells = { ...curr.spells };
+          const newSpellUses = { ...(curr.spell_uses || {}) };
           delete newSpells[currentIdx.toString()];
           delete newSpellUses[currentIdx.toString()];
-          updateWand(slot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
-        }
+          return { spells: newSpells, spell_uses: newSpellUses };
+        }, t('app.notification.delete_spell'));
       }
     };
 
@@ -697,7 +698,7 @@ export function WandEditor({
           {/* Group 1: Shuffle */}
           <div className="px-6 py-2 border-r border-white/5 flex items-center h-16">
             <button
-              onClick={() => updateWand(slot, { shuffle_deck_when_empty: !data.shuffle_deck_when_empty })}
+              onClick={() => updateWand(slot, (curr) => ({ shuffle_deck_when_empty: !curr.shuffle_deck_when_empty }))}
               className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${data.shuffle_deck_when_empty ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}
             >
               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
@@ -802,15 +803,17 @@ export function WandEditor({
                     onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
                     onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}
                     onMouseLeave={handleSlotMouseLeave}
-                    onClick={(e) => {
-                      if (e.altKey) {
-                        const newAC = [...data.always_cast];
-                        newAC.splice(i, 1);
-                        updateWand(slot, { always_cast: newAC }, "删除始终施放法术");
-                        return;
-                      }
-                      openPicker(slot, `ac-${i}`, e);
-                    }}
+                     onClick={(e) => {
+                       if (e.altKey) {
+                         updateWand(slot, (curr) => {
+                           const newAC = [...(curr.always_cast || [])];
+                           newAC.splice(i, 1);
+                           return { always_cast: newAC };
+                         }, "删除始终施放法术");
+                         return;
+                       }
+                       openPicker(slot, `ac-${i}`, e);
+                     }}
                   >
                     <div className={`
                     w-12 h-12 rounded-lg border flex items-center justify-center relative shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform hover:scale-105

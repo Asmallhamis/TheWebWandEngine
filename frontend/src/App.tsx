@@ -185,11 +185,12 @@ function App() {
 
   const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected);
 
-  const updateWand = useCallback((slot: string, updates: Partial<WandData>, actionName = t('app.notification.modify_wand'), icons?: string[]) => {
+  const updateWand = useCallback((slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName = t('app.notification.modify_wand'), icons?: string[]) => {
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
       const currentWand = (prevWands as Record<string, WandData>)[slot] || { ...DEFAULT_WAND };
-      const newWand = { ...currentWand, ...updates };
+      const resolvedUpdates = typeof updates === 'function' ? updates(currentWand) : updates;
+      const newWand = { ...currentWand, ...resolvedUpdates };
       if (activeTab.isRealtime) syncWand(slot, newWand);
       return { ...prevWands, [slot]: newWand };
     }, actionName, icons);

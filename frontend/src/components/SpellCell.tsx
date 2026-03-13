@@ -29,7 +29,7 @@ interface SpellCellProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent) => void;
   setSelection: (s: any) => void;
-  updateWand: (slot: string, partial: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, partial: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   openWiki: (sid: string) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   t: (key: string, options?: any) => string;
@@ -68,12 +68,14 @@ const SpellCellComponent = ({
             if (e.button === 1 && spell) {
               e.preventDefault();
               e.stopPropagation();
-              const marked = Array.isArray(data.marked_slots) ? data.marked_slots : [];
               const slotIdx = i + 1;
-              const newMarked = marked.includes(slotIdx)
-                ? marked.filter(m => m !== slotIdx)
-                : [...marked, slotIdx];
-              updateWand(slot, { marked_slots: newMarked });
+              updateWand(slot, (curr) => {
+                const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];
+                const newMarked = marked.includes(slotIdx)
+                  ? marked.filter(m => m !== slotIdx)
+                  : [...marked, slotIdx];
+                return { marked_slots: newMarked };
+              });
               return;
             }
             e.preventDefault();
@@ -119,11 +121,13 @@ const SpellCellComponent = ({
             } else if (sid) {
               e.preventDefault();
               e.stopPropagation();
-              const newSpells = { ...data.spells };
-              const newSpellUses = { ...(data.spell_uses || {}) };
-              delete newSpells[idx];
-              delete newSpellUses[idx];
-              updateWand(slot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
+              updateWand(slot, (curr) => {
+                const newSpells = { ...curr.spells };
+                const newSpellUses = { ...(curr.spell_uses || {}) };
+                delete newSpells[idx];
+                delete newSpellUses[idx];
+                return { spells: newSpells, spell_uses: newSpellUses };
+              }, t('app.notification.delete_spell'));
               return;
             }
           }
@@ -143,9 +147,10 @@ const SpellCellComponent = ({
             }
 
             const newUses = uses === 0 ? (spell.max_uses ?? -1) : 0;
-            const newSpellUses = { ...(data.spell_uses || {}), [idx]: newUses };
             const actionName = newUses === 0 ? t('app.notification.set_charges_0') : t('app.notification.restore_charges');
-            updateWand(slot, { spell_uses: newSpellUses }, actionName);
+            updateWand(slot, (curr) => ({
+              spell_uses: { ...(curr.spell_uses || {}), [idx]: newUses }
+            }), actionName);
             return;
           }
           if (selection && selection.indices.length > 1) {
@@ -220,8 +225,9 @@ const SpellCellComponent = ({
                       onClick={(e) => {
                         e.stopPropagation();
                         const newUses = uses === 0 ? (spell.max_uses ?? 10) : 0;
-                        const newSpellUses = { ...(data.spell_uses || {}), [idx]: newUses };
-                        updateWand(slot, { spell_uses: newSpellUses });
+                        updateWand(slot, (curr) => ({
+                          spell_uses: { ...(curr.spell_uses || {}), [idx]: newUses }
+                        }));
                       }}
                     >
                       {uses}

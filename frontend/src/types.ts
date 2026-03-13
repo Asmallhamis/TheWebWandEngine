@@ -33,6 +33,7 @@ export interface WandData {
     name?: string;
     item_sprite?: string;
   };
+  canvas_positions?: Record<string, { x: number, y: number }>;
 }
 
 export interface HistoryItem {

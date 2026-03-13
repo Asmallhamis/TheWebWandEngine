@@ -1297,23 +1297,25 @@ export function WandWarehouse({
         };
 
         // 将 WandData 更新转换回 SmartTag spells 数组
-        const handleUpdateRequired = (_slot: string, updates: Partial<WandData>) => {
-          if (updates.spells) {
-            const maxIdx = Math.max(0, ...Object.keys(updates.spells).map(Number));
+        const handleUpdateRequired = (_slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>)) => {
+          const resolved = typeof updates === 'function' ? updates(requiredWandData) : updates;
+          if (resolved.spells) {
+            const maxIdx = Math.max(0, ...Object.keys(resolved.spells).map(Number));
             const spells: string[] = [];
             for (let i = 1; i <= maxIdx; i++) {
-              spells.push(updates.spells[i.toString()] || '');
+              spells.push(resolved.spells[i.toString()] || '');
             }
             setEditingSmartTag(prev => prev ? { ...prev, spells } : null);
           }
         };
 
-        const handleUpdateExcluded = (_slot: string, updates: Partial<WandData>) => {
-          if (updates.spells) {
-            const maxIdx = Math.max(0, ...Object.keys(updates.spells).map(Number));
+        const handleUpdateExcluded = (_slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>)) => {
+          const resolved = typeof updates === 'function' ? updates(excludedWandData) : updates;
+          if (resolved.spells) {
+            const maxIdx = Math.max(0, ...Object.keys(resolved.spells).map(Number));
             const excludedSpells: string[] = [];
             for (let i = 1; i <= maxIdx; i++) {
-              excludedSpells.push(updates.spells[i.toString()] || '');
+              excludedSpells.push(resolved.spells[i.toString()] || '');
             }
             setEditingSmartTag(prev => prev ? { ...prev, excludedSpells } : null);
           }

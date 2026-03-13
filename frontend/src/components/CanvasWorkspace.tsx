@@ -26,7 +26,7 @@ interface CanvasWorkspaceProps {
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: DragSource | null;
   clipboard: { type: 'wand'; data: WandData } | null;
-  updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
+  updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
   handleSlotMouseDown: (wandSlot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (wandSlot: string, idx: number) => void;
@@ -54,11 +54,13 @@ interface DraggableNodeProps {
   slotIndex: string;
   colorDef: { bg: string; border: string; text: string; shadow: string };
   onRename?: (newName: string) => void;
+  onPosChange?: (x: number, y: number) => void;
   headerActions?: React.ReactNode;
+  updateWand?: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   children: React.ReactNode;
 }
 
-const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, slotIndex, colorDef, onRename, headerActions, children }) => {
+const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, slotIndex, colorDef, onRename, onPosChange, headerActions, children }) => {
   const controls = useControls() as any;
   const scale = controls.instance?.transformState?.scale || 1;
   const [pos, setPos] = useState({ x: defaultX, y: defaultY });
@@ -88,6 +90,9 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
   const handlePointerUp = (e: React.PointerEvent) => {
     dragRef.current.isDragging = false;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    if (onPosChange) {
+      onPosChange(pos.x, pos.y);
+    }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -203,7 +208,16 @@ const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) =>
         )}
       </div>
       <button
-        onClick={() => centerView(1, 500)}
+        onClick={() => {
+          if (wands.length > 0) {
+            const el = document.getElementById(`canvas-stats-${wands[0]}`);
+            if (el) {
+              zoomToElement(el, 1, 500);
+              return;
+            }
+          }
+          centerView(1, 500);
+        }}
         className="mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg transition-colors border border-indigo-500/20"
       >
         <Frame size={14} />
@@ -211,6 +225,27 @@ const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) =>
       </button>
     </div>
   );
+};
+
+const InitCamera = ({ wands, activeTabId }: { wands: string[], activeTabId: string }) => {
+  const { zoomToElement } = useControls();
+  const hasFocused = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (wands.length > 0 && hasFocused.current !== activeTabId) {
+      const firstWand = wands[0];
+      // 给一点渲染时间
+      setTimeout(() => {
+        const el = document.getElementById(`canvas-stats-${firstWand}`);
+        if (el) {
+          zoomToElement(el, 1, 0); // 初始跳转不带动画，避免进入时闪烁
+          hasFocused.current = activeTabId;
+        }
+      }, 50);
+    }
+  }, [wands, activeTabId, zoomToElement]);
+
+  return null;
 };
 
 export function CanvasWorkspace(props: CanvasWorkspaceProps) {
@@ -238,6 +273,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
         panning={{ excluded: ['cancel-pan', 'panning-disabled'] }}
       >
         <Navigator wands={wands} activeTab={activeTab} />
+        <InitCamera wands={wands} activeTabId={activeTab.id} />
         
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
           <div className="relative w-[10000px] h-[10000px] pointer-events-none cyber-grid">
@@ -249,7 +285,16 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                 const colorDef = getWandColor(slot);
                 const wandName = data.appearance?.name || `Wand ${slot}`;
                 
-                const baseY = 5000 + (index * 1200) - ((wands.length * 1200) / 2); // Center the initial layout vertically
+                const baseY = 5000 + (index * 1200) - (((wands.length - 1) * 1200) / 2); // Center the initial layout vertically
+
+                const handlePosChange = (nodeKey: string, x: number, y: number) => {
+                  props.updateWand(slot, {
+                    canvas_positions: {
+                      ...(data.canvas_positions || {}),
+                      [nodeKey]: { x, y }
+                    }
+                  });
+                };
 
                 const handleRename = (newName: string) => {
                   props.updateWand(slot, {
@@ -268,9 +313,10 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                       title={`${wandName} - Stats & Shot States`}
                       slotIndex={slot}
                       colorDef={colorDef}
-                      defaultX={3500}
-                      defaultY={baseY}
+                      defaultX={data.canvas_positions?.stats?.x ?? 4800}
+                      defaultY={data.canvas_positions?.stats?.y ?? baseY}
                       onRename={handleRename}
+                      onPosChange={(x, y) => handlePosChange('stats', x, y)}
                     >
                       {evalData && evalData.loading && (
                         <div className="flex items-center gap-2 text-amber-500 animate-pulse">
@@ -295,16 +341,23 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                     </DraggableNode>
 
                     {/* Recursive Tree Node */}
-                    {evalData && evalData.data && (
-                      <DraggableNode 
-                        id={`canvas-tree-${slot}`}
-                        title={`${wandName} - Recursive Tree`}
-                        slotIndex={slot}
-                        colorDef={colorDef}
-                        defaultX={4800}
-                        defaultY={baseY}
-                        onRename={handleRename}
-                      >
+                    <DraggableNode 
+                      id={`canvas-tree-${slot}`}
+                      title={`${wandName} - Recursive Tree`}
+                      slotIndex={slot}
+                      colorDef={colorDef}
+                      defaultX={data.canvas_positions?.tree?.x ?? 6100}
+                      defaultY={data.canvas_positions?.tree?.y ?? baseY}
+                      onRename={handleRename}
+                      onPosChange={(x, y) => handlePosChange('tree', x, y)}
+                    >
+                      {evalData && evalData.loading && (
+                        <div className="flex items-center gap-2 text-amber-500 animate-pulse mb-4">
+                          <Activity size={16} />
+                          <span className="text-sm font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
+                        </div>
+                      )}
+                      {evalData && evalData.data ? (
                         <div className="flex w-max h-max">
                           {(() => {
                             const absToOrdinal: Record<number, number> = {};
@@ -322,12 +375,27 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                                 showIndices={settings.showIndices}
                                 absoluteToOrdinal={absToOrdinal}
                                 markedSlots={data.marked_slots}
+                                onToggleMark={(indices) => {
+                                  props.updateWand(slot, (curr: WandData) => {
+                                    const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];
+                                    const anyMarked = indices.some(idx => marked.includes(idx));
+                                    let newMarked;
+                                    if (anyMarked) {
+                                      newMarked = marked.filter((m: number) => !indices.includes(m));
+                                    } else {
+                                      newMarked = [...marked, ...indices];
+                                    }
+                                    return { marked_slots: newMarked };
+                                  });
+                                }}
                               />
                             );
                           })()}
                         </div>
-                      </DraggableNode>
-                    )}
+                      ) : (
+                        !evalData?.loading && <div className="text-zinc-600 italic px-4 py-8">No evaluation data available.</div>
+                      )}
+                    </DraggableNode>
                   </React.Fragment>
                 );
               })}
@@ -383,9 +451,17 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
       title={`${wandName} - Editor`}
       slotIndex={slot}
       colorDef={colorDef}
-      defaultX={2000}
-      defaultY={5000 + (index * 600)}
+      defaultX={data.canvas_positions?.editor?.x ?? 3500}
+      defaultY={data.canvas_positions?.editor?.y ?? (5000 + (index * 600))}
       onRename={handleRename}
+      onPosChange={(x, y) => {
+        props.updateWand(slot, {
+          canvas_positions: {
+            ...(data.canvas_positions || {}),
+            'editor': { x, y }
+          }
+        });
+      }}
       headerActions={
         <button
           onClick={(e) => { e.stopPropagation(); setIsLocked(!isLocked); }}

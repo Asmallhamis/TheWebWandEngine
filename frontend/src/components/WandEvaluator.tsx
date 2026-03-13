@@ -326,14 +326,14 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
           <div className="space-y-6">
           {castGroups.map(group => {
             const isRange = group.start !== group.end;
-            const isVisible = userExpandedCasts[group.start] ?? true; // 状态详情默认可见
+            const isVisible = isCanvas ? true : (userExpandedCasts[group.start] ?? true); // 状态详情默认可见
             const isShowingAll = userShowAllCasts[group.start] ?? false;
 
             return (
               <div key={group.start} className="space-y-4">
                 <div
-                  className="flex items-center gap-2 cursor-pointer group/h"
-                  onClick={() => setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
+                  className={`flex items-center gap-2 ${isCanvas ? '' : 'cursor-pointer'} group/h`}
+                  onClick={() => !isCanvas && setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
                 >
                   <div className={`flex items-center gap-2 px-2 py-0.5 rounded border uppercase tracking-tighter transition-colors ${isRange ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'}`}>
                     <span className="text-[9px] font-black">
@@ -357,9 +357,11 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                   )}
 
                   <div className="h-px flex-1 bg-white/5"></div>
-                  <div className="text-zinc-600 group-hover/h:text-zinc-400 transition-colors">
-                    {isVisible ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  </div>
+                  {!isCanvas && (
+                    <div className="text-zinc-600 group-hover/h:text-zinc-400 transition-colors">
+                      {isVisible ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </div>
+                  )}
                 </div>
 
                 {isVisible && (

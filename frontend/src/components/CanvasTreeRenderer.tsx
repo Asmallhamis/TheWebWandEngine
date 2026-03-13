@@ -12,12 +12,27 @@ interface CanvasTreeRendererProps {
   showIndices?: boolean;
   absoluteToOrdinal?: Record<number, number> | null;
   markedSlots?: number[];
+  onToggleMark?: (indices: number[]) => void;
 }
 
 const BASE_NODE_HEIGHT = 44;
 const HORIZONTAL_GAP = 36;
 const VERTICAL_GAP = 12;
 const ICON_SIZE = 28;
+// 绘制 Cast 标题的高度 / Height for drawing Cast headers
+const CAST_HEADER_HEIGHT = 32;
+
+/**
+ * 递归计算节点总数（用于 Header 显示）
+ * Recursively count total nodes (used for Header display)
+ */
+function countNodes(node: EvalNode): number {
+  let count = 1;
+  node.children?.forEach(c => {
+    count += countNodes(c);
+  });
+  return count;
+}
 
 interface ComputedNode {
   node: EvalNode;
@@ -39,7 +54,7 @@ function getCachedImage(url: string): HTMLImageElement {
   return img;
 }
 
-export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, spellDb, settings, width = 1200, height = 800, onHover, showIndices, absoluteToOrdinal, markedSlots }) => {
+export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, spellDb, settings, width = 1200, height = 800, onHover, showIndices, absoluteToOrdinal, markedSlots, onToggleMark }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverNode, setHoverNode] = useState<ComputedNode | null>(null);
@@ -109,16 +124,31 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
       return { cNode, totalHeight: subtreeHeight };
     }
 
-    const { cNode, totalHeight: th } = layout(data, 20, 20);
-    
     function getMaxWidth(cn: ComputedNode): number {
       let max = cn.x + cn.width;
       cn.children.forEach(c => max = Math.max(max, getMaxWidth(c)));
       return max;
     }
+
+    const roots: ComputedNode[] = [];
+    let currentY = 20;
     
-    const tw = getMaxWidth(cNode);
-    return { root: cNode, totalHeight: th, totalWidth: tw };
+    if (data.name === 'Wand' && data.children && data.children.length > 0) {
+       for (const child of data.children) {
+          const { cNode, totalHeight } = layout(child, 20, currentY + CAST_HEADER_HEIGHT);
+          roots.push(cNode);
+          currentY += totalHeight + CAST_HEADER_HEIGHT + VERTICAL_GAP * 2;
+       }
+    } else {
+       const { cNode, totalHeight } = layout(data, 20, currentY);
+       roots.push(cNode);
+       currentY += totalHeight + VERTICAL_GAP;
+    }
+    
+    let tw = 0;
+    roots.forEach(r => tw = Math.max(tw, getMaxWidth(r)));
+
+    return { roots, totalHeight: currentY, totalWidth: tw };
   }, [data, spellDb]);
 
   // Redraw logic
@@ -357,13 +387,47 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
          const idxText = node.index.map(idx => absoluteToOrdinal?.[idx] ?? idx).join(',');
          ctx.fillText(idxText, x + width + 4, y + height);
          ctx.shadowBlur = 0;
-      }
-
-      ctx.restore();
     }
 
-    drawNode(computedLayout.root, ctx);
-  }, [computedLayout, spellDb, hoverNode]);
+    ctx.restore();
+  }
+
+   computedLayout.roots.forEach(r => {
+     if (data.name === 'Wand') {
+        const hdrY = r.y - 12;
+        const totalW = computedLayout.totalWidth;
+        
+        ctx.save();
+        ctx.fillStyle = '#71717a'; // zinc-500
+        ctx.font = 'black 10px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        
+        const castName = r.node.name.toUpperCase();
+        ctx.fillText(castName, r.x, hdrY);
+        
+        const nameW = ctx.measureText(castName).width;
+        const nodesCount = countNodes(r.node);
+        const countText = `${nodesCount} NODES`.toUpperCase();
+        const countW = ctx.measureText(countText).width;
+        
+        // Separator line
+        ctx.beginPath();
+        ctx.strokeStyle = '#27272a'; // zinc-800
+        ctx.lineWidth = 1;
+        ctx.moveTo(r.x + nameW + 12, hdrY - 4);
+        ctx.lineTo(totalW - countW - 12, hdrY - 4);
+        ctx.stroke();
+        
+        // Count badge style
+        ctx.fillStyle = '#3f3f46'; // zinc-700
+        ctx.textAlign = 'right';
+        ctx.fillText(countText, totalW, hdrY);
+        ctx.restore();
+     }
+     drawNode(r, ctx);
+   });
+}, [computedLayout, spellDb, hoverNode, markedSlots, showIndices, absoluteToOrdinal, settings, getIconUrl, getCachedImage]);
 
   // Hover detection
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -374,7 +438,7 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
     
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
-    setMousePos({ x: e.clientX, y: e.clientY });
+    setMousePos({ x, y });
 
     let found: ComputedNode | null = null;
     function check(cn: ComputedNode) {
@@ -384,7 +448,7 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
       }
       cn.children.forEach(check);
     }
-    check(computedLayout.root);
+    computedLayout.roots.forEach(check);
     setHoverNode(found);
     if (found) {
       onHover?.((found as ComputedNode).node.index);
@@ -413,13 +477,29 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
         width={computedLayout.totalWidth + 100}
         height={computedLayout.totalHeight + 100}
         style={{ display: 'block', imageRendering: 'pixelated' }}
+        onAuxClick={(e) => {
+          if (e.button === 1 && hoverNode) {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleMark?.(hoverNode.node.index);
+          }
+        }}
+        onMouseDown={(e) => {
+          if (e.button === 1) {
+            e.preventDefault(); // 防止 Windows 中键滚轮图标出现
+          }
+        }}
       />
       
       {/* Tooltip for extra info */}
       {hoverNode && hoverNode.node.extra && (
         <div 
-          className="fixed pointer-events-none z-[9999] bg-zinc-950/95 text-[9px] font-bold px-2 py-1.5 rounded border border-white/20 text-zinc-100 shadow-2xl uppercase tracking-tighter"
-          style={{ left: mousePos.x + 15, top: mousePos.y + 15 }}
+          className="absolute pointer-events-none z-[9999] bg-zinc-950/95 text-[9px] font-bold px-2 py-1.5 rounded border border-white/20 text-zinc-100 shadow-2xl uppercase tracking-tighter leading-tight whitespace-pre-wrap max-w-[240px]"
+          style={{ 
+            left: mousePos.x + 10, 
+            top: mousePos.y - 10,
+            transform: 'translateY(-100%)', // 在鼠标上方显示，类似 WandEvaluator
+          }}
         >
           {hoverNode.node.extra}
         </div>
