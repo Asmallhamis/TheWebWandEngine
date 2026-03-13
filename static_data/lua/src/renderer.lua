@@ -27,17 +27,6 @@ local function fold(node, engine_data)
 			end
 		end
 
-		if equal then
-			local num = engine_data.shot_refs_to_nums[engine_data.nodes_to_shot_ref[node]]
-			for k, v in pairs(engine_data.shot_refs_to_nums) do
-				if num.real < v.real then
-					engine_data.shot_refs_to_nums[k].disp = engine_data.shot_refs_to_nums[k].disp
-						- 1
-				end
-			end
-
-			engine_data.nodes_to_shot_ref[node] = nil
-		end
 	end
 
 	node.count = 1
