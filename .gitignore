@@ -55,6 +55,7 @@
 !/LICENSE
 !/spell_mapping.md
 !/noita_wiki_simulator.user.js
+!/noita_wiki_embed.user.js
 
 # ==========================================
 # 4. 显式排除的第三方/敏感内容 (多重保险)
@@ -80,3 +81,4 @@
 !/verify_static_site.bat
 !/spell_mapping.md
 !/noita_wiki_simulator.user.js
+!/noita_wiki_embed.user.js
