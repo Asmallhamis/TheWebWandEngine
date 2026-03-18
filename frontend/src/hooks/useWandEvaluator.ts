@@ -70,7 +70,8 @@ export const useWandEvaluator = (
     settings.foldNodes,
     settings.stopAtRecharge,
     settings.perks,
-    isConnected
+    isConnected,
+    updateWand
   ]);
 
   useEffect(() => {

@@ -747,8 +747,10 @@ export function WandEditor({
             <div className="flex items-center gap-2 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden focus-within:border-indigo-500/50 transition-colors" title={t('evaluator.evaluation_seed_desc')}>
               <button 
               onClick={() => {
-                if (data.evaluation_seed === '') {
-                  requestEvaluation(data, true);
+                if (!data.evaluation_seed) {
+                  // 本地生成随机种子，无需触发完整评估往返
+                  const randomSeed = String(Math.floor(Math.random() * 2147483647));
+                  updateWand(slot, { evaluation_seed: randomSeed });
                 } else {
                   updateWand(slot, { evaluation_seed: '' });
                 }
