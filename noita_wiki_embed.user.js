@@ -13,7 +13,7 @@
 (function () {
     'use strict';
 
-    const SIMULATOR_BASE_URL = 'http://localhost:3000/';
+    const SIMULATOR_BASE_URL = 'https://asmallhamis.github.io/TheWebWandEngine/';
     // const SIMULATOR_BASE_URL = 'https://asmallhamis.github.io/TheWebWandEngine/';
 
     function utf8_to_b64(str) {
