@@ -141,7 +141,7 @@ export const useWandActions = (params: {
     }
   }, [clipboard, updateWand]);
 
-  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => {
+  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number }) => {
     let x, y, initialSearch = '';
     let rowTop: number | undefined;
 
@@ -173,10 +173,11 @@ export const useWandActions = (params: {
         y = cellRect.bottom + 8;
       }
     } else {
-      const manual = e as { x: number, y: number, initialSearch?: string };
+      const manual = e as { x: number, y: number, initialSearch?: string, rowTop?: number };
       x = manual.x;
       y = manual.y;
       initialSearch = manual.initialSearch || '';
+      rowTop = manual.rowTop;
     }
 
     setPickerConfig({

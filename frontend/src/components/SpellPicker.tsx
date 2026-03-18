@@ -111,23 +111,36 @@ export function SpellPicker({
             };
           }
 
+          const vpW = window.innerWidth / scale;
+          const vpH = window.innerHeight / scale;
+          const pickerW = Math.max(400, Math.min(vpW - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24));
+          const pickerMaxH = 520;
+
+          // Center horizontally on the cell, clamp to viewport
+          let left = adjX - pickerW / 2;
+          left = Math.max(4, Math.min(left, vpW - pickerW - 4));
+
+          // Try below the row first
+          let top = adjY;
+          const rowTopAdj = pickerConfig.rowTop !== undefined ? pickerConfig.rowTop / scale : undefined;
+
+          // If placing below would overflow viewport, flip above
+          if (top + pickerMaxH > vpH && rowTopAdj !== undefined) {
+            // Place picker so its bottom aligns just above the row top
+            return {
+              left,
+              width: pickerW,
+              top: 'auto' as any,
+              bottom: vpH - rowTopAdj + 4,
+              maxHeight: Math.max(200, rowTopAdj - 8),
+            };
+          }
+
           return {
-            top: Math.min(adjY, (window.innerHeight / scale) - 520),
-            left: Math.min(adjX, (window.innerWidth / scale) - 620),
-            width: Math.max(400, Math.min((window.innerWidth / scale) - 40, settings.wrapLimit * (settings.pickerRowHeight + 6) + 24)),
-            // 如果 clamp 后的 top 会挡住当前法术行，则翻转到行上方
-            ...(() => {
-              const clampedTop = Math.min(adjY, (window.innerHeight / scale) - 520);
-              const rowTopAdj = pickerConfig.rowTop !== undefined ? pickerConfig.rowTop / scale : undefined;
-              if (rowTopAdj !== undefined && clampedTop < rowTopAdj) {
-                // 翻转：Picker 底部对齐到行的上方
-                return {
-                  top: 'auto' as any,
-                  bottom: (window.innerHeight / scale) - rowTopAdj + 4
-                };
-              }
-              return {};
-            })()
+            top,
+            left,
+            width: pickerW,
+            maxHeight: Math.max(200, vpH - top - 8),
           };
         })()}
         onClick={e => e.stopPropagation()}

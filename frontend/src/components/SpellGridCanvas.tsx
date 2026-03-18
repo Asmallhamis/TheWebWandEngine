@@ -83,7 +83,7 @@ export interface SpellGridCanvasProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string }) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number }) => void;
   setSelection: (s: any) => void;
   updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   openWiki: (sid: string) => void;
@@ -770,7 +770,42 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     if (_selection && _selection.indices.length > 1) {
       setSelection(null);
     } else {
-      openPicker(slot, idx, e);
+      // Compute cell screen coordinates from canvas rect + layout
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const logicalW = parseFloat(canvas.style.width) || rect.width;
+        const logicalH = parseFloat(canvas.style.height) || rect.height;
+        const scaleX = rect.width / logicalW;
+        const scaleY = rect.height / logicalH;
+
+        const cellIdx = hit.slotIdx - 1;
+        const col = cellIdx % layout.cols;
+        const row = Math.floor(cellIdx / layout.cols);
+        const _gap = settings.editorSpellGap || 0;
+
+        // Cell position in logical canvas coords
+        const cellLogicalX = col * layout.cellOuter + _gap / 2;
+        const cellLogicalY = row * layout.cellOuter + _gap / 2;
+
+        // Row bottom in logical coords (bottom of any cell in this row)
+        const rowBottomLogical = row * layout.cellOuter + _gap / 2 + layout.cellInner;
+        // Row top in logical coords
+        const rowTopLogical = row * layout.cellOuter + _gap / 2;
+
+        // Convert to screen coords
+        const cellScreenCenterX = rect.left + (cellLogicalX + layout.cellInner / 2) * scaleX;
+        const rowScreenBottom = rect.top + rowBottomLogical * scaleY;
+        const rowScreenTop = rect.top + rowTopLogical * scaleY;
+
+        openPicker(slot, idx, {
+          x: cellScreenCenterX,
+          y: rowScreenBottom + 4,
+          rowTop: rowScreenTop,
+        });
+      } else {
+        openPicker(slot, idx, e);
+      }
     }
   }, [hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t]);
 
