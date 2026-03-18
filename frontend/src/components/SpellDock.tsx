@@ -5,7 +5,7 @@ import { getWandSpriteUrl } from '../lib/evaluatorAdapter';
 import { getWandColor } from './CanvasWorkspace';
 
 export function SpellDock(props: any) {
-  const { activeTab, wands, isConnected, deleteWand, copyWand, copyLegacyWand, pasteWand, clipboard, saveToWarehouse, pinnedWands = [], togglePinWand } = props;
+  const { activeTab, wands, isConnected, deleteWand, copyWand, copyLegacyWand, pasteWand, clipboard, saveToWarehouse } = props;
   const [isDockMinimized, setIsDockMinimized] = useState(false);
   const [collapsedAttributes, setCollapsedAttributes] = useState<Record<string, boolean>>({});
   const [activeDockWand, setActiveDockWand] = useState<string>(wands[0] || '');
@@ -64,18 +64,6 @@ export function SpellDock(props: any) {
                {isAttrsCollapsed ? 'Show Attributes' : 'Hide Attributes'}
             </button>
             <div className="w-px h-3 bg-white/10 mx-2"></div>
-            {togglePinWand && (
-              <>
-                <button 
-                  onClick={() => togglePinWand(activeDockWand)} 
-                  className={`p-1.5 rounded transition-colors ${pinnedWands.includes(activeDockWand) ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/10 text-zinc-500 hover:text-indigo-400'}`} 
-                  title={pinnedWands.includes(activeDockWand) ? "Unpin from Canvas" : "Pin to Canvas"}
-                >
-                  <Pin size={14} className={pinnedWands.includes(activeDockWand) ? "fill-current" : ""} />
-                </button>
-                <div className="w-px h-3 bg-white/10 mx-2"></div>
-              </  >
-            )}
             <button onClick={() => copyWand(activeDockWand)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors" title="Copy"><Scissors size={14} /></button>
             <button onClick={() => pasteWand(activeDockWand)} disabled={!clipboard} className={`p-1.5 rounded transition-colors ${clipboard ? 'hover:bg-white/10 text-zinc-500 hover:text-emerald-400' : 'text-zinc-800 cursor-not-allowed'}`} title="Paste"><Clipboard size={14} /></button>
             <button onClick={() => saveToWarehouse(data)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-purple-400 rounded transition-colors" title="Save to Warehouse"><Library size={14} /></button>
@@ -96,7 +84,7 @@ export function SpellDock(props: any) {
 
       {/* Dock Content */}
       <div className={`w-[96%] max-w-[1920px] glass-panel rounded-t-3xl rounded-b-none flex flex-col max-h-[50vh] overflow-y-auto custom-scrollbar transition-colors ${activeDockWand ? `border-t-2 border-l-2 border-r-2 ${getWandColor(activeDockWand).border}` : 'border-white/10'} shadow-[0_-5px_30px_rgba(0,0,0,0.5)] border-b-0`}>
-        {activeDockWand && data && (
+        {activeDockWand && data && !isDockMinimized && (
           <div className="flex flex-col relative w-full pt-2">
              <WandEditor 
                {...props}

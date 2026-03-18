@@ -18,6 +18,8 @@ export const WAND_COLORS: Record<string, { bg: string; border: string; text: str
 
 export const getWandColor = (slot: string) => WAND_COLORS[slot] || { bg: 'bg-indigo-500', border: 'border-indigo-500/50', text: 'text-indigo-500', shadow: 'shadow-[0_0_15px_rgba(99,102,241,0.8)]' };
 
+let globalZIndexCounter = 10;
+
 interface CanvasWorkspaceProps {
   activeTab: Tab;
   isConnected: boolean;
@@ -51,6 +53,7 @@ interface DraggableNodeProps {
   defaultX: number;
   defaultY: number;
   title: string;
+  subtitle?: string;
   slotIndex: string;
   colorDef: { bg: string; border: string; text: string; shadow: string };
   onRename?: (newName: string) => void;
@@ -60,12 +63,13 @@ interface DraggableNodeProps {
   children: React.ReactNode;
 }
 
-const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, slotIndex, colorDef, onRename, onPosChange, headerActions, children }) => {
+const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, subtitle, slotIndex, colorDef, onRename, onPosChange, headerActions, children }) => {
   const controls = useControls() as any;
   const scale = controls.instance?.transformState?.scale || 1;
   const [pos, setPos] = useState({ x: defaultX, y: defaultY });
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
+  const [zIndex, setZIndex] = useState(() => ++globalZIndexCounter);
   const dragRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
 
   useEffect(() => {
@@ -121,11 +125,16 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
     }
   };
 
+  const bringToFront = useCallback(() => {
+    setZIndex(prev => prev === globalZIndexCounter ? prev : ++globalZIndexCounter);
+  }, []);
+
   return (
     <div 
       id={id}
       className={`absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
-      style={{ left: pos.x, top: pos.y, width: 'max-content' }}
+      style={{ left: pos.x, top: pos.y, width: 'max-content', zIndex }}
+      onPointerDownCapture={bringToFront}
     >
       <div 
         className="cancel-pan flex items-center gap-3 mb-2 cursor-grab active:cursor-grabbing p-2 -m-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors select-none"
@@ -136,22 +145,32 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
       >
         <div className={`cancel-pan w-4 h-4 rounded-full ${colorDef.bg} ${colorDef.shadow}`}></div>
         {isEditing ? (
-          <input
-            autoFocus
-            className={`cancel-pan bg-transparent border-none outline-none text-xl font-black ${colorDef.text} px-2 py-0 uppercase tracking-widest min-w-[150px]`}
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            onPointerDown={e => e.stopPropagation()}
-          />
+          <div className="flex items-center gap-2 mr-auto">
+            <input
+              autoFocus
+              className={`cancel-pan bg-transparent border-none outline-none text-xl font-black ${colorDef.text} px-2 py-0 uppercase tracking-widest min-w-[150px]`}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onPointerDown={e => e.stopPropagation()}
+            />
+            {subtitle && (
+              <span className={`text-xl font-black ${colorDef.text} opacity-50 uppercase tracking-widest pointer-events-none select-none`}>
+                - {subtitle}
+              </span>
+            )}
+          </div>
         ) : (
-          <h2 
-            className={`cancel-pan text-xl font-black ${colorDef.text} px-2 py-1 uppercase tracking-widest min-w-[100px] border border-transparent hover:border-white/20 hover:bg-white/5 rounded transition-all cursor-text mr-auto`}
+          <div 
+            className={`cancel-pan flex items-center gap-2 text-xl font-black ${colorDef.text} px-2 py-1 uppercase tracking-widest border border-transparent hover:border-white/20 hover:bg-white/5 rounded transition-all cursor-text mr-auto`}
             onDoubleClick={handleDoubleClick}
           >
-            {title} 
-          </h2>
+            <span>{title}</span>
+            {subtitle && (
+              <span className="opacity-50 pointer-events-none select-none">- {subtitle}</span>
+            )}
+          </div>
         )}
         {headerActions && (
           <div className="flex items-center gap-1 cancel-pan ml-2">
@@ -253,11 +272,21 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
   const { t } = useTranslation();
   
   const wands = Object.keys(activeTab.wands || {}).sort();
-  const [pinnedWands, setPinnedWands] = useState<string[]>([]);
-  
-  const togglePinWand = (slot: string) => {
-    setPinnedWands(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]);
-  };
+
+  const requestedEvals = useRef<Set<string>>(new Set());
+
+  // 自动为画布中未评估的法杖请求评估，确保树形图和统计在首次进入画布模式时自动出现
+  useEffect(() => {
+    wands.forEach(slot => {
+      const evalKey = `${activeTab.id}-${slot}`;
+      const data = activeTab.wands[slot];
+      
+      if (!evalResults[evalKey] && data && !requestedEvals.current.has(evalKey)) {
+        requestedEvals.current.add(evalKey);
+        props.requestEvaluation(activeTab.id, slot, data, false);
+      }
+    });
+  }, [wands, activeTab.id, activeTab.wands, evalResults, props]);
 
   return (
     <div className="flex-1 relative overflow-hidden bg-[#050505] inset-0 absolute">
@@ -310,7 +339,8 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                     {/* Stats & States Node */}
                     <DraggableNode 
                       id={`canvas-stats-${slot}`}
-                      title={`${wandName} - Stats & Shot States`}
+                      title={wandName}
+                      subtitle="Stats & Shot States"
                       slotIndex={slot}
                       colorDef={colorDef}
                       defaultX={data.canvas_positions?.stats?.x ?? 4800}
@@ -343,7 +373,8 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                     {/* Recursive Tree Node */}
                     <DraggableNode 
                       id={`canvas-tree-${slot}`}
-                      title={`${wandName} - Recursive Tree`}
+                      title={wandName}
+                      subtitle="Recursive Tree"
                       slotIndex={slot}
                       colorDef={colorDef}
                       defaultX={data.canvas_positions?.tree?.x ?? 6100}
@@ -396,35 +427,31 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                         !evalData?.loading && <div className="text-zinc-600 italic px-4 py-8">No evaluation data available.</div>
                       )}
                     </DraggableNode>
+
+                    {/* Wand Attributes Node */}
+                    <PinnedWandAttributes 
+                      slot={slot}
+                      data={data}
+                      wandName={wandName}
+                      colorDef={colorDef}
+                      handleRename={handleRename}
+                      props={props}
+                      baseY={baseY}
+                    />
+
+                    {/* Spells Grid Editor Node */}
+                    <PinnedWandEditor 
+                      slot={slot}
+                      data={data}
+                      wandName={wandName}
+                      colorDef={colorDef}
+                      handleRename={handleRename}
+                      props={props}
+                      baseY={baseY}
+                    />
                   </React.Fragment>
                 );
               })}
-              {/* Render Pinned Wand Editors */}
-              {pinnedWands.map((slot, index) => {
-                const data = activeTab.wands[slot];
-                if (!data) return null;
-                const colorDef = getWandColor(slot);
-                const wandName = data.appearance?.name || `Wand ${slot}`;
-                const handleRename = (newName: string) => {
-                  props.updateWand(slot, {
-                    appearance: { ...data.appearance, name: newName }
-                  });
-                };
-                
-                return (
-                  <PinnedWandEditor 
-                    key={`editor-${slot}`}
-                    slot={slot}
-                    data={data}
-                    wandName={wandName}
-                    colorDef={colorDef}
-                    handleRename={handleRename}
-                    props={props}
-                    index={index}
-                  />
-                );
-              })}
-              
               {wands.length === 0 && (
                 <div className="absolute top-[5000px] left-[5000px] -translate-x-1/2 -translate-y-1/2 text-zinc-700 text-xl font-black uppercase tracking-widest glass-panel p-12 rounded-3xl flex items-center justify-center pointer-events-none">
                   Empty Workspace
@@ -436,23 +463,29 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
       </TransformWrapper>
 
       {/* Bottom HUD Dock */}
-      <SpellDock {...props} wands={wands} pinnedWands={pinnedWands} togglePinWand={togglePinWand} />
+      <SpellDock {...props} wands={wands} />
     </div>
   );
 }
 
 // 独立的组件来管理 Pinned Editor 本地的锁定状态
-function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props, index }: any) {
-  const [isLocked, setIsLocked] = useState(true);
+function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props, baseY }: any) {
+  const [isLockedLocal, setIsLockedLocal] = useState(true);
+  const lockEnabled = props.settings.enableCanvasEditorLock;
+  const isLocked = lockEnabled ? isLockedLocal : false;
+  const [isEditingCells, setIsEditingCells] = useState(false);
+  const cellsPerRow = data.canvas_cells_per_row ?? props.settings.defaultCanvasCellsPerRow ?? 26;
+  const [cellsInput, setCellsInput] = useState(cellsPerRow.toString());
   
   return (
     <DraggableNode 
       id={`canvas-editor-${slot}`}
-      title={`${wandName} - Editor`}
+      title={wandName}
+      subtitle="Editor"
       slotIndex={slot}
       colorDef={colorDef}
       defaultX={data.canvas_positions?.editor?.x ?? 3500}
-      defaultY={data.canvas_positions?.editor?.y ?? (5000 + (index * 600))}
+      defaultY={data.canvas_positions?.editor?.y ?? baseY}
       onRename={handleRename}
       onPosChange={(x, y) => {
         props.updateWand(slot, {
@@ -463,17 +496,59 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
         });
       }}
       headerActions={
-        <button
-          onClick={(e) => { e.stopPropagation(); setIsLocked(!isLocked); }}
-          className={`cancel-pan p-2 rounded-lg transition-colors flex items-center gap-2 text-xs font-black uppercase tracking-widest border ${isLocked ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} hover:bg-white/10`}
-          title={isLocked ? "Unlock Editor Mode" : "Lock Editor to Drag Mode"}
-        >
-          {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
-          {isLocked ? 'Locked' : 'Editing'}
-        </button>
+        <>
+          <div 
+            className="cancel-pan flex items-center bg-white/5 border border-white/10 rounded-lg px-2 h-8 text-xs font-bold text-zinc-300 hover:bg-white/10 transition-colors mx-2 cursor-text"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditingCells(true);
+              setCellsInput((data.canvas_cells_per_row ?? 26).toString());
+            }}
+          >
+            {isEditingCells ? (
+              <input
+                autoFocus
+                type="number"
+                min={1}
+                max={props.settings.maxCanvasCellsPerRow ?? 100}
+                className="bg-transparent border-none outline-none w-16 text-center text-indigo-300 pointer-events-auto"
+                value={cellsInput}
+                onChange={(e) => setCellsInput(e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
+                onBlur={() => {
+                  setIsEditingCells(false);
+                  let val = parseInt(cellsInput, 10);
+                  if (!isNaN(val) && val > 0) {
+                    val = Math.min(val, props.settings.maxCanvasCellsPerRow ?? 100);
+                    props.updateWand(slot, { canvas_cells_per_row: val });
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    (e.target as HTMLElement).blur(); // Blur triggers save
+                  } else if (e.key === 'Escape') {
+                    setIsEditingCells(false);
+                  }
+                }}
+              />
+            ) : (
+              <span className="select-none pointer-events-none whitespace-nowrap">每行格数: {cellsPerRow}</span>
+            )}
+          </div>
+          {lockEnabled && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsLockedLocal(!isLockedLocal); }}
+              className={`cancel-pan px-3 h-8 rounded-lg transition-colors flex items-center gap-2 text-xs font-black uppercase tracking-widest border ${isLocked ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} hover:bg-white/10`}
+              title={isLocked ? "Unlock Editor Mode" : "Lock Editor to Drag Mode"}
+            >
+              {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              {isLocked ? 'Locked' : 'Editing'}
+            </button>
+          )}
+        </>
       }
     >
-      <div className={`relative transition-opacity duration-300 w-[1000px] ${isLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`relative transition-opacity duration-300 w-max max-w-max min-w-[300px] ${isLocked ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         <div className="absolute inset-0 bg-transparent -m-4 pointer-events-none cancel-pan"></div>
         {/* We use an arbitrary wrapper large enough, and supply hideAttributes=true */}
         <div className={isLocked ? '' : 'cancel-pan'}>
@@ -483,8 +558,43 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
              data={data}
              hideAttributes={true}
              hideAlwaysCast={false}
+             isCanvasMode={true}
           />
         </div>
+      </div>
+    </DraggableNode>
+  );
+}
+
+function PinnedWandAttributes({ slot, data, wandName, colorDef, handleRename, props, baseY }: any) {
+  return (
+    <DraggableNode 
+      id={`canvas-attrs-${slot}`}
+      title={wandName}
+      subtitle="Attributes"
+      slotIndex={slot}
+      colorDef={colorDef}
+      defaultX={data.canvas_positions?.attrs?.x ?? 2200}
+      defaultY={data.canvas_positions?.attrs?.y ?? baseY}
+      onRename={handleRename}
+      onPosChange={(x, y) => {
+        props.updateWand(slot, {
+          canvas_positions: {
+            ...(data.canvas_positions || {}),
+            'attrs': { x, y }
+          }
+        });
+      }}
+    >
+      <div className="relative w-max max-w-max min-w-[300px] cancel-pan">
+        <WandEditor 
+           {...props}
+           slot={slot}
+           data={data}
+           hideAttributes={false}
+           hideSpells={true}
+           hideAlwaysCast={true}
+        />
       </div>
     </DraggableNode>
   );

@@ -524,6 +524,54 @@ export function SettingsModal({
                     </div>
                   </div>
                 )}
+                {(isMatch(t('settings.default_canvas_cells')) || isMatch(t('settings.max_canvas_cells'))) && (
+                  <div className="space-y-4 bg-fuchsia-500/5 p-4 rounded-lg border border-fuchsia-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-fuchsia-500/10 rounded-lg text-fuchsia-400">
+                        <Wand2 size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">画布模式格数设置 (Canvas Mode Cells)</div>
+                        <div className="text-[10px] text-zinc-500">自定义法杖节点在画布中的网格显示方式</div>
+                      </div>
+                    </div>
+                    
+                    {isMatch(t('settings.default_canvas_cells')) && (
+                      <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.default_canvas_cells')} ({settings.defaultCanvasCellsPerRow ?? 26})</label>
+                        <div className="flex items-center gap-4">
+                          <input type="range" min="1" max={settings.maxCanvasCellsPerRow ?? 100} step="1" value={settings.defaultCanvasCellsPerRow ?? 26} onChange={e => setSettings(s => ({ ...s, defaultCanvasCellsPerRow: parseInt(e.target.value) || 26 }))} className="flex-1 accent-fuchsia-500" />
+                          <span className="text-xs font-mono font-bold text-fuchsia-400 w-8">{settings.defaultCanvasCellsPerRow ?? 26}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isMatch(t('settings.max_canvas_cells')) && (
+                      <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.max_canvas_cells')} ({settings.maxCanvasCellsPerRow ?? 100})</label>
+                        <div className="flex items-center gap-4">
+                          <input type="range" min="26" max="500" step="1" value={settings.maxCanvasCellsPerRow ?? 100} onChange={e => setSettings(s => ({ ...s, maxCanvasCellsPerRow: parseInt(e.target.value) || 100 }))} className="flex-1 accent-red-500" />
+                          <span className="text-xs font-mono font-bold text-red-400 w-8">{settings.maxCanvasCellsPerRow ?? 100}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isMatch(t('settings.enable_canvas_lock')) && (
+                      <div className="flex justify-between items-center bg-black/20 p-3 rounded-lg border border-white/5">
+                        <div className="pr-4">
+                          <div className="text-xs font-bold text-zinc-200">{t('settings.enable_canvas_lock')}</div>
+                          <div className="text-[10px] text-zinc-500">{t('settings.enable_canvas_lock_desc')}</div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, enableCanvasEditorLock: !s.enableCanvasEditorLock }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.enableCanvasEditorLock ? 'bg-fuchsia-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.enableCanvasEditorLock ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {isMatch(t('settings.ui_scale')) && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.ui_scale')} ({settings.uiScale || 100}%)</label>

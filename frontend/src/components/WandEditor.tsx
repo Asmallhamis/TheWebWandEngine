@@ -8,6 +8,7 @@ import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useTranslation } from 'react-i18next';
 import { detectPatterns, getMergedRules, type PatternMatch } from '../lib/spellPatterns';
 import { SpellCell } from './SpellCell';
+import { SpellGridCanvas } from './SpellGridCanvas';
 
 interface WandEditorProps {
   slot: string;
@@ -33,6 +34,9 @@ interface WandEditorProps {
   hideAttributes?: boolean;
   /** 隐藏始终施放区域 (用于智能标签编辑) */
   hideAlwaysCast?: boolean;
+  /** 画布模式下不限制高度 */
+  isCanvasMode?: boolean;
+  hideSpells?: boolean;
 }
 
 export function WandEditor({
@@ -56,7 +60,9 @@ export function WandEditor({
   settings,
   isConnected,
   hideAttributes,
-  hideAlwaysCast
+  hideAlwaysCast,
+  isCanvasMode,
+  hideSpells
 }: WandEditorProps) {
   const { t, i18n } = useTranslation();
   const [isAltPressed, setIsAltPressed] = React.useState(false);
@@ -181,15 +187,6 @@ export function WandEditor({
     const rules = getMergedRules(settings.userMarkingRules).filter(r => r.enabled);
     return detectPatterns(data.spells, data.deck_capacity, rules);
   }, [data.spells, data.deck_capacity, settings.userMarkingRules]);
-
-  // 预计算每个槽位对应的 PatternMatch (用于渲染和双击)
-  const slotMatchMap = React.useMemo(() => {
-    const map: Record<number, PatternMatch> = {};
-    for (const m of patternMatches) {
-      for (const idx of m.indices) map[idx] = m;
-    }
-    return map;
-  }, [patternMatches]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -772,7 +769,7 @@ export function WandEditor({
         </div>
       </div>}
 
-      <div ref={spellsRef} className={hideAttributes ? "space-y-3" : "space-y-8"}>
+      {hideSpells ? null : <div ref={spellsRef} className={hideAttributes ? "space-y-3" : "space-y-8"}>
         {!hideAlwaysCast && Array.isArray(data.always_cast) && data.always_cast.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -803,17 +800,17 @@ export function WandEditor({
                     onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
                     onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}
                     onMouseLeave={handleSlotMouseLeave}
-                     onClick={(e) => {
-                       if (e.altKey) {
-                         updateWand(slot, (curr) => {
-                           const newAC = [...(curr.always_cast || [])];
-                           newAC.splice(i, 1);
-                           return { always_cast: newAC };
-                         }, "删除始终施放法术");
-                         return;
-                       }
-                       openPicker(slot, `ac-${i}`, e);
-                     }}
+                    onClick={(e) => {
+                      if (e.altKey) {
+                        updateWand(slot, (curr) => {
+                          const newAC = [...(curr.always_cast || [])];
+                          newAC.splice(i, 1);
+                          return { always_cast: newAC };
+                        }, "删除始终施放法术");
+                        return;
+                      }
+                      openPicker(slot, `ac-${i}`, e);
+                    }}
                   >
                     <div className={`
                     w-12 h-12 rounded-lg border flex items-center justify-center relative shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform hover:scale-105
@@ -875,55 +872,29 @@ export function WandEditor({
           </div>
         )}
 
-        <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-1 select-none">
-          <div
-            className="grid gap-0"
-            style={{
-              gridTemplateColumns: `repeat(auto-fill, minmax(${48 + (settings.editorSpellGap || 0)}px, 1fr))`
-            }}
-          >
-            {Array.from({ length: Math.max(data.deck_capacity, 24) }).map((_, i) => {
-              const idx = (i + 1).toString();
-              const sid = data.spells ? data.spells[idx] : null;
-              const spell = sid ? spellDb[sid] : null;
-              const uses = (data.spell_uses || {})[idx] ?? spell?.max_uses;
-              const isLocked = i >= data.deck_capacity;
-              const gap = settings.editorSpellGap || 0;
-
-              return (
-                <SpellCell 
-                   key={i}
-                   i={i}
-                   slot={slot}
-                   idx={idx}
-                   data={data}
-                   spell={spell}
-                   sid={sid}
-                   uses={uses}
-                   isLocked={isLocked}
-                   isAltPressed={isAltPressed}
-                   absoluteToOrdinal={absoluteToOrdinal}
-                   slotMatchMap={slotMatchMap}
-                   gap={gap}
-                   settings={settings}
-                   isConnected={isConnected}
-                   handleSlotMouseMove={handleSlotMouseMove}
-                   handleSlotMouseLeave={handleSlotMouseLeave}
-                   handleSlotMouseDown={handleSlotMouseDown}
-                   handleSlotMouseUp={handleSlotMouseUp}
-                   handleSlotMouseEnter={handleSlotMouseEnter}
-                   openPicker={openPicker}
-                   setSelection={setSelection}
-                   updateWand={updateWand}
-                   openWiki={openWiki}
-                   setSettings={setSettings}
-                   t={t}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </div>
+        <SpellGridCanvas
+          slot={slot}
+          data={data}
+          spellDb={spellDb}
+          settings={settings}
+          isConnected={isConnected}
+          isAltPressed={isAltPressed}
+          absoluteToOrdinal={absoluteToOrdinal}
+          patternMatches={patternMatches}
+          isCanvasMode={isCanvasMode}
+          handleSlotMouseMove={handleSlotMouseMove}
+          handleSlotMouseLeave={handleSlotMouseLeave}
+          handleSlotMouseDown={handleSlotMouseDown}
+          handleSlotMouseUp={handleSlotMouseUp}
+          handleSlotMouseEnter={handleSlotMouseEnter}
+          openPicker={openPicker}
+          setSelection={setSelection}
+          updateWand={updateWand}
+          openWiki={openWiki}
+          setSettings={setSettings}
+          t={t}
+        />
+      </div>}
     </div>
   );
 }

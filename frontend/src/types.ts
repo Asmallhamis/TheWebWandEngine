@@ -34,6 +34,7 @@ export interface WandData {
     item_sprite?: string;
   };
   canvas_positions?: Record<string, { x: number, y: number }>;
+  canvas_cells_per_row?: number;
 }
 
 export interface HistoryItem {
@@ -143,6 +144,9 @@ export interface AppSettings {
   userMarkingRules?: SpellMarkingRule[];
   isCanvasMode?: boolean;
   showSpellId: boolean;
+  defaultCanvasCellsPerRow: number;
+  maxCanvasCellsPerRow: number;
+  enableCanvasEditorLock: boolean;
 }
 
 export interface EvalNode {

@@ -63,7 +63,10 @@ export const useSettings = () => {
       compactAttributes: isMobileDevice,
       triggerVisualizationMode: 'standard',
       userMarkingRules: [],
-      showSpellId: false
+      showSpellId: false,
+      defaultCanvasCellsPerRow: 26,
+      maxCanvasCellsPerRow: 100,
+      enableCanvasEditorLock: false
     };
     if (saved) {
       try {
