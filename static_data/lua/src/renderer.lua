@@ -366,7 +366,9 @@ end
 
 local function render_combined_json(calls, engine_data, text_formatter)
 	local out = {}
-	table.insert(out, "{\"tree\":")
+	table.insert(out, "{\"seed\":")
+	table.insert(out, tostring(engine_data.used_seed or 0))
+	table.insert(out, ",\"tree\":")
 	render_json(calls, engine_data, out)
 
 	local shot_nums_to_refs = {}
