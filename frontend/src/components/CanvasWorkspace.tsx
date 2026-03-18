@@ -33,7 +33,7 @@ interface CanvasWorkspaceProps {
   handleSlotMouseEnter: (wandSlot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, wandSlot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  openPicker: (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   evalResults: Record<string, { data: EvalResponse; id: number; loading?: boolean }>;
@@ -483,6 +483,7 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
              data={data}
              hideAttributes={true}
              hideAlwaysCast={false}
+             usePixiGrid={true}
           />
         </div>
       </div>

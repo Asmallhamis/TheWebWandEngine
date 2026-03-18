@@ -27,7 +27,7 @@ interface SpellCellProps {
   handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number }) => void;
   setSelection: (s: any) => void;
   updateWand: (slot: string, partial: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   openWiki: (sid: string) => void;

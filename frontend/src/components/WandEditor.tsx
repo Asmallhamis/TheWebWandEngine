@@ -8,6 +8,7 @@ import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useTranslation } from 'react-i18next';
 import { detectPatterns, getMergedRules, type PatternMatch } from '../lib/spellPatterns';
 import { SpellCell } from './SpellCell';
+import { SpellGridPixi, type SpellGridPixiHandle } from './SpellGridPixi';
 
 interface WandEditorProps {
   slot: string;
@@ -22,7 +23,7 @@ interface WandEditorProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   requestEvaluation: (wand: WandData, force?: boolean) => void;
@@ -33,6 +34,8 @@ interface WandEditorProps {
   hideAttributes?: boolean;
   /** 隐藏始终施放区域 (用于智能标签编辑) */
   hideAlwaysCast?: boolean;
+  /** 使用 Pixi 渲染法术网格 (仅用于画布模式对比) */
+  usePixiGrid?: boolean;
 }
 
 export function WandEditor({
@@ -56,12 +59,14 @@ export function WandEditor({
   settings,
   isConnected,
   hideAttributes,
-  hideAlwaysCast
+  hideAlwaysCast,
+  usePixiGrid
 }: WandEditorProps) {
   const { t, i18n } = useTranslation();
   const [isAltPressed, setIsAltPressed] = React.useState(false);
   const wandRef = React.useRef<HTMLDivElement>(null);
   const spellsRef = React.useRef<HTMLDivElement>(null);
+  const pixiGridRef = React.useRef<SpellGridPixiHandle>(null);
 
   const openWiki = (sid: string) => {
     const spell = spellDb[sid];
@@ -74,6 +79,9 @@ export function WandEditor({
   // 计算当前一行能放多少个格子
   const getCols = () => {
     if (!spellsRef.current) return 10;
+    if (usePixiGrid && pixiGridRef.current?.getLayout()) {
+      return pixiGridRef.current.getLayout()!.cols || 10;
+    }
     const grid = spellsRef.current.querySelector('.grid');
     if (!grid) return 10;
     const style = getComputedStyle(grid);
@@ -123,8 +131,13 @@ export function WandEditor({
       // 2. 字母/数字触发搜索 (IME 风格)
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
         e.preventDefault();
-        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
-        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
+        const rect = (() => {
+          if (usePixiGrid && pixiGridRef.current) {
+            return pixiGridRef.current.getCellRect(currentIdx);
+          }
+          const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
+          return el?.getBoundingClientRect();
+        })() || { left: 0, bottom: 0 };
         openPicker(slot, currentIdx.toString(), {
           clientX: 0, clientY: 0, // 告知 App.tsx 这是一个非鼠标触发
           x: rect.left,
@@ -136,8 +149,13 @@ export function WandEditor({
       // 3. Enter/Space 触发空搜索
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
-        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
+        const rect = (() => {
+          if (usePixiGrid && pixiGridRef.current) {
+            return pixiGridRef.current.getCellRect(currentIdx);
+          }
+          const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
+          return el?.getBoundingClientRect();
+        })() || { left: 0, bottom: 0 };
         openPicker(slot, currentIdx.toString(), {
           clientX: 0, clientY: 0,
           x: rect.left,
@@ -396,6 +414,24 @@ export function WandEditor({
   };
 
   const handleExportImage = async (mode: 'only_spells' | 'full') => {
+    if (usePixiGrid && mode === 'only_spells' && pixiGridRef.current) {
+      try {
+        let blob = await pixiGridRef.current.exportImageBlob({ pure: settings.pureSpellsExport });
+        if (!blob) return;
+        if (settings.embedMetadataInImage) {
+          blob = await embedMetadata(blob, getWand2Text());
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `wand_${new Date().getTime()}.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Failed to export image:', err);
+      }
+      return;
+    }
     const ref = mode === 'only_spells' ? spellsRef : wandRef;
     if (!ref.current) return;
 
@@ -875,54 +911,77 @@ export function WandEditor({
           </div>
         )}
 
-        <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-1 select-none">
-          <div
-            className="grid gap-0"
-            style={{
-              gridTemplateColumns: `repeat(auto-fill, minmax(${48 + (settings.editorSpellGap || 0)}px, 1fr))`
-            }}
-          >
-            {Array.from({ length: Math.max(data.deck_capacity, 24) }).map((_, i) => {
-              const idx = (i + 1).toString();
-              const sid = data.spells ? data.spells[idx] : null;
-              const spell = sid ? spellDb[sid] : null;
-              const uses = (data.spell_uses || {})[idx] ?? spell?.max_uses;
-              const isLocked = i >= data.deck_capacity;
-              const gap = settings.editorSpellGap || 0;
+        {usePixiGrid ? (
+          <SpellGridPixi
+            ref={pixiGridRef}
+            slot={slot}
+            data={data}
+            spellDb={spellDb}
+            settings={settings}
+            isConnected={isConnected}
+            isAltPressed={isAltPressed}
+            absoluteToOrdinal={absoluteToOrdinal}
+            slotMatchMap={slotMatchMap}
+            handleSlotMouseDown={handleSlotMouseDown}
+            handleSlotMouseUp={handleSlotMouseUp}
+            handleSlotMouseEnter={handleSlotMouseEnter}
+            handleSlotMouseLeave={handleSlotMouseLeave}
+            openPicker={openPicker}
+            setSelection={setSelection}
+            updateWand={updateWand}
+            setSettings={setSettings}
+            openWiki={openWiki}
+          />
+        ) : (
+          <div className="max-h-[600px] overflow-y-auto custom-scrollbar p-1 select-none">
+            <div
+              className="grid gap-0"
+              style={{
+                gridTemplateColumns: `repeat(auto-fill, minmax(${48 + (settings.editorSpellGap || 0)}px, 1fr))`
+              }}
+            >
+              {Array.from({ length: Math.max(data.deck_capacity, 24) }).map((_, i) => {
+                const idx = (i + 1).toString();
+                const sid = data.spells ? data.spells[idx] : null;
+                const spell = sid ? spellDb[sid] : null;
+                const uses = (data.spell_uses || {})[idx] ?? spell?.max_uses;
+                const isLocked = i >= data.deck_capacity;
+                const gap = settings.editorSpellGap || 0;
 
-              return (
-                <SpellCell 
-                   key={i}
-                   i={i}
-                   slot={slot}
-                   idx={idx}
-                   data={data}
-                   spell={spell}
-                   sid={sid}
-                   uses={uses}
-                   isLocked={isLocked}
-                   isAltPressed={isAltPressed}
-                   absoluteToOrdinal={absoluteToOrdinal}
-                   slotMatchMap={slotMatchMap}
-                   gap={gap}
-                   settings={settings}
-                   isConnected={isConnected}
-                   handleSlotMouseMove={handleSlotMouseMove}
-                   handleSlotMouseLeave={handleSlotMouseLeave}
-                   handleSlotMouseDown={handleSlotMouseDown}
-                   handleSlotMouseUp={handleSlotMouseUp}
-                   handleSlotMouseEnter={handleSlotMouseEnter}
-                   openPicker={openPicker}
-                   setSelection={setSelection}
-                   updateWand={updateWand}
-                   openWiki={openWiki}
-                   setSettings={setSettings}
-                   t={t}
-                />
-              );
-            })}
+                return (
+                  <SpellCell 
+                     key={i}
+                     i={i}
+                     slot={slot}
+                     idx={idx}
+                     data={data}
+                     spell={spell}
+                     sid={sid}
+                     uses={uses}
+                     isLocked={isLocked}
+                     isAltPressed={isAltPressed}
+                     absoluteToOrdinal={absoluteToOrdinal}
+                     slotMatchMap={slotMatchMap}
+                     gap={gap}
+                     settings={settings}
+                     isConnected={isConnected}
+                     handleSlotMouseMove={handleSlotMouseMove}
+                     handleSlotMouseLeave={handleSlotMouseLeave}
+                     handleSlotMouseDown={handleSlotMouseDown}
+                     handleSlotMouseUp={handleSlotMouseUp}
+                     handleSlotMouseEnter={handleSlotMouseEnter}
+                     openPicker={openPicker}
+                     setSelection={setSelection}
+                     updateWand={updateWand}
+                     openWiki={openWiki}
+                     setSettings={setSettings}
+                     t={t}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
