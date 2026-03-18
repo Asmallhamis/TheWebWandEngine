@@ -5,7 +5,8 @@ import { evaluateWand } from '../lib/evaluatorAdapter';
 export const useWandEvaluator = (
   activeTab: Tab,
   settings: AppSettings,
-  isConnected: boolean
+  isConnected: boolean,
+  updateWand?: (slot: string, updates: Partial<WandData>) => void
 ) => {
   const [evalResults, setEvalResults] = useState<Record<string, { data: EvalResponse, id: number, loading?: boolean }>>({});
   const evalTimersRef = useRef<Record<string, any>>({});
@@ -28,6 +29,27 @@ export const useWandEvaluator = (
             ...prev,
             [key]: { data: res.data, id: res.id, loading: false }
           }));
+          
+          if (res.data.seed !== undefined && !wand.evaluation_seed && updateWand) {
+            const nextSeed = String(res.data.seed);
+            const newWand = { ...wand, evaluation_seed: nextSeed };
+            const { canvas_positions, appearance, marked_slots, canvas_cells_per_row, ...newLogicWand } = newWand;
+            const nextStateString = JSON.stringify({
+              wand: newLogicWand,
+              numCasts: settings.numCasts,
+              unlimited: settings.unlimitedSpells,
+              ifHalf: settings.initialIfHalf,
+              lowHp: settings.simulateLowHp,
+              manyEnemies: settings.simulateManyEnemies,
+              manyProjectiles: settings.simulateManyProjectiles,
+              seed: nextSeed,
+              fold: settings.foldNodes,
+              stopAtRecharge: settings.stopAtRecharge,
+              perks: settings.perks
+            });
+            lastEvaluatedWandsRef.current[key] = nextStateString;
+            requestAnimationFrame(() => updateWand(slot, { evaluation_seed: nextSeed }));
+          }
         }
       }
     } catch (e) {
@@ -60,7 +82,7 @@ export const useWandEvaluator = (
 
       const key = `${activeTab.id}-${slot}`;
       // Exclude non-logic fields that don't affect evaluation results
-      const { canvas_positions, appearance, marked_slots, ...logicWand } = wand;
+      const { canvas_positions, appearance, marked_slots, canvas_cells_per_row, ...logicWand } = wand;
       
       const wandStateString = JSON.stringify({
         wand: logicWand,
@@ -70,7 +92,7 @@ export const useWandEvaluator = (
         lowHp: settings.simulateLowHp,
         manyEnemies: settings.simulateManyEnemies,
         manyProjectiles: settings.simulateManyProjectiles,
-        seed: settings.evaluationSeed,
+        seed: logicWand.evaluation_seed !== undefined ? logicWand.evaluation_seed : settings.evaluationSeed,
         fold: settings.foldNodes,
         stopAtRecharge: settings.stopAtRecharge,
         perks: settings.perks

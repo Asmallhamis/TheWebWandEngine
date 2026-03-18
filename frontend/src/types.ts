@@ -35,6 +35,7 @@ export interface WandData {
   };
   canvas_positions?: Record<string, { x: number, y: number }>;
   canvas_cells_per_row?: number;
+  evaluation_seed?: string;
 }
 
 export interface HistoryItem {
@@ -170,6 +171,7 @@ export interface ShotState {
 }
 
 export interface EvalResponse {
+  seed?: number;
   tree: EvalNode;
   states: ShotState[];
   counts: Record<string, number>;

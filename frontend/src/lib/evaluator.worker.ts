@@ -416,8 +416,13 @@ self.onmessage = async (e: MessageEvent) => {
                 luaArgs.push('-sr', 'true');
             }
 
-            if (options.evaluationSeed !== undefined && options.evaluationSeed !== null && options.evaluationSeed !== "") {
-                luaArgs.push('-se', formatLuaArg(options.evaluationSeed));
+            let seedToUse = options.evaluationSeed;
+            if (data.evaluation_seed !== undefined) {
+                seedToUse = data.evaluation_seed;
+            }
+
+            if (seedToUse !== undefined && seedToUse !== null && seedToUse !== "") {
+                luaArgs.push('-se', formatLuaArg(seedToUse));
             }
 
             if (options.foldNodes === false) {

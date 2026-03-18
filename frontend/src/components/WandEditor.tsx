@@ -744,26 +744,38 @@ export function WandEditor({
             </button>
           </div>
           <div className="flex flex-col gap-1.5">
-            <button
-              onClick={() => requestEvaluation(data, true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-[16px] font-black uppercase tracking-widest transition-all"
-              title={t('evaluator.force_analyze_desc')}
-            >
-              <RefreshCw size={12} className="opacity-70" />
-              {t('evaluator.force_analyze')}
-            </button>
             <div className="flex items-center gap-2 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden focus-within:border-indigo-500/50 transition-colors" title={t('evaluator.evaluation_seed_desc')}>
+              <button 
+              onClick={() => {
+                if (data.evaluation_seed === '') {
+                  requestEvaluation(data, true);
+                } else {
+                  updateWand(slot, { evaluation_seed: '' });
+                }
+              }}
+              className="text-zinc-500 hover:text-indigo-400 transition-colors"
+              title="Randomize Seed"
+            >
+                 <span className="text-[12px]">🎲</span>
+              </button>
+              <div className="w-px h-3 bg-white/10 mx-0.5"></div>
               <span className="text-[9px] text-zinc-500 font-black uppercase shrink-0">Seed</span>
               <input
                 type="text"
-                value={settings.evaluationSeed || ''}
+                value={data.evaluation_seed !== undefined ? data.evaluation_seed : (settings.evaluationSeed || '')}
                 onChange={e => {
                   const val = e.target.value;
-                  setSettings(s => ({ ...s, evaluationSeed: val }));
+                  updateWand(slot, { evaluation_seed: val });
                 }}
                 className="bg-transparent border-none outline-none text-[10px] text-zinc-300 w-16 font-mono"
-                placeholder="Auto"
               />
+              <button 
+                onClick={() => requestEvaluation(data, true)}
+                className="text-zinc-500 hover:text-emerald-400 transition-colors ml-1"
+                title={t('evaluator.force_analyze_desc')}
+              >
+                 <RefreshCw size={12} />
+              </button>
             </div>
           </div>
         </div>

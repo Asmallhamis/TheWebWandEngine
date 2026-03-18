@@ -143,6 +143,7 @@ function M.make_fake_api(options)
 	regenerate_translations(options)
 
 	local frame = (options.seed ~= nil) and options.seed or entropy.get_entropy()
+	M.used_seed = frame
 
 	-- Deterministic PRNG implementation to ensure same results across LuaJIT (Desktop) and Lua 5.4 (WASM)
 	-- This overrides the built-in math.random to use a custom pure-Lua PRNG.

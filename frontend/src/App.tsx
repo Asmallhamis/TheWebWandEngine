@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next';
 
 // --- Internal ---
-import { SpellInfo, WandData, Tab } from './types';
+import { SpellInfo, WandData, Tab, EvalResponse } from './types';
 import { getActiveModBundle, saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND } from './constants';
 import { Header } from './components/Header';
@@ -183,8 +183,6 @@ function App() {
     spellStats, searchResults
   } = useSpellSearch(tabs, spellDb, settings);
 
-  const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected);
-
   const updateWand = useCallback((slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName = t('app.notification.modify_wand'), icons?: string[]) => {
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
@@ -195,6 +193,8 @@ function App() {
       return { ...prevWands, [slot]: newWand };
     }, actionName, icons);
   }, [activeTab.isRealtime, performAction, syncWand, t]);
+
+  const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected, updateWand);
 
   const setSelection = useUIStore(s => s.setSelection);
   const selection = useUIStore(s => s.selection);

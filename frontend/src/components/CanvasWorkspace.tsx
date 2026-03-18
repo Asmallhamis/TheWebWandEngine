@@ -552,8 +552,9 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
         <div className="absolute inset-0 bg-transparent -m-4 pointer-events-none cancel-pan"></div>
         {/* We use an arbitrary wrapper large enough, and supply hideAttributes=true */}
         <div className={isLocked ? '' : 'cancel-pan'}>
-          <WandEditor 
+           <WandEditor 
              {...props}
+             requestEvaluation={(wand: any, force?: boolean) => props.requestEvaluation(props.activeTab.id, slot, wand, force)}
              slot={slot}
              data={data}
              hideAttributes={true}
@@ -587,9 +588,10 @@ function PinnedWandAttributes({ slot, data, wandName, colorDef, handleRename, pr
       }}
     >
       <div className="relative w-max max-w-max min-w-[300px] cancel-pan">
-        <WandEditor 
-           {...props}
-           slot={slot}
+         <WandEditor 
+            {...props}
+            requestEvaluation={(wand: any, force?: boolean) => props.requestEvaluation(props.activeTab.id, slot, wand, force)}
+            slot={slot}
            data={data}
            hideAttributes={false}
            hideSpells={true}

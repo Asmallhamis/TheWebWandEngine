@@ -188,6 +188,38 @@ export function wikiNameToSpritePath(wikiName: string): { sprite?: string; item_
  * 魔杖评估适配器
  * 自动在 后端API 和 本地WASM引擎 之间切换
  */
+
+// Cache for mod bundle to avoid redundant filtering
+let cachedFilteredBundle: { appends: any, vfs: any, activeMods: string[], hasBundle: boolean } | null = null;
+let lastBundleVersion = 0;
+
+const pendingRequests = new Map<number, { resolve: (val: any) => void, reject: (err: any) => void }>();
+
+function ensureWorker() {
+  if (!worker) {
+    worker = new Worker(new URL('./evaluator.worker.ts', import.meta.url), {
+      type: 'module'
+    });
+    worker.onmessage = (e: MessageEvent) => {
+      const { id, type, data, error } = e.data;
+      const pending = pendingRequests.get(id);
+      if (!pending) return;
+      
+      pendingRequests.delete(id);
+      if (type === 'RESULT') {
+        pending.resolve({ data, id });
+      } else if (type === 'ERROR') {
+        pending.reject(error);
+      }
+    };
+  }
+  return worker;
+}
+
+/**
+ * 魔杖评估适配器
+ * 自动在 后端API 和 本地WASM引擎 之间切换
+ */
 export async function evaluateWand(
   wand: WandData,
   settings: any,
@@ -240,7 +272,7 @@ export async function evaluateWand(
           simulate_many_enemies: settings.simulateManyEnemies,
           simulate_many_projectiles: settings.simulateManyProjectiles,
           fold_nodes: settings.foldNodes,
-          evaluation_seed: settings.evaluationSeed,
+          evaluation_seed: wand.evaluation_seed !== undefined ? wand.evaluation_seed : settings.evaluationSeed,
           stop_at_recharge: settings.stopAtRecharge,
           perks: Object.entries((settings.perks || {}) as Record<string, number>).flatMap(([id, count]) =>
             Array.from({ length: count }, () => id)
@@ -264,44 +296,32 @@ export async function evaluateWand(
   }
 
   // --- 路径 B: GitHub Pages 模式 (纯 WASM) ---
-  console.log(`[Evaluator] Using WASM Engine (${requestId})`);
-  // 只有在 Static 模式下才初始化 Worker
   return new Promise((resolve, reject) => {
     try {
-      // Get mod appends for WASM evaluation
-      getActiveModBundle().then(bundle => {
-        const { appends, vfs, activeMods, hasBundle } = filterBundleForActiveMods(bundle);
+      const w = ensureWorker();
+      pendingRequests.set(requestId, { resolve, reject });
 
-        worker?.postMessage({
+      getActiveModBundle().then(bundle => {
+        // Simple cache for filtered bundle
+        // Note: we assume getActiveModBundle returns an object that can be versioned if needed
+        const bundleVersion = (bundle as any)?.version || 0;
+        if (!cachedFilteredBundle || bundleVersion !== lastBundleVersion) {
+          cachedFilteredBundle = filterBundleForActiveMods(bundle);
+          lastBundleVersion = bundleVersion;
+        }
+
+        w.postMessage({
           type: 'EVALUATE',
           data: wand,
           options: settings,
           id: requestId,
-          mod_appends: hasBundle ? appends : null,
-          active_mods: hasBundle ? activeMods : null,
-          vfs: hasBundle ? vfs : null,
+          mod_appends: cachedFilteredBundle.appends,
+          active_mods: cachedFilteredBundle.activeMods,
+          vfs: cachedFilteredBundle.vfs,
         });
       });
-
-      if (!worker) {
-        worker = new Worker(new URL('./evaluator.worker.ts', import.meta.url), {
-          type: 'module'
-        });
-      }
-
-      const handler = (e: MessageEvent) => {
-        if (e.data.id !== requestId) return;
-        if (e.data.type === 'RESULT') {
-          worker?.removeEventListener('message', handler);
-          resolve({ data: e.data.data, id: requestId });
-        } else if (e.data.type === 'ERROR') {
-          worker?.removeEventListener('message', handler);
-          reject(e.data.error);
-        }
-      };
-
-      worker.addEventListener('message', handler);
     } catch (err) {
+      pendingRequests.delete(requestId);
       reject(err);
     }
   });
