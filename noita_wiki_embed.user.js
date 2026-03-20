@@ -123,8 +123,10 @@
             loadingPlaceholder.style.display = 'none';
         };
 
-        // 折叠/展开
-        let isCollapsed = false;
+        // 折叠/展开（默认收起）
+        let isCollapsed = true;
+        iframeContainer.style.display = 'none';
+        toggleBtn.textContent = '▶';
         header.addEventListener('click', () => {
             isCollapsed = !isCollapsed;
             iframeContainer.style.display = isCollapsed ? 'none' : 'block';
