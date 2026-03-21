@@ -22,6 +22,7 @@ import { type PatternMatch } from '../lib/spellPatterns';
 const BASE_CELL = 48;
 const ICON_SIZE = 40;
 const BORDER_RADIUS = 8;
+const CANVAS_PADDING_TOP = 20;
 
 // Colors
 const C = {
@@ -83,7 +84,7 @@ export interface SpellGridCanvasProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number }) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
   updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   openWiki: (sid: string) => void;
@@ -109,6 +110,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const resolverId = React.useMemo(() => `canvas-${slot}`, [slot]);
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number>(0);
   const paintRef = useRef<() => void>(() => {});
@@ -116,6 +118,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   const lastHoveredIdxRef = useRef<number>(-1);
   const mouseDownIdxRef = useRef<number>(-1);
   const [containerWidth, setContainerWidth] = useState(0);
+  const registerHoverResolver = useUIStore(s => s.registerHoverResolver);
+  const unregisterHoverResolver = useUIStore(s => s.unregisterHoverResolver);
 
   // ─── Derived values ─────────────────────────────────────────
   const gap = settings.editorSpellGap || 0;
@@ -409,8 +413,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Delete button (hover only)
     if (isHovered && spell && !isDragSwap) {
       const dbSize = 16;
-      const dbX = x + cellInner - dbSize / 2 + 2;
-      const dbY = y - dbSize / 2 + 2;
+      const dbX = x + cellInner;
+      const dbY = y - 4;
       ctx.save();
       ctx.beginPath();
       ctx.arc(dbX, dbY, dbSize / 2, 0, Math.PI * 2);
@@ -437,7 +441,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const dpr = window.devicePixelRatio || 1;
     const { cols, rows, cellOuter, cellInner } = layout;
     const canvasW = cols * cellOuter;
-    const canvasH = rows * cellOuter;
+    const canvasH = rows * cellOuter + CANVAS_PADDING_TOP;
     const _gap = settings.editorSpellGap || 0;
 
     // Resize visible canvas if needed
@@ -467,8 +471,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     if (baseDirtyRef.current) {
       baseDirtyRef.current = false;
       const bctx = baseCanvas.getContext('2d')!;
-      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      bctx.clearRect(0, 0, canvasW, canvasH);
+      bctx.setTransform(dpr, 0, 0, dpr, 0, CANVAS_PADDING_TOP * dpr);
+      bctx.clearRect(0, -CANVAS_PADDING_TOP, canvasW, canvasH);
       // Paint all cells without hover/selection overlays
       for (let i = 0; i < totalSlots; i++) {
         paintCell(bctx, i, _gap, cols, cellOuter, cellInner, true, null, null, null);
@@ -501,27 +505,32 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       }
     }
 
-    // Redraw only overlay cells with full state
+    // redraw only overlay cells with full state
     for (const i of overlayCells) {
       // Clear this cell region first
       const col = i % cols;
       const row = Math.floor(i / cols);
       const x = col * cellOuter;
-      const y = row * cellOuter;
+      const y = row * cellOuter + CANVAS_PADDING_TOP;
       // Clear the cell area + padding for delete button overflow
-      ctx.clearRect(x - 2, y - 10, cellOuter + 4, cellOuter + 12);
+      ctx.clearRect(x - 2, y - 20, cellOuter + 4, cellOuter + 22);
       // Blit base cell region from offscreen
       const sx = x * dpr;
-      const sy = Math.max(0, (y - 10)) * dpr;
+      const sy = Math.max(0, (y - 20)) * dpr;
       const sw = (cellOuter + 4) * dpr;
-      const sh = (cellOuter + 12) * dpr;
+      const sh = (cellOuter + 22) * dpr;
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.drawImage(baseCanvas, sx, sy, sw, sh, sx, sy, sw, sh);
       ctx.restore();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // Paint cell with overlays
+      // NOTE: paintCell uses relative y, but bctx was translated by CANVAS_PADDING_TOP.
+      // So we need to translate context here too to match.
+      ctx.save();
+      ctx.translate(0, CANVAS_PADDING_TOP);
       paintCell(ctx, i, _gap, cols, cellOuter, cellInner, false, _selection, _hovered, _drag);
+      ctx.restore();
     }
   };
 
@@ -582,7 +591,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const scaleX = rect.width / logicalW;
     const scaleY = rect.height / logicalH;
     const mx = (clientX - rect.left) / scaleX;
-    const my = (clientY - rect.top) / scaleY;
+    const my = (clientY - rect.top) / scaleY - CANVAS_PADDING_TOP;
 
     const { cols, cellOuter, cellInner } = layout;
     const _gap = settings.editorSpellGap || 0;
@@ -603,26 +612,34 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Check if click is on delete button
     const x = col * cellOuter + _gap / 2;
     const y = row * cellOuter + _gap / 2;
-    const dbX = x + cellInner - 16 / 2 + 2;
-    const dbY = y - 16 / 2 + 2;
+    const dbX = x + cellInner;
+    const dbY = y - 4;
     const dist = Math.sqrt((mx - dbX) ** 2 + (my - dbY) ** 2);
     const isDelete = dist <= 10;
 
     return { slotIdx, isRightHalf, isDelete };
   }, [layout, totalSlots, data.deck_capacity, settings.editorSpellGap]);
 
-  // ─── Mouse event handlers ─────────────────────────────────
+  useEffect(() => {
+    registerHoverResolver(resolverId, (clientX, clientY) => {
+      const hit = hitTest(clientX, clientY);
+      if (!hit) return null;
+      return {
+        wandSlot: slot,
+        idx: hit.slotIdx,
+        isRightHalf: hit.isRightHalf,
+      };
+    });
+    return () => unregisterHoverResolver(resolverId);
+  }, [registerHoverResolver, unregisterHoverResolver, resolverId, hitTest, slot]);
+
+  // ─── Unified Event Handlers ─────────────────────────────────
   const setHoveredSlot = useUIStore(s => s.setHoveredSlot);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    const hit = hitTest(e.clientX, e.clientY);
+  const updateHoverFromClientPoint = useCallback((clientX: number, clientY: number) => {
+    const hit = hitTest(clientX, clientY);
     if (hit) {
-      // Set hovered slot directly with correct isRightHalf from canvas hit-test
-      // (bypasses handleSlotMouseMove which uses e.currentTarget — wrong for canvas)
       setHoveredSlot({ wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
-
-      // Simulate mouseEnter: call handleSlotMouseEnter when cell changes
-      // (drives drag-to-select in useInteraction)
       if (lastHoveredIdxRef.current !== hit.slotIdx) {
         lastHoveredIdxRef.current = hit.slotIdx;
         handleSlotMouseEnter(slot, hit.slotIdx);
@@ -635,22 +652,24 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     }
   }, [hitTest, slot, setHoveredSlot, handleSlotMouseEnter, handleSlotMouseLeave]);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    updateHoverFromClientPoint(e.clientX, e.clientY);
+  }, [updateHoverFromClientPoint]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    // 允许通过 capture 进行拖拽，防止原生冲突
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const hit = hitTest(e.clientX, e.clientY);
     if (!hit) return;
 
-    if (e.button === 1) {
+    if (e.button === 1) { // Middle click
       const sid = data.spells?.[hit.slotIdx.toString()];
       const spell = sid ? spellDb[sid] : null;
       if (e.ctrlKey && sid) {
-        e.preventDefault();
-        e.stopPropagation();
         openWiki(sid);
         return;
       }
       if (spell) {
-        e.preventDefault();
-        e.stopPropagation();
         updateWand(slot, (curr) => {
           const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];
           const newMarked = marked.includes(hit.slotIdx)
@@ -663,13 +682,13 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     }
 
     if (e.button === 0 || e.button === 2) {
-      e.preventDefault();
       mouseDownIdxRef.current = hit.slotIdx;
       handleSlotMouseDown(slot, hit.slotIdx, e.button === 2);
     }
   }, [hitTest, slot, data.spells, spellDb, handleSlotMouseDown, updateWand, openWiki]);
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
       handleSlotMouseUp(slot, hit.slotIdx);
@@ -786,12 +805,12 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
         // Cell position in logical canvas coords
         const cellLogicalX = col * layout.cellOuter + _gap / 2;
-        const cellLogicalY = row * layout.cellOuter + _gap / 2;
+        const cellLogicalY = row * layout.cellOuter + _gap / 2 + CANVAS_PADDING_TOP;
 
         // Row bottom in logical coords (bottom of any cell in this row)
-        const rowBottomLogical = row * layout.cellOuter + _gap / 2 + layout.cellInner;
+        const rowBottomLogical = row * layout.cellOuter + _gap / 2 + layout.cellInner + CANVAS_PADDING_TOP;
         // Row top in logical coords
-        const rowTopLogical = row * layout.cellOuter + _gap / 2;
+        const rowTopLogical = row * layout.cellOuter + _gap / 2 + CANVAS_PADDING_TOP;
 
         // Convert to screen coords
         const cellScreenCenterX = rect.left + (cellLogicalX + layout.cellInner / 2) * scaleX;
@@ -802,9 +821,18 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
           x: cellScreenCenterX,
           y: rowScreenBottom + 4,
           rowTop: rowScreenTop,
+          insertAnchor: {
+            wandSlot: slot,
+            idx: hit.slotIdx,
+            isRightHalf: hit.isRightHalf,
+          }
         });
       } else {
-        openPicker(slot, idx, e);
+        openPicker(slot, idx, {
+          x: e.clientX,
+          y: e.clientY,
+          insertAnchor: { wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf }
+        });
       }
     }
   }, [hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t]);
@@ -834,13 +862,14 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     >
       <canvas
         ref={canvasRef}
-        style={{ cursor, imageRendering: 'pixelated' }}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
+        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }}
         onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handleMouseLeave}
         onContextMenu={handleContextMenu}
-        onMouseLeave={handleMouseLeave}
+        onPointerLeave={handleMouseLeave}
       />
     </div>
   );

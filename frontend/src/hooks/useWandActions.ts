@@ -141,9 +141,10 @@ export const useWandActions = (params: {
     }
   }, [clipboard, updateWand]);
 
-  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number }) => {
+  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => {
     let x, y, initialSearch = '';
     let rowTop: number | undefined;
+    let insertAnchor: { wandSlot: string; idx: number; isRightHalf: boolean } | null | undefined;
 
     if (e && 'currentTarget' in e && e.currentTarget) {
       const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -173,11 +174,12 @@ export const useWandActions = (params: {
         y = cellRect.bottom + 8;
       }
     } else {
-      const manual = e as { x: number, y: number, initialSearch?: string, rowTop?: number };
+      const manual = e as { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null };
       x = manual.x;
       y = manual.y;
       initialSearch = manual.initialSearch || '';
       rowTop = manual.rowTop;
+      insertAnchor = manual.insertAnchor;
     }
 
     setPickerConfig({
@@ -185,6 +187,7 @@ export const useWandActions = (params: {
       spellIdx,
       x,
       y,
+      ...(insertAnchor !== undefined ? { insertAnchor } : {}),
       ...(rowTop !== undefined ? { rowTop } : {})
     });
     setPickerSearch(initialSearch);

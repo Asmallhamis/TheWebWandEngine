@@ -23,7 +23,7 @@ interface WandEditorProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   requestEvaluation: (wand: WandData, force?: boolean) => void;
@@ -77,99 +77,6 @@ export function WandEditor({
     window.open(`${baseUrl}${sid.toUpperCase()}`, '_blank');
   };
 
-  // 计算当前一行能放多少个格子
-  const getCols = () => {
-    if (!spellsRef.current) return 10;
-    const grid = spellsRef.current.querySelector('.grid');
-    if (!grid) return 10;
-    const style = getComputedStyle(grid);
-    return style.gridTemplateColumns.split(' ').filter(s => s !== '').length || 10;
-  };
-
-  React.useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 如果正在输入框里，不处理导航
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      // 必须有选中项且选中了当前法杖
-      if (!selection || selection.wandSlot !== slot || selection.indices.length !== 1) return;
-
-      const currentIdx = selection.indices[0];
-      const maxCap = data.deck_capacity;
-      const cols = getCols();
-
-      // 1. 方向键和 Tab 导航
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const next = e.shiftKey
-          ? (currentIdx <= 1 ? maxCap : currentIdx - 1)
-          : (currentIdx >= maxCap ? 1 : currentIdx + 1);
-        setSelection({ ...selection, indices: [next], startIdx: next });
-        return;
-      }
-
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        const next = currentIdx >= maxCap ? 1 : currentIdx + 1;
-        setSelection({ ...selection, indices: [next], startIdx: next });
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const next = currentIdx <= 1 ? maxCap : currentIdx - 1;
-        setSelection({ ...selection, indices: [next], startIdx: next });
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        const next = Math.min(maxCap, currentIdx + cols);
-        if (next !== currentIdx) setSelection({ ...selection, indices: [next], startIdx: next });
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        const next = Math.max(1, currentIdx - cols);
-        if (next !== currentIdx) setSelection({ ...selection, indices: [next], startIdx: next });
-      }
-
-      // 2. 字母/数字触发搜索 (IME 风格)
-      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
-        e.preventDefault();
-        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
-        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
-        openPicker(slot, currentIdx.toString(), {
-          clientX: 0, clientY: 0, // 告知 App.tsx 这是一个非鼠标触发
-          x: rect.left,
-          y: rect.bottom + 8,
-          initialSearch: e.key
-        } as any);
-      }
-
-      // 3. Enter/Space 触发空搜索
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement;
-        const rect = el?.getBoundingClientRect() || { left: 0, bottom: 0 };
-        openPicker(slot, currentIdx.toString(), {
-          clientX: 0, clientY: 0,
-          x: rect.left,
-          y: rect.bottom + 8,
-          initialSearch: ''
-        } as any);
-      }
-
-      // 4. 删除键
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        updateWand(slot, (curr) => {
-          const sid = curr.spells[currentIdx.toString()];
-          if (!sid) return {};
-          const newSpells = { ...curr.spells };
-          const newSpellUses = { ...(curr.spell_uses || {}) };
-          delete newSpells[currentIdx.toString()];
-          delete newSpellUses[currentIdx.toString()];
-          return { spells: newSpells, spell_uses: newSpellUses };
-        }, t('app.notification.delete_spell'));
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selection, slot, data.deck_capacity, data.spells, data.spell_uses]);
-
   const absoluteToOrdinal = React.useMemo(() => {
     const map: Record<number, number> = {};
     let ordinal = 1;
@@ -195,12 +102,14 @@ export function WandEditor({
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Alt') setIsAltPressed(false);
     };
+    const handleBlur = () => setIsAltPressed(false);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', () => setIsAltPressed(false)); // Reset on loss of focus
+    window.addEventListener('blur', handleBlur); // Reset on loss of focus
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
@@ -217,7 +126,12 @@ export function WandEditor({
 
       const currentIdx = selection.indices[0];
       const maxCap = data.deck_capacity;
-      const rowCount = Math.floor((spellsRef.current?.offsetWidth || 600) / (56 + (settings.editorSpellGap || 0)));
+      const getPickerAnchor = () => {
+        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement | null;
+        const rect = el?.getBoundingClientRect();
+        if (!rect) return { clientX: 0, clientY: 0, insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false } };
+        return { clientX: 0, clientY: 0, x: rect.left, y: rect.bottom + 8 };
+      };
 
       // 1. 方向键和 Tab 导航
       if (e.key === 'Tab') {
@@ -245,33 +159,41 @@ export function WandEditor({
 
       // 2. 字母/数字触发搜索 (IME 风格)
       // 排除掉控制键
-      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
         // 如果是数字且当前格子有法术，可能是想直接用数字选词，但在格子界面我们倾向于开启搜索
-        // 除非是按了空格/回车（开启空的搜索框）
         e.preventDefault();
         openPicker(slot, currentIdx.toString(), {
-          clientX: 0, clientY: 0, // 坐标由 Picker 自己计算偏移
-          initialSearch: e.key === ' ' ? '' : e.key
+          ...getPickerAnchor(),
+          initialSearch: e.key
         } as any);
       }
 
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openPicker(slot, currentIdx.toString(), { clientX: 0, clientY: 0 } as any);
+        openPicker(slot, currentIdx.toString(), {
+          ...getPickerAnchor(),
+          insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false },
+          initialSearch: ''
+        } as any);
+        return;
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const newSpells = { ...(data.spells || {}) };
-        const newSpellUses = { ...(data.spell_uses || {}) };
-        delete newSpells[currentIdx];
-        delete newSpellUses[currentIdx];
-        updateWand(slot, { spells: newSpells, spell_uses: newSpellUses });
+        updateWand(slot, (curr) => {
+          const sid = curr.spells[currentIdx.toString()];
+          if (!sid) return {};
+          const newSpells = { ...curr.spells };
+          const newSpellUses = { ...(curr.spell_uses || {}) };
+          delete newSpells[currentIdx.toString()];
+          delete newSpellUses[currentIdx.toString()];
+          return { spells: newSpells, spell_uses: newSpellUses };
+        }, t('app.notification.delete_spell'));
       }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selection, slot, data.deck_capacity, settings.editorSpellGap, onMoveSelection, openPicker]);
+  }, [selection, slot, data.deck_capacity, onMoveSelection, openPicker, t]);
 
   const renderTimeInput = (label: string, frames: number, updateKey: keyof WandData) => {
     const primaryValue = settings.showStatsInFrames ? frames : parseFloat((frames / 60).toFixed(3));
@@ -823,7 +745,15 @@ export function WandEditor({
                         }, "删除始终施放法术");
                         return;
                       }
-                      openPicker(slot, `ac-${i}`, e);
+                      openPicker(slot, `ac-${i}`, {
+                        x: e.clientX,
+                        y: e.clientY,
+                        insertAnchor: {
+                          wandSlot: slot,
+                          idx: acIdx,
+                          isRightHalf: e.clientX > (e.currentTarget as HTMLElement).getBoundingClientRect().left + (e.currentTarget as HTMLElement).getBoundingClientRect().width / 2,
+                        }
+                      });
                     }}
                   >
                     <div className={`

@@ -28,8 +28,8 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 
 interface OverlayManagerProps {
   // Spell Picker
-  pickerConfig: PickerConfig | null;
-  setPickerConfig: (config: PickerConfig | null) => void;
+  pickerConfig: (PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null;
+  setPickerConfig: (config: (PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null) => void;
   pickerSearch: string;
   setPickerSearch: (search: string | ((prev: string) => string)) => void;
   pickSpell: (spellId: string | null, isKeyboard?: boolean) => void;
@@ -96,7 +96,7 @@ interface OverlayManagerProps {
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
 }
 
 export const OverlayManager = ({

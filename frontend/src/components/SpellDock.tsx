@@ -83,7 +83,10 @@ export function SpellDock(props: any) {
       </div>
 
       {/* Dock Content */}
-      <div className={`w-[96%] max-w-[1920px] glass-panel rounded-t-3xl rounded-b-none flex flex-col max-h-[50vh] overflow-y-auto custom-scrollbar transition-colors ${activeDockWand ? `border-t-2 border-l-2 border-r-2 ${getWandColor(activeDockWand).border}` : 'border-white/10'} shadow-[0_-5px_30px_rgba(0,0,0,0.5)] border-b-0`}>
+      <div 
+        data-wand-target={activeDockWand || ''} 
+        className={`w-[96%] max-w-[1920px] glass-panel rounded-t-3xl rounded-b-none flex flex-col max-h-[50vh] overflow-y-auto custom-scrollbar transition-colors ${activeDockWand ? `border-t-2 border-l-2 border-r-2 ${getWandColor(activeDockWand).border}` : 'border-white/10'} shadow-[0_-5px_30px_rgba(0,0,0,0.5)] border-b-0`}
+      >
         {activeDockWand && data && !isDockMinimized && (
           <div className="flex flex-col relative w-full pt-2">
              <WandEditor 

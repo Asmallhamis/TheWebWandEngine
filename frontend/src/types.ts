@@ -148,6 +148,7 @@ export interface AppSettings {
   defaultCanvasCellsPerRow: number;
   maxCanvasCellsPerRow: number;
   enableCanvasEditorLock: boolean;
+  pickerFirstSpaceBehavior: 'ignore' | 'insert_at_current_hover' | 'insert_at_open_anchor';
 }
 
 export interface EvalNode {

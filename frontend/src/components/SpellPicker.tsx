@@ -4,9 +4,10 @@ import { SpellInfo, AppSettings, SpellTypeConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
+import { useUIStore } from '../store/useUIStore';
 
 interface SpellPickerProps {
-  pickerConfig: { x: number; y: number; rowTop?: number; wandSlot: string; spellIdx: string; isAlwaysCast?: boolean } | null;
+  pickerConfig: { x: number; y: number; rowTop?: number; wandSlot: string; spellIdx: string; isAlwaysCast?: boolean; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null } | null;
   onClose: () => void;
   pickerSearch: string;
   setPickerSearch: (s: string) => void;
@@ -34,6 +35,21 @@ export function SpellPicker({
 }: SpellPickerProps) {
   const { t, i18n } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const setHoveredSlot = useUIStore(s => s.setHoveredSlot);
+  const resolveHoveredSlotAtPoint = useUIStore(s => s.resolveHoveredSlotAtPoint);
+  
+  // Track mount time to prevent ghost clicks from closing/triggering the picker instantly on mobile
+  const mountTimeRef = React.useRef(Date.now());
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (Date.now() - mountTimeRef.current < 300) return;
+    onClose();
+  };
+
+  const handlePickSpell = (id: string | null, isKeyboard?: boolean) => {
+    if (!isKeyboard && Date.now() - mountTimeRef.current < 300) return;
+    pickSpell(id, isKeyboard);
+  };
 
   const flatSpells = React.useMemo(() => {
     if (pickerSearch) {
@@ -50,6 +66,30 @@ export function SpellPicker({
   useEffect(() => {
     setSelectedIndex(0);
   }, [pickerSearch]);
+
+  useEffect(() => {
+    if (!pickerConfig || settings.pickerFirstSpaceBehavior !== 'insert_at_current_hover') return;
+
+    const updateHoverFromPoint = (clientX: number, clientY: number) => {
+      const hit = resolveHoveredSlotAtPoint(clientX, clientY);
+      setHoveredSlot(hit);
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      updateHoverFromPoint(e.clientX, e.clientY);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      updateHoverFromPoint(e.clientX, e.clientY);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, true);
+    window.addEventListener('mousemove', handleMouseMove, true);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove, true);
+      window.removeEventListener('mousemove', handleMouseMove, true);
+    };
+  }, [pickerConfig, settings.pickerFirstSpaceBehavior, resolveHoveredSlotAtPoint, setHoveredSlot]);
 
   const translateSpellType = (name: string) => {
     const mapping: Record<string, string> = {
@@ -90,7 +130,7 @@ export function SpellPicker({
   if (!pickerConfig) return null;
 
   return (
-    <div className="fixed inset-0 z-[700] overflow-hidden" onClick={onClose}>
+    <div className="fixed inset-0 z-[700] overflow-hidden" onClick={handleBackdropClick}>
       <div
         data-testid="spell-picker"
         className={`glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-200 overflow-hidden ${settings.mobilePickerMode
@@ -157,14 +197,29 @@ export function SpellPicker({
             onKeyDown={e => {
               if (e.key === 'Escape') onClose();
 
+              if (e.key === ' ' && pickerSearch === '') {
+                const behavior = settings.pickerFirstSpaceBehavior;
+                if (behavior === 'ignore') {
+                  e.preventDefault();
+                  return;
+                }
+
+                if (behavior === 'insert_at_current_hover' || behavior === 'insert_at_open_anchor') {
+                  e.preventDefault();
+                  handlePickSpell('__TWWE_INSERT_EMPTY_SLOT__', true);
+                  return;
+                }
+              }
+
               // 空格和回车选词
               if (e.key === 'Enter' || (e.key === ' ' && pickerSearch !== '')) {
                 if (pickerSearch === '' && flatSpells.length === 0) {
-                  pickSpell(null);
+                  handlePickSpell(null, true);
                 } else if (flatSpells[selectedIndex]) {
                   e.preventDefault();
-                  pickSpell(flatSpells[selectedIndex].id, true);
+                  handlePickSpell(flatSpells[selectedIndex].id, true);
                 }
+
                 return;
               }
 
@@ -186,7 +241,7 @@ export function SpellPicker({
                   const idx = parseInt(e.key) - 1;
                   if (flatSpells[idx]) {
                     e.preventDefault();
-                    pickSpell(flatSpells[idx].id, true);
+                    handlePickSpell(flatSpells[idx].id, true);
                   }
                   return;
                 }
@@ -207,7 +262,7 @@ export function SpellPicker({
               }
             }}
           />
-          <button onClick={() => pickSpell(null)} className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20">
+          <button onClick={() => handlePickSpell(null, false)} className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20">
             {t('settings.title') === 'Settings' ? 'CLEAR' : '清除槽位'}
           </button>
         </div>
@@ -231,7 +286,7 @@ export function SpellPicker({
                     return (
                       <button
                         key={s.id}
-                        onClick={() => pickSpell(s.id, false)}
+                        onClick={() => handlePickSpell(s.id, false)}
                         style={{
                           height: settings.pickerRowHeight,
                           width: settings.pickerRowHeight,
@@ -294,7 +349,7 @@ export function SpellPicker({
                         return (
                           <button
                             key={s.id}
-                            onClick={() => pickSpell(s.id, false)}
+                            onClick={() => handlePickSpell(s.id, false)}
                             style={{
                               height: settings.pickerRowHeight,
                               width: settings.pickerRowHeight,
@@ -365,7 +420,7 @@ export function SpellPicker({
                         return (
                           <button
                             key={s.id}
-                            onClick={() => pickSpell(s.id, false)}
+                            onClick={() => handlePickSpell(s.id, false)}
                             style={{
                               height: settings.pickerRowHeight,
                               width: settings.pickerRowHeight,

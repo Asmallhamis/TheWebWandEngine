@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next';
 
 // --- Internal ---
-import { SpellInfo, WandData, Tab, EvalResponse } from './types';
+import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig } from './types';
 import { getActiveModBundle, saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND } from './constants';
 import { Header } from './components/Header';
@@ -175,7 +175,7 @@ function App() {
   }, [setSettingsCategoryOverride, setSettingsExpandedBundleId]);
 
   // Picker State
-  const [pickerConfig, setPickerConfig] = useState<{ wandSlot: string; spellIdx: string; x: number; y: number; rowTop?: number; } | null>(null);
+  const [pickerConfig, setPickerConfig] = useState<(PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null>(null);
 
   const {
     pickerSearch, setPickerSearch,
@@ -216,7 +216,9 @@ function App() {
     tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard, performAction, syncWand, setTabs, setNotification: (n) => showNotification(n?.msg || '', n?.type), lastLocalUpdateRef, setSelection, setPickerConfig, setPickerSearch, setPickerExpandedGroups, updateWand
   });
 
-  const insertEmptySlot = () => _insertEmptySlot(updateWand);
+  const insertEmptySlot = (mode?: 'current_hover' | 'selection' | 'open_anchor', openAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null) =>
+    _insertEmptySlot(updateWand, mode, openAnchor);
+
 
   const { importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng } = useWandImport({
     activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification: (n) => showNotification(n?.msg || '', n?.type)
@@ -232,6 +234,22 @@ function App() {
   const pickSpell = (spellId: string | null, isKeyboard: boolean = false) => {
     if (!pickerConfig) return;
     const { wandSlot, spellIdx } = pickerConfig;
+
+    if (spellId === '__TWWE_INSERT_EMPTY_SLOT__') {
+      const behavior = settings.pickerFirstSpaceBehavior;
+      const mode = behavior === 'insert_at_open_anchor' ? 'open_anchor' : 'current_hover';
+      insertEmptySlot(mode, pickerConfig.insertAnchor || null);
+      setPickerConfig(null);
+
+      if (mode === 'open_anchor' && pickerConfig.insertAnchor) {
+        const nextIdx = pickerConfig.insertAnchor.idx + (pickerConfig.insertAnchor.isRightHalf ? 1 : 0);
+        setSelection({ wandSlot: pickerConfig.insertAnchor.wandSlot, indices: [nextIdx], startIdx: nextIdx });
+      } else {
+        setSelection(null);
+      }
+
+      return;
+    }
 
     // 处理智能标签编辑器的法术选择
     if (wandSlot.startsWith('smart-tag-req-') || wandSlot.startsWith('smart-tag-exc-')) {

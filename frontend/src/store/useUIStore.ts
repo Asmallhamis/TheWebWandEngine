@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { AppNotification } from '../types';
 
+type HoveredSlot = { wandSlot: string, idx: number, isRightHalf: boolean } | null;
+type HoverResolver = (clientX: number, clientY: number) => HoveredSlot;
+
 interface UIState {
     // Modal States
     isSettingsOpen: boolean;
@@ -19,7 +22,8 @@ interface UIState {
     // Interaction States
     selection: { wandSlot: string, indices: number[], startIdx: number } | null;
     dragSource: { wandSlot: string, idx: number, sid: string } | null;
-    hoveredSlot: { wandSlot: string, idx: number, isRightHalf: boolean } | null;
+    hoveredSlot: HoveredSlot;
+    hoverResolvers: Record<string, HoverResolver>;
 
     // Actions
     setIsSettingsOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -33,14 +37,17 @@ interface UIState {
 
     setSelection: (s: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
     setDragSource: (s: { wandSlot: string, idx: number, sid: string } | null) => void;
-    setHoveredSlot: (s: { wandSlot: string, idx: number, isRightHalf: boolean } | null) => void;
+    setHoveredSlot: (s: HoveredSlot) => void;
+    registerHoverResolver: (id: string, resolver: HoverResolver) => void;
+    unregisterHoverResolver: (id: string) => void;
+    resolveHoveredSlotAtPoint: (clientX: number, clientY: number) => HoveredSlot;
 
     // Helpers
     showNotification: (msg: string, type?: string, duration?: number) => void;
     closeAllModals: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
     isSettingsOpen: false,
     isWarehouseOpen: false,
     isHistoryOpen: false,
@@ -52,6 +59,7 @@ export const useUIStore = create<UIState>((set) => ({
     selection: null,
     dragSource: null,
     hoveredSlot: null,
+    hoverResolvers: {},
 
     setIsSettingsOpen: (open) => set((state) => ({ isSettingsOpen: typeof open === 'function' ? open(state.isSettingsOpen) : open })),
     setIsWarehouseOpen: (open) => set((state) => ({ isWarehouseOpen: typeof open === 'function' ? open(state.isWarehouseOpen) : open })),
@@ -65,6 +73,20 @@ export const useUIStore = create<UIState>((set) => ({
     setSelection: (selection) => set({ selection }),
     setDragSource: (dragSource) => set({ dragSource }),
     setHoveredSlot: (hoveredSlot) => set({ hoveredSlot }),
+    registerHoverResolver: (id, resolver) => set((state) => ({ hoverResolvers: { ...state.hoverResolvers, [id]: resolver } })),
+    unregisterHoverResolver: (id) => set((state) => {
+        const next = { ...state.hoverResolvers };
+        delete next[id];
+        return { hoverResolvers: next };
+    }),
+    resolveHoveredSlotAtPoint: (clientX, clientY) => {
+        const resolvers = Object.values(get().hoverResolvers);
+        for (let i = resolvers.length - 1; i >= 0; i--) {
+            const hit = resolvers[i](clientX, clientY);
+            if (hit) return hit;
+        }
+        return null;
+    },
 
     showNotification: (msg, type = 'info', duration = 3000) => {
         set({ notification: { msg, type: type as any } });

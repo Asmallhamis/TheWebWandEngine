@@ -27,7 +27,7 @@ interface SpellCellProps {
   handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent) => void;
+  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
   updateWand: (slot: string, partial: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   openWiki: (sid: string) => void;
@@ -156,7 +156,15 @@ const SpellCellComponent = ({
           if (selection && selection.indices.length > 1) {
             setSelection(null);
           } else {
-            !isLocked && openPicker(slot, idx, e);
+            !isLocked && openPicker(slot, idx, {
+              x: e.clientX,
+              y: e.clientY,
+              insertAnchor: {
+                wandSlot: slot,
+                idx: i + 1,
+                isRightHalf: hoveredSlot?.wandSlot === slot && hoveredSlot?.idx === (i + 1) ? hoveredSlot.isRightHalf : (e.clientX > (e.currentTarget as HTMLElement).getBoundingClientRect().left + (e.currentTarget as HTMLElement).getBoundingClientRect().width / 2)
+              }
+            });
           }
         }}
         className={`

@@ -29,7 +29,7 @@ interface UseGlobalEventsProps {
   copyToClipboard: (isCut?: boolean) => Promise<void>;
   pasteFromClipboard: (forceTarget?: { slot: string, idx: number }) => Promise<boolean>;
   readMetadataFromPng: (file: File) => Promise<string | null>;
-  insertEmptySlot: () => void;
+  insertEmptySlot: (mode?: 'current_hover' | 'selection' | 'open_anchor') => void;
   updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
 }
 
@@ -61,6 +61,7 @@ export const useGlobalEvents = ({
   updateWand
 }: UseGlobalEventsProps) => {
   const { t } = useTranslation();
+  const lastHoveredTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (notification) {
@@ -95,6 +96,12 @@ export const useGlobalEvents = ({
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
+      const wandEl = (e.target as HTMLElement)?.closest?.('[data-wand-target]');
+      if (wandEl) {
+        const target = wandEl.getAttribute('data-wand-target');
+        if (target) lastHoveredTargetRef.current = target;
+      }
+
       if (dragSource) {
         setMousePos({ x: e.clientX, y: e.clientY });
       }
@@ -121,7 +128,11 @@ export const useGlobalEvents = ({
           setIsWarehouseOpen(prev => !prev);
         } else if (e.key === 'a') {
           const selection = useUIStore.getState().selection;
-          const targetSlot = selection?.wandSlot || Object.keys(activeTab.wands).find(slot => activeTab.expandedWands.has(slot));
+          const hoveredSlot = useUIStore.getState().hoveredSlot;
+          const lastHovered = lastHoveredTargetRef.current;
+          
+          let targetSlot = hoveredSlot?.wandSlot || lastHovered || selection?.wandSlot || Object.keys(activeTab.wands).find(slot => activeTab.expandedWands.has(slot));
+          
           if (targetSlot) {
             e.preventDefault();
             const wand = activeTab.wands[targetSlot];
@@ -200,7 +211,7 @@ export const useGlobalEvents = ({
       } else if (e.key === ' ') {
         if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
           e.preventDefault();
-          insertEmptySlot();
+          insertEmptySlot('current_hover');
         }
       }
 

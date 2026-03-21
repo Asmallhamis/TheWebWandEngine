@@ -132,6 +132,7 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
   return (
     <div 
       id={id}
+      data-wand-target={slotIndex}
       className={`absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
       style={{ left: pos.x, top: pos.y, width: 'max-content', zIndex }}
       onPointerDownCapture={bringToFront}

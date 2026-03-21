@@ -278,16 +278,28 @@ export const useInteraction = (params: {
     setHoveredSlot(null);
   }, [setHoveredSlot]);
 
-  const insertEmptySlot = useCallback((updateWand: any) => {
+  const insertEmptySlot = useCallback((updateWand: any, mode: 'current_hover' | 'selection' | 'open_anchor' = 'current_hover', openAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null) => {
     const stateHoveredSlot = useUIStore.getState().hoveredSlot;
     const stateSelection = useUIStore.getState().selection;
 
-    let targetWandSlot = stateHoveredSlot?.wandSlot;
-    let startIdx = (stateHoveredSlot && stateHoveredSlot.idx > 0)
-      ? (stateHoveredSlot.idx + (stateHoveredSlot.isRightHalf ? 1 : 0))
-      : null;
+    let targetWandSlot: string | undefined;
+    let startIdx: number | null = null;
 
-    if (!targetWandSlot && stateSelection) {
+    if (mode === 'open_anchor' && openAnchor) {
+      targetWandSlot = openAnchor.wandSlot;
+      startIdx = openAnchor.idx > 0
+        ? (openAnchor.idx + (openAnchor.isRightHalf ? 1 : 0))
+        : null;
+    }
+
+    if (startIdx === null && mode !== 'selection' && stateHoveredSlot) {
+      targetWandSlot = stateHoveredSlot.wandSlot;
+      startIdx = stateHoveredSlot.idx > 0
+        ? (stateHoveredSlot.idx + (stateHoveredSlot.isRightHalf ? 1 : 0))
+        : null;
+    }
+
+    if ((startIdx === null || !targetWandSlot) && stateSelection) {
       targetWandSlot = stateSelection.wandSlot;
       startIdx = Math.min(...stateSelection.indices.filter(i => i > 0));
     }

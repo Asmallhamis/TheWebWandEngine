@@ -1057,6 +1057,31 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.picker_first_space_behavior')) && (
+                  <div className="flex justify-between items-start bg-white/5 p-3 rounded-lg border border-white/5 gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400">
+                        <Search size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.picker_first_space_behavior')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.picker_first_space_behavior_desc')}</div>
+                      </div>
+                    </div>
+                    <select
+                      value={settings.pickerFirstSpaceBehavior}
+                      onChange={(e) => setSettings(s => ({
+                        ...s,
+                        pickerFirstSpaceBehavior: e.target.value as AppSettings['pickerFirstSpaceBehavior']
+                      }))}
+                      className="shrink-0 bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs text-zinc-200 outline-none"
+                    >
+                      <option value="ignore">{t('settings.picker_first_space_behavior_ignore')}</option>
+                      <option value="insert_at_current_hover">{t('settings.picker_first_space_behavior_current_hover')}</option>
+                      <option value="insert_at_open_anchor">{t('settings.picker_first_space_behavior_open_anchor')}</option>
+                    </select>
+                  </div>
+                )}
                 {isMatch(t('settings.hide_sync_button')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
                     <div className="flex items-center gap-2">

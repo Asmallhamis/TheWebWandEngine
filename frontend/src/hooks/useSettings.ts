@@ -66,7 +66,8 @@ export const useSettings = () => {
       showSpellId: false,
       defaultCanvasCellsPerRow: 26,
       maxCanvasCellsPerRow: 100,
-      enableCanvasEditorLock: false
+      enableCanvasEditorLock: false,
+      pickerFirstSpaceBehavior: 'ignore'
     };
     if (saved) {
       try {
