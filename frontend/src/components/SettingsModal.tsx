@@ -623,10 +623,29 @@ export function SettingsModal({
                       </div>
                     </div>
                     <button
-                      onClick={() => setSettings(s => ({ ...s, hideLabels: !s.hideLabels }))}
-                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      onClick={() => setSettings(s => ({ ...s, moveExistingWandToTopOnDuplicatePaste: !s.moveExistingWandToTopOnDuplicatePaste }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.moveExistingWandToTopOnDuplicatePaste ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.moveExistingWandToTopOnDuplicatePaste ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
+                {isMatch(t('settings.move_existing_wand_to_top_on_duplicate_paste')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-zinc-500/10 rounded-lg text-zinc-400">
+                        <Wand2 size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.move_existing_wand_to_top_on_duplicate_paste')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.move_existing_wand_to_top_on_duplicate_paste_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, moveExistingWandToTopOnDuplicatePaste: !s.moveExistingWandToTopOnDuplicatePaste }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.moveExistingWandToTopOnDuplicatePaste ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.moveExistingWandToTopOnDuplicatePaste ? 'left-6' : 'left-1'}`} />
                     </button>
                   </div>
                 )}
@@ -681,7 +700,7 @@ export function SettingsModal({
                             <div className="text-[10px] text-zinc-500 mt-1">
                               {patternText || t('settings.spell_marking_empty')}
                               {' · '}
-                              {rule.matchMode}
+                              {t(`settings.spell_marking_mode_options.${rule.matchMode}`)}
                               {rule.matchMode === 'repeat' ? ` x${rule.minRepeat || 2}` : ''}
                               {' · '}
                               {rule.ignoreEmpty ? t('settings.spell_marking_ignore_empty_on') : t('settings.spell_marking_ignore_empty_off')}
@@ -719,9 +738,9 @@ export function SettingsModal({
                                       onChange={e => upsertUserRule({ ...rule, matchMode: e.target.value as any, isBuiltIn: !!rule.isBuiltIn })}
                                       className="px-2 py-1 text-[11px] rounded bg-black/30 border border-white/10"
                                     >
-                                      <option value="contains">contains</option>
-                                      <option value="exact">exact</option>
-                                      <option value="repeat">repeat</option>
+                                      <option value="contains">{t('settings.spell_marking_mode_options.contains')}</option>
+                                      <option value="exact">{t('settings.spell_marking_mode_options.exact')}</option>
+                                      <option value="repeat">{t('settings.spell_marking_mode_options.repeat')}</option>
                                     </select>
                                   </div>
                                 </div>
@@ -1650,7 +1669,7 @@ export function SettingsModal({
                   <h3 className="text-[11px] font-black text-amber-400 uppercase flex items-center gap-2">
                     <Package size={14} /> {t('settings.mod_environments')}
                   </h3>
-                  <div className="text-[9px] text-zinc-500 mb-2 italic">注: 此处的统计仅计入影响法术或逻辑的 Mod</div>
+                  <div className="text-[9px] text-zinc-500 mb-2 italic">{t('settings.mod_environments_stats_note')}</div>
                   <div className="grid grid-cols-1 gap-2">
                     {modBundles.map((bundle: ModBundle) => {
                       const modList = (bundle.all_mods && bundle.all_mods.length > 0)

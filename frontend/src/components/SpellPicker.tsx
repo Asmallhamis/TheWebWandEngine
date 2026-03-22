@@ -274,7 +274,7 @@ export function SpellPicker({
                 {!settings.hideLabels && (
                   <div className="flex items-center gap-2 px-2 mb-2">
                     <Search size={12} className="text-indigo-400" />
-                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">搜索结果 (按匹配度排序)</span>
+                    <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">{t('spell_picker.search_results_sorted')}</span>
                   </div>
                 )}
                 <div className={`flex flex-wrap gap-1 px-1 ${settings.hideLabels ? 'mb-4' : ''}`}>
@@ -321,7 +321,7 @@ export function SpellPicker({
                       {!settings.hideLabels && (
                         <div className="flex items-center gap-2">
                           <Star size={12} className="text-amber-500" />
-                          <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">常用统计 (Global)</span>
+                          <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">{t('spell_picker.common_spells_global')}</span>
                         </div>
                       )}
                       <button

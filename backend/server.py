@@ -72,5 +72,9 @@ if __name__ == "__main__":
     if is_frozen and not os.environ.get("WERKZEUG_RUN_MAIN"):
         Timer(1.5, open_browser).start()
 
-    # 打包模式下必须关闭 debug，否则 reloader 会导致 EXE 运行异常
-    app.run(host="0.0.0.0", port=17471, debug=not is_frozen)
+    # 开发模式下保留 debug，但关闭 Werkzeug reloader。
+    # Windows 下 reloader 可能误监控到 site-packages 等目录并反复触发重载。
+    # 打包模式下本来就不需要 reloader。
+    app.run(
+        host="0.0.0.0", port=17471, debug=not is_frozen, use_reloader=False
+    )

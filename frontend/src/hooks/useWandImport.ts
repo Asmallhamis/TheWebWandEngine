@@ -244,34 +244,36 @@ export const useWandImport = ({
           })()
         };
 
-        // 重复检测：如果当前标签页已存在完全一致的法杖，则移动到顶部
-        const existingSlot = Object.keys(activeTab.wands).find(slot => 
-          areWandsIdentical(activeTab.wands[slot], newWand)
-        );
+        if (settings.moveExistingWandToTopOnDuplicatePaste) {
+          // 重复检测：如果当前标签页已存在完全一致的法杖，则移动到顶部
+          const existingSlot = Object.keys(activeTab.wands).find(slot => 
+            areWandsIdentical(activeTab.wands[slot], newWand)
+          );
 
-        if (existingSlot) {
-          performAction(prevWands => {
-            const nextWands: Record<string, WandData> = {};
-            const wandsList = Object.entries(prevWands).sort(([a], [b]) => Number(a) - Number(b));
+          if (existingSlot) {
+            performAction(prevWands => {
+              const nextWands: Record<string, WandData> = {};
+              const wandsList = Object.entries(prevWands).sort(([a], [b]) => Number(a) - Number(b));
+              
+              // 移动到顶部 (Slot 1)
+              nextWands["1"] = prevWands[existingSlot];
+              
+              let nextSlotNum = 2;
+              for (const [slot, wand] of wandsList) {
+                if (slot === existingSlot) continue;
+                nextWands[nextSlotNum.toString()] = wand;
+                nextSlotNum++;
+              }
+              return nextWands;
+            }, t('app.notification.move_existing_wand_to_top'));
             
-            // 移动到顶部 (Slot 1)
-            nextWands["1"] = prevWands[existingSlot];
+            setNotification({ msg: t('app.notification.wand_already_exists_moving_to_top'), type: 'info' });
+            setActiveTabId(activeTabId); // Trigger refresh if needed
             
-            let nextSlotNum = 2;
-            for (const [slot, wand] of wandsList) {
-              if (slot === existingSlot) continue;
-              nextWands[nextSlotNum.toString()] = wand;
-              nextSlotNum++;
-            }
-            return nextWands;
-          }, t('app.notification.move_existing_wand_to_top'));
-          
-          setNotification({ msg: t('app.notification.wand_already_exists_moving_to_top'), type: 'info' });
-          setActiveTabId(activeTabId); // Trigger refresh if needed
-          
-          // 滚动到顶部
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return true;
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return true;
+          }
         }
 
         const nextSlot = (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();

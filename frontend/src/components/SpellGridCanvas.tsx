@@ -471,11 +471,14 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     if (baseDirtyRef.current) {
       baseDirtyRef.current = false;
       const bctx = baseCanvas.getContext('2d')!;
-      bctx.setTransform(dpr, 0, 0, dpr, 0, CANVAS_PADDING_TOP * dpr);
-      bctx.clearRect(0, -CANVAS_PADDING_TOP, canvasW, canvasH);
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      bctx.clearRect(0, 0, canvasW, canvasH);
       // Paint all cells without hover/selection overlays
       for (let i = 0; i < totalSlots; i++) {
+        bctx.save();
+        bctx.translate(0, CANVAS_PADDING_TOP);
         paintCell(bctx, i, _gap, cols, cellOuter, cellInner, true, null, null, null);
+        bctx.restore();
       }
     }
 

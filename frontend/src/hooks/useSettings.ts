@@ -67,7 +67,8 @@ export const useSettings = () => {
       defaultCanvasCellsPerRow: 26,
       maxCanvasCellsPerRow: 100,
       enableCanvasEditorLock: false,
-      pickerFirstSpaceBehavior: 'ignore'
+      pickerFirstSpaceBehavior: 'ignore',
+      moveExistingWandToTopOnDuplicatePaste: false
     };
     if (saved) {
       try {

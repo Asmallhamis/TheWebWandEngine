@@ -193,12 +193,13 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
 
 const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) => {
   const { zoomToElement, centerView } = useControls();
+  const { t } = useTranslation();
 
   return (
     <div className="absolute top-4 left-4 z-50 glass-panel p-3 flex flex-col gap-2">
       <div className="flex items-center gap-2 text-zinc-400 mb-1 px-1">
         <Navigation size={14} className="text-emerald-400" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Navigator</span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">{t('canvas.navigator')}</span>
       </div>
       <div className="flex flex-col gap-1 max-h-[40vh] overflow-y-auto custom-scrollbar pr-1">
         {wands.map(slot => {
@@ -224,7 +225,7 @@ const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) =>
           );
         })}
         {wands.length === 0 && (
-          <div className="text-xs text-zinc-600 px-2 py-1">No wands</div>
+          <div className="text-xs text-zinc-600 px-2 py-1">{t('canvas.no_wands')}</div>
         )}
       </div>
       <button
@@ -241,7 +242,7 @@ const Navigator = ({ wands, activeTab }: { wands: string[], activeTab: Tab }) =>
         className="mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg transition-colors border border-indigo-500/20"
       >
         <Frame size={14} />
-        <span className="text-[10px] font-bold uppercase">Reset View</span>
+        <span className="text-[10px] font-bold uppercase">{t('canvas.reset_view')}</span>
       </button>
     </div>
   );
