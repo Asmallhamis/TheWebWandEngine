@@ -26,7 +26,7 @@ export const useInteraction = (params: {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // --- Mouse Handlers ---
-  const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false) => {
+  const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false, pointer?: { x: number; y: number }) => {
     const isHandMode = settings.editorDragMode === 'hand';
 
     // 允许正常格子的拖拽
@@ -34,6 +34,8 @@ export const useInteraction = (params: {
       const wand = activeTab.wands[wandSlot];
       const sid = wand?.spells[idx.toString()];
       if (sid) {
+        if (pointer) setMousePos(pointer);
+        setHoveredSlot({ wandSlot, idx, isRightHalf: !!isRightClick });
         setDragSource({ wandSlot, idx, sid });
       }
     }
@@ -43,7 +45,7 @@ export const useInteraction = (params: {
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
 
 
-  }, [activeTab.wands, settings.editorDragMode, setDragSource, setSelection]);
+  }, [activeTab.wands, settings.editorDragMode, setDragSource, setSelection, setHoveredSlot]);
 
   const handleSlotMouseUp = useCallback((wandSlot: string, idx: number) => {
     const dragSource = useUIStore.getState().dragSource;
@@ -238,9 +240,10 @@ export const useInteraction = (params: {
       }, t('app.notification.move_spell'), [dragSource.sid]);
 
       setDragSource(null);
+      setHoveredSlot(null);
     }
     setIsSelecting(false);
-  }, [activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t, setDragSource]);
+  }, [activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t, setDragSource, setHoveredSlot]);
 
 
   const handleSlotMouseEnter = useCallback((wandSlot: string, idx: number) => {

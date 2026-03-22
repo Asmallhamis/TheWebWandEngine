@@ -24,7 +24,7 @@ interface SpellCellProps {
 
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
@@ -79,7 +79,7 @@ const SpellCellComponent = ({
               return;
             }
             e.preventDefault();
-            handleSlotMouseDown(slot, i + 1, e.button === 2);
+            handleSlotMouseDown(slot, i + 1, e.button === 2, { x: e.clientX, y: e.clientY });
           }
         }}
         data-slot-idx={idx}
@@ -247,6 +247,7 @@ const SpellCellComponent = ({
 
             <button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 const newSpells = { ...(data.spells || {}) };
                 const newSpellUses = { ...(data.spell_uses || {}) };
@@ -254,7 +255,8 @@ const SpellCellComponent = ({
                 delete newSpellUses[idx];
                 updateWand(slot, { spells: newSpells, spell_uses: newSpellUses });
               }}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity z-10 pointer-events-auto shadow-lg"
+              className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-red-500/95 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 hover:opacity-100 transition-opacity z-20 pointer-events-auto shadow-lg"
+              aria-label={t('app.notification.delete_spell')}
             >
               <X size={12} />
             </button>
@@ -275,6 +277,7 @@ const SpellCellComponent = ({
             <span className="text-orange-400/70 text-[9px] font-mono leading-tight text-center break-all line-clamp-2 max-w-full">{sid}</span>
             <button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 const newSpells = { ...(data.spells || {}) };
                 const newSpellUses = { ...(data.spell_uses || {}) };
@@ -282,7 +285,8 @@ const SpellCellComponent = ({
                 delete newSpellUses[idx];
                 updateWand(slot, { spells: newSpells, spell_uses: newSpellUses });
               }}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity z-10 pointer-events-auto shadow-lg"
+              className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-red-500/95 text-white flex items-center justify-center opacity-0 group-hover/cell:opacity-100 hover:opacity-100 transition-opacity z-20 pointer-events-auto shadow-lg"
+              aria-label={t('app.notification.delete_spell')}
             >
               <X size={12} />
             </button>

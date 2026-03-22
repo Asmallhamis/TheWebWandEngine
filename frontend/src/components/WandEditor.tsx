@@ -18,7 +18,7 @@ interface WandEditorProps {
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: { wandSlot: string; idx: number; sid: string } | null;
   updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
@@ -762,7 +762,7 @@ export function WandEditor({
                         openWiki(sid);
                         return;
                       }
-                      handleSlotMouseDown(slot, acIdx, e.button === 2);
+                      handleSlotMouseDown(slot, acIdx, e.button === 2, { x: e.clientX, y: e.clientY });
                     }}
                     onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
                     onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}

@@ -79,7 +79,7 @@ export interface SpellGridCanvasProps {
   patternMatches: PatternMatch[];
   isCanvasMode?: boolean;
 
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
@@ -658,9 +658,16 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     // 允许通过 capture 进行拖拽，防止原生冲突
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const target = e.target as HTMLElement;
+    target.setPointerCapture(e.pointerId);
     const hit = hitTest(e.clientX, e.clientY);
-    if (!hit) return;
+    if (!hit) {
+      setHoveredSlot(null);
+      return;
+    }
+
+    setHoveredSlot({ wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
+    lastHoveredIdxRef.current = hit.slotIdx;
 
     if (e.button === 1) { // Middle click
       const sid = data.spells?.[hit.slotIdx.toString()];
@@ -683,17 +690,23 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
     if (e.button === 0 || e.button === 2) {
       mouseDownIdxRef.current = hit.slotIdx;
-      handleSlotMouseDown(slot, hit.slotIdx, e.button === 2);
+      handleSlotMouseDown(slot, hit.slotIdx, e.button === 2, { x: e.clientX, y: e.clientY });
     }
   }, [hitTest, slot, data.spells, spellDb, handleSlotMouseDown, updateWand, openWiki]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    const target = e.target as HTMLElement;
+    if (target.hasPointerCapture(e.pointerId)) {
+      target.releasePointerCapture(e.pointerId);
+    }
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
       handleSlotMouseUp(slot, hit.slotIdx);
+    } else {
+      handleSlotMouseLeave();
+      lastHoveredIdxRef.current = -1;
     }
-  }, [hitTest, slot, handleSlotMouseUp]);
+  }, [hitTest, slot, handleSlotMouseUp, handleSlotMouseLeave]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const hit = hitTest(e.clientX, e.clientY);
