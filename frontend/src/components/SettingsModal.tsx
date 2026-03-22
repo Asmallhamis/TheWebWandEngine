@@ -253,7 +253,7 @@ export function SettingsModal({
           alert(t('app.notification.import_mod_bundle_success'));
         }
       } catch (err) {
-        alert('Invalid Mod Bundle file');
+        alert(t('settings.import_mod_bundle_invalid'));
       }
     };
     reader.readAsText(file);
@@ -531,8 +531,8 @@ export function SettingsModal({
                         <Wand2 size={16} />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-zinc-200">画布模式格数设置 (Canvas Mode Cells)</div>
-                        <div className="text-[10px] text-zinc-500">自定义法杖节点在画布中的网格显示方式</div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.canvas_grid_layout_title')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.canvas_grid_layout_desc')}</div>
                       </div>
                     </div>
                     

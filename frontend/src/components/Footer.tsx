@@ -1,6 +1,7 @@
 import React from 'react';
 import { Zap, Info } from 'lucide-react';
 import { Tab, AppNotification } from '../types';
+import { APP_VERSION_INFO } from '../generated/version';
 
 interface FooterProps {
   isConnected: boolean;
@@ -23,7 +24,7 @@ export function Footer({ isConnected, activeTab, tabsCount, notification }: Foot
         </div>
         <div className="flex gap-4">
           <span>Tabs: {tabsCount}</span>
-          <span>TheWebWandEngine • Professional Refactored v0.4.0</span>
+          <span>{APP_VERSION_INFO.label}</span>
         </div>
       </footer>
 

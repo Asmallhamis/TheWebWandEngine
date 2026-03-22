@@ -958,9 +958,9 @@ export function WandWarehouse({
                         setFolders(prev => [...prev, ...data.folders]);
                         alert(t('warehouse.import_success', { count: data.wands.length }));
                       } else {
-                        alert('Import failed: ' + data.error);
+                        alert(t('app.notification.sync_failed_with_error', { error: data.error }));
                       }
-                    } catch (e) { alert('Import error'); }
+                    } catch (e) { alert(t('warehouse.import_error')); }
                   }
                 }}
                 className="text-[10px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
@@ -978,9 +978,9 @@ export function WandWarehouse({
                         setFolders(prev => [...prev, ...data.folders]);
                         alert(t('warehouse.import_success', { count: data.wands.length }));
                       } else {
-                        alert('Import failed: ' + data.error);
+                        alert(t('app.notification.sync_failed_with_error', { error: data.error }));
                       }
-                    } catch (e) { alert('Import error'); }
+                    } catch (e) { alert(t('warehouse.import_error')); }
                   }
                 }}
                 className="text-[10px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
@@ -1014,12 +1014,12 @@ export function WandWarehouse({
                             if (json.folders) setFolders(json.folders);
                             if (json.smartTags) setSmartTags(json.smartTags);
                           }
-                          alert('Import success!');
+                          alert(t('app.notification.import_all_success'));
                         } else {
-                          alert('Invalid backup file format');
+                          alert(t('app.notification.import_failed_format'));
                         }
                       } catch (err) {
-                        alert('File parsing failed');
+                        alert(t('warehouse.file_parsing_failed'));
                         console.error(err);
                       }
                     };

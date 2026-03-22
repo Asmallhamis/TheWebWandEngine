@@ -189,7 +189,7 @@ export function SpellPicker({
           <Search size={14} className="text-zinc-500" />
           <input
             autoFocus={!settings.disablePickerAutoFocus}
-            placeholder={t('settings.title') === 'Settings' ? 'Search spells...' : '搜索法术...'}
+            placeholder={t('spell_picker.search_placeholder')}
             className="bg-transparent flex-1 text-sm outline-none placeholder:text-zinc-600"
             data-testid="spell-picker-input"
             value={pickerSearch}

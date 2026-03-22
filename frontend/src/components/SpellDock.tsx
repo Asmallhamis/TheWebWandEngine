@@ -3,9 +3,11 @@ import { WandEditor } from './WandEditor';
 import { ChevronDown, ChevronUp, Maximize2, Minimize2, Trash2, Library, Clipboard, Scissors, Pin } from 'lucide-react';
 import { getWandSpriteUrl } from '../lib/evaluatorAdapter';
 import { getWandColor } from './CanvasWorkspace';
+import { useTranslation } from 'react-i18next';
 
 export function SpellDock(props: any) {
   const { activeTab, wands, isConnected, deleteWand, copyWand, copyLegacyWand, pasteWand, clipboard, saveToWarehouse } = props;
+  const { t } = useTranslation();
   const [isDockMinimized, setIsDockMinimized] = useState(false);
   const [collapsedAttributes, setCollapsedAttributes] = useState<Record<string, boolean>>({});
   const [activeDockWand, setActiveDockWand] = useState<string>(wands[0] || '');
@@ -61,12 +63,12 @@ export function SpellDock(props: any) {
           <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md rounded-t-xl border-t border-l border-r border-white/10 px-4 py-1.5 mr-4 shrink-0">
             <button onClick={() => toggleAttribute(activeDockWand)} className="px-3 py-1 hover:bg-white/10 text-zinc-400 hover:text-white rounded flex items-center gap-2 text-[10px] uppercase font-bold transition-colors">
                {isAttrsCollapsed ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
-               {isAttrsCollapsed ? 'Show Attributes' : 'Hide Attributes'}
+               {isAttrsCollapsed ? t('dock.show_attributes') : t('dock.hide_attributes')}
             </button>
             <div className="w-px h-3 bg-white/10 mx-2"></div>
-            <button onClick={() => copyWand(activeDockWand)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors" title="Copy"><Scissors size={14} /></button>
-            <button onClick={() => pasteWand(activeDockWand)} disabled={!clipboard} className={`p-1.5 rounded transition-colors ${clipboard ? 'hover:bg-white/10 text-zinc-500 hover:text-emerald-400' : 'text-zinc-800 cursor-not-allowed'}`} title="Paste"><Clipboard size={14} /></button>
-            <button onClick={() => saveToWarehouse(data)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-purple-400 rounded transition-colors" title="Save to Warehouse"><Library size={14} /></button>
+            <button onClick={() => copyWand(activeDockWand)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors" title={t('wand_card.copy')}><Scissors size={14} /></button>
+            <button onClick={() => pasteWand(activeDockWand)} disabled={!clipboard} className={`p-1.5 rounded transition-colors ${clipboard ? 'hover:bg-white/10 text-zinc-500 hover:text-emerald-400' : 'text-zinc-800 cursor-not-allowed'}`} title={t('wand_card.paste_overwrite')}><Clipboard size={14} /></button>
+            <button onClick={() => saveToWarehouse(data)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-purple-400 rounded transition-colors" title={t('wand_card.save_to_warehouse')}><Library size={14} /></button>
             <button onClick={() => deleteWand(activeDockWand)} className="p-1.5 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded transition-colors ml-1"><Trash2 size={14} /></button>
           </div>
         )}
@@ -76,7 +78,7 @@ export function SpellDock(props: any) {
           className="glass-card hover:bg-zinc-800 border-b-0 px-6 py-2 rounded-t-xl rounded-b-none flex items-center gap-2 text-zinc-400 hover:text-white transition-all shrink-0"
         >
           <span className="text-[10px] font-black uppercase tracking-widest">
-            {isDockMinimized ? 'Expand' : 'Collapse'}
+            {isDockMinimized ? t('dock.expand') : t('dock.collapse')}
           </span>
           {isDockMinimized ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>

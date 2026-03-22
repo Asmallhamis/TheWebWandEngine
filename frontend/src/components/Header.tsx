@@ -79,7 +79,7 @@ export function Header({
             <button
               onClick={() => setActiveTabId(tab.id)}
               onDoubleClick={() => {
-                const newName = prompt('重命名工作流:', tab.name);
+                const newName = prompt(t('app.notification.renamed_workflow'), tab.name);
                 if (newName) {
                   setTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: newName } : t));
                 }
@@ -127,7 +127,7 @@ export function Header({
         <button
           onClick={() => pullData(true)}
           onContextMenu={(e) => { e.preventDefault(); pushData(); }}
-          title="左键: 拉取一次 / 右键: 推送当前到游戏"
+          title={t('header.sync_button_title')}
           className={`
             neo-button text-[10px] w-32 justify-between px-3
             ${activeTab.isRealtime
@@ -177,7 +177,7 @@ export function Header({
             setSettings(prev => ({ ...prev, isCanvasMode: !prev.isCanvasMode }));
           }}
           className={`p-2 transition-colors ${settings.isCanvasMode ? 'text-emerald-400 hover:text-emerald-300' : 'text-zinc-500 hover:text-white'}`}
-          title={settings.isCanvasMode ? "Switch to List View" : "Switch to Canvas View"}
+          title={settings.isCanvasMode ? t('header.switch_to_list_view') : t('header.switch_to_canvas_view')}
         >
           <Layers size={18} />
         </button>
@@ -192,7 +192,7 @@ export function Header({
           <button
             onClick={syncGameSpells}
             className="p-2 text-indigo-400 hover:text-indigo-300 transition-colors"
-            title="同步模组法术数据"
+            title={t('header.sync_mod_spells')}
           >
             <Cpu size={18} />
           </button>
@@ -201,7 +201,7 @@ export function Header({
           <button
             onClick={exportModBundle}
             className="p-2 text-amber-400 hover:text-amber-300 transition-colors"
-            title="导出/持久化当前 Mod 环境包"
+            title={t('header.export_mod_bundle')}
           >
             <Package size={18} />
           </button>

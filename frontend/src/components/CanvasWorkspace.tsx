@@ -341,7 +341,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                     <DraggableNode 
                       id={`canvas-stats-${slot}`}
                       title={wandName}
-                      subtitle="Stats & Shot States"
+                      subtitle={t('canvas.stats_and_shot_states')}
                       slotIndex={slot}
                       colorDef={colorDef}
                       defaultX={data.canvas_positions?.stats?.x ?? 4800}
@@ -367,7 +367,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                           isCanvas={true}
                         />
                       ) : (
-                        <div className="text-zinc-600 italic px-4 py-8">No evaluation data. Modify wand or force analyze.</div>
+                        <div className="text-zinc-600 italic px-4 py-8">{t('canvas.no_evaluation_data')}</div>
                       )}
                     </DraggableNode>
 
@@ -375,7 +375,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                     <DraggableNode 
                       id={`canvas-tree-${slot}`}
                       title={wandName}
-                      subtitle="Recursive Tree"
+                      subtitle={t('canvas.recursive_tree')}
                       slotIndex={slot}
                       colorDef={colorDef}
                       defaultX={data.canvas_positions?.tree?.x ?? 6100}
@@ -425,7 +425,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                           })()}
                         </div>
                       ) : (
-                        !evalData?.loading && <div className="text-zinc-600 italic px-4 py-8">No evaluation data available.</div>
+                        !evalData?.loading && <div className="text-zinc-600 italic px-4 py-8">{t('canvas.no_evaluation_data_available')}</div>
                       )}
                     </DraggableNode>
 
@@ -455,7 +455,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
               })}
               {wands.length === 0 && (
                 <div className="absolute top-[5000px] left-[5000px] -translate-x-1/2 -translate-y-1/2 text-zinc-700 text-xl font-black uppercase tracking-widest glass-panel p-12 rounded-3xl flex items-center justify-center pointer-events-none">
-                  Empty Workspace
+                  {t('canvas.empty_workspace')}
                 </div>
               )}
             </div>
@@ -471,6 +471,8 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
 
 // 独立的组件来管理 Pinned Editor 本地的锁定状态
 function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props, baseY }: any) {
+  const { t } = useTranslation();
+
   const [isLockedLocal, setIsLockedLocal] = useState(true);
   const lockEnabled = props.settings.enableCanvasEditorLock;
   const isLocked = lockEnabled ? isLockedLocal : false;
@@ -482,7 +484,7 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
     <DraggableNode 
       id={`canvas-editor-${slot}`}
       title={wandName}
-      subtitle="Editor"
+      subtitle={t('canvas.editor')}
       slotIndex={slot}
       colorDef={colorDef}
       defaultX={data.canvas_positions?.editor?.x ?? 3500}
@@ -540,7 +542,7 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
             <button
               onClick={(e) => { e.stopPropagation(); setIsLockedLocal(!isLockedLocal); }}
               className={`cancel-pan px-3 h-8 rounded-lg transition-colors flex items-center gap-2 text-xs font-black uppercase tracking-widest border ${isLocked ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} hover:bg-white/10`}
-              title={isLocked ? "Unlock Editor Mode" : "Lock Editor to Drag Mode"}
+              title={isLocked ? t('canvas.unlock_editor_mode') : t('canvas.lock_editor_to_drag_mode')}
             >
               {isLocked ? <Lock size={14} /> : <Unlock size={14} />}
               {isLocked ? 'Locked' : 'Editing'}
@@ -569,11 +571,13 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
 }
 
 function PinnedWandAttributes({ slot, data, wandName, colorDef, handleRename, props, baseY }: any) {
+  const { t } = useTranslation();
+
   return (
     <DraggableNode 
       id={`canvas-attrs-${slot}`}
       title={wandName}
-      subtitle="Attributes"
+      subtitle={t('canvas.attributes')}
       slotIndex={slot}
       colorDef={colorDef}
       defaultX={data.canvas_positions?.attrs?.x ?? 2200}

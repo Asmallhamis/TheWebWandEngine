@@ -209,7 +209,10 @@
     "new_group_default_name": "New Group",
     "contains_types": "Contains Types",
     "search_placeholder": "Search settings...",
+    "import_mod_bundle_invalid": "Invalid Mod Bundle file",
     "no_results": "No results found",
+    "canvas_grid_layout_title": "Canvas Grid Layout",
+    "canvas_grid_layout_desc": "Controls the grid layout used to display custom wand nodes in canvas mode.",
     "spell_types_list": {
       "projectile": "Projectile",
       "static_projectile": "Static Projectile",
@@ -375,6 +378,8 @@
     "save_smart_tag": "Save Smart Tag",
     "cancel": "Cancel",
     "import_success": "Successfully imported {{count}} wands",
+    "import_error": "Import error",
+    "file_parsing_failed": "File parsing failed",
     "selected_wands": "{{count}} Selected",
     "backup_detected": "Backup file detected.\nContains {{wandCount}} wands, {{folderCount}} folders.\n\nMerge into current warehouse? (Click 'Cancel' to overwrite current warehouse)",
     "all_wands": "{{count}} Wands",
@@ -419,6 +424,18 @@
     "deck_capacity": "Cap.",
     "spread_degrees": "Spr.",
     "always_casts": "Always Casts:"
+  },
+  "canvas": {
+    "stats_and_shot_states": "Stats & Shot States",
+    "recursive_tree": "Recursive Tree",
+    "editor": "Editor",
+    "attributes": "Attributes",
+    "no_evaluation_data": "No evaluation data. Modify wand or force analyze.",
+    "no_evaluation_data_available": "No evaluation data available.",
+    "empty_workspace": "Empty Workspace",
+    "unlock_editor_mode": "Unlock Editor Mode",
+    "lock_editor_to_drag_mode": "Lock Editor to Drag Mode",
+    "randomize_seed": "Randomize Seed"
   },
   "editor": {
     "shuffle": "Shuffle",
@@ -480,5 +497,21 @@
       "rounds": "The number of evaluation rounds can be adjusted in 'Cast Parameters' (default is 3)."
     },
     "button": "Shortcuts Guide"
+  },
+  "spell_picker": {
+    "search_placeholder": "Search spells..."
+  },
+  "header": {
+    "sync_button_title": "Left click: pull data once; right click: push current data to the game",
+    "switch_to_list_view": "Switch to List View",
+    "switch_to_canvas_view": "Switch to Canvas View",
+    "sync_mod_spells": "Sync mod spell data",
+    "export_mod_bundle": "Export or persist the current Mod Environment Bundle"
+  },
+  "dock": {
+    "show_attributes": "Show Attributes",
+    "hide_attributes": "Hide Attributes",
+    "expand": "Expand",
+    "collapse": "Collapse"
   }
 }

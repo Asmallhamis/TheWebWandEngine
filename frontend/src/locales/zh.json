@@ -209,7 +209,10 @@
     "new_group_default_name": "新分组",
     "contains_types": "包含类型",
     "search_placeholder": "搜索设置项...",
+    "import_mod_bundle_invalid": "无效的 Mod 环境包文件",
     "no_results": "未找到匹配的设置",
+    "canvas_grid_layout_title": "画布网格布局",
+    "canvas_grid_layout_desc": "控制画布模式下自定义法杖节点的网格显示布局。",
     "spell_types_list": {
       "projectile": "投射物",
       "static_projectile": "静态投射物",
@@ -375,6 +378,8 @@
     "save_smart_tag": "保存智能标签",
     "cancel": "取消",
     "import_success": "成功导入 {{count}} 个法杖",
+    "import_error": "导入出错",
+    "file_parsing_failed": "文件解析失败",
     "selected_wands": "已选中 {{count}} 个魔杖",
     "backup_detected": "检测到备份文件。\n包含 {{wandCount}} 个魔杖，{{folderCount}} 个文件夹。\n\n是否合并到当前仓库？(点击“取消”则完全覆盖当前仓库)",
     "all_wands": "{{count}} 个魔杖",
@@ -419,6 +424,18 @@
     "deck_capacity": "容量",
     "spread_degrees": "散射",
     "always_casts": "始终施放:"
+  },
+  "canvas": {
+    "stats_and_shot_states": "统计与射击状态",
+    "recursive_tree": "递归树",
+    "editor": "编辑器",
+    "attributes": "属性",
+    "no_evaluation_data": "暂无评估数据。请修改法杖或强制重新分析。",
+    "no_evaluation_data_available": "暂无可用的评估数据。",
+    "empty_workspace": "空工作区",
+    "unlock_editor_mode": "解除编辑模式锁定",
+    "lock_editor_to_drag_mode": "锁定编辑器为拖动模式",
+    "randomize_seed": "随机化种子"
   },
   "editor": {
     "shuffle": "乱序",
@@ -480,5 +497,21 @@
       "rounds": "评估轮数可以在“施法参数”设置中调整，默认为 3。"
     },
     "button": "快捷键说明"
+  },
+  "spell_picker": {
+    "search_placeholder": "搜索法术..."
+  },
+  "header": {
+    "sync_button_title": "左键：拉取一次数据；右键：将当前数据推送到游戏",
+    "switch_to_list_view": "切换到列表视图",
+    "switch_to_canvas_view": "切换到画布视图",
+    "sync_mod_spells": "同步模组法术数据",
+    "export_mod_bundle": "导出或持久化当前 Mod 环境包"
+  },
+  "dock": {
+    "show_attributes": "显示属性",
+    "hide_attributes": "隐藏属性",
+    "expand": "展开",
+    "collapse": "收起"
   }
 }

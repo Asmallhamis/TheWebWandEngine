@@ -709,7 +709,7 @@ export function WandEditor({
                 }
               }}
               className="text-zinc-500 hover:text-indigo-400 transition-colors"
-              title="Randomize Seed"
+              title={t('canvas.randomize_seed')}
             >
                  <span className="text-[12px]">🎲</span>
               </button>
