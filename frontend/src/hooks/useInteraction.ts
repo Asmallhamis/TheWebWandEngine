@@ -29,19 +29,20 @@ export const useInteraction = (params: {
   const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false) => {
     const isHandMode = settings.editorDragMode === 'hand';
 
-    if (isRightClick || (isHandMode && !isRightClick)) {
+    // 允许正常格子的拖拽
+    if (idx >= 0 && (isRightClick || (isHandMode && !isRightClick))) {
       const wand = activeTab.wands[wandSlot];
-      const sid = idx < 0 ? wand?.always_cast[(-idx) - 1] : wand?.spells[idx.toString()];
+      const sid = wand?.spells[idx.toString()];
       if (sid) {
         setDragSource({ wandSlot, idx, sid });
       }
     }
 
-    if (isRightClick || isHandMode) return;
-
-    if (idx < 0) return;
+    if (idx < 0 || isRightClick || isHandMode) return;
     setIsSelecting(true);
     setSelection({ wandSlot, indices: [idx], startIdx: idx });
+
+
   }, [activeTab.wands, settings.editorDragMode, setDragSource, setSelection]);
 
   const handleSlotMouseUp = useCallback((wandSlot: string, idx: number) => {
@@ -52,42 +53,30 @@ export const useInteraction = (params: {
       const targetWandSlot = wandSlot;
       const targetIdx = idx;
 
+      if (targetIdx < 0) {
+        setDragSource(null);
+        setIsSelecting(false);
+        return;
+      }
+
       performAction((prevWands: Record<string, WandData>) => {
         const nextWands = { ...prevWands };
         const sourceWand = { ...nextWands[sourceWandSlot] };
 
-        const sid = sourceIdx < 0 ? sourceWand.always_cast[(-sourceIdx) - 1] : sourceWand.spells[sourceIdx.toString()];
-        const uses = sourceIdx < 0 ? undefined : sourceWand.spell_uses?.[sourceIdx.toString()];
+        const sid = sourceWand.spells[sourceIdx.toString()];
+        const uses = sourceWand.spell_uses?.[sourceIdx.toString()];
 
-        if (sourceIdx < 0) {
-          const newAC = [...(sourceWand.always_cast || [])];
-          newAC.splice((-sourceIdx) - 1, 1);
-          sourceWand.always_cast = newAC;
-        } else {
-          const newSourceSpells = { ...sourceWand.spells };
-          const newSourceUses = { ...(sourceWand.spell_uses || {}) };
-          delete newSourceSpells[sourceIdx.toString()];
-          delete newSourceUses[sourceIdx.toString()];
-          sourceWand.spells = newSourceSpells;
-          sourceWand.spell_uses = newSourceUses;
-        }
+        const newSourceSpells = { ...sourceWand.spells };
+        const newSourceUses = { ...(sourceWand.spell_uses || {}) };
+        delete newSourceSpells[sourceIdx.toString()];
+        delete newSourceUses[sourceIdx.toString()];
+        sourceWand.spells = newSourceSpells;
+        sourceWand.spell_uses = newSourceUses;
 
         const targetWand = sourceWandSlot === targetWandSlot ? sourceWand : { ...nextWands[targetWandSlot] };
 
-        if (targetIdx === -1000 || targetIdx < 0) {
-          const newAC = [...(targetWand.always_cast || [])];
-          if (targetIdx === -1000) {
-            newAC.push(sid);
-          } else {
-            const acIdx = (-targetIdx) - 1;
-            const stateHoveredSlot = useUIStore.getState().hoveredSlot;
-            const isRightHalf = stateHoveredSlot?.wandSlot === targetWandSlot &&
-              stateHoveredSlot?.idx === targetIdx &&
-              stateHoveredSlot?.isRightHalf;
-            newAC.splice(acIdx + (isRightHalf ? 1 : 0), 0, sid);
-          }
-          targetWand.always_cast = newAC;
-        } else if (settings.dragSpellMode === 'noita_swap') {
+        if (settings.dragSpellMode === 'noita_swap') {
+
           const targetSid = targetWand.spells[targetIdx.toString()];
           const targetUses = targetWand.spell_uses?.[targetIdx.toString()];
 
@@ -116,9 +105,8 @@ export const useInteraction = (params: {
             }
             sourceWandToUpdate.spells = nextSourceSpells;
             sourceWandToUpdate.spell_uses = nextSourceUses;
-          } else if (targetSid && (sourceWandSlot !== targetWandSlot || sourceIdx !== targetIdx)) {
-            targetWand.always_cast = [...targetWand.always_cast, targetSid];
           }
+
 
           if (targetIdx > targetWand.deck_capacity) {
             targetWand.deck_capacity = targetIdx;
