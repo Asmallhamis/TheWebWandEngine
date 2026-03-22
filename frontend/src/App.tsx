@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next';
 
 // --- Internal ---
-import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig } from './types';
+import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig, WandSelection } from './types';
+
 import { getActiveModBundle, saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND } from './constants';
 import { Header } from './components/Header';
@@ -175,7 +176,8 @@ function App() {
   }, [setSettingsCategoryOverride, setSettingsExpandedBundleId]);
 
   // Picker State
-  const [pickerConfig, setPickerConfig] = useState<(PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null>(null);
+  const [pickerConfig, setPickerConfig] = useState<PickerConfig | null>(null);
+
 
   const {
     pickerSearch, setPickerSearch,
@@ -197,7 +199,8 @@ function App() {
   const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected, updateWand);
 
   const setSelection = useUIStore(s => s.setSelection);
-  const selection = useUIStore(s => s.selection);
+  const selection = useUIStore(s => s.selection) as WandSelection | null;
+
   const dragSource = useUIStore(s => s.dragSource);
   const setDragSource = useUIStore(s => s.setDragSource);
   const hoveredSlot = useUIStore(s => s.hoveredSlot);
@@ -289,30 +292,17 @@ function App() {
     lastLocalUpdateRef.current = Date.now();
     performAction(prevWands => {
       const wand = prevWands[wandSlot] || { ...DEFAULT_WAND };
-      if (spellIdx.startsWith('ac-')) {
-        const acIdx = parseInt(spellIdx.split('-')[1]);
-        const newAC = [...(wand.always_cast || [])];
-        if (spellId) {
-          if (acIdx >= newAC.length) newAC.push(spellId);
-          else newAC[acIdx] = spellId;
-        } else {
-          newAC.splice(acIdx, 1);
-        }
-        const newWand = { ...wand, always_cast: newAC };
-        if (activeTab.isRealtime) syncWand(wandSlot, newWand);
-        return { ...prevWands, [wandSlot]: newWand };
-      } else {
-        const newSpells = { ...wand.spells };
-        if (spellId) newSpells[spellIdx] = spellId;
-        else delete newSpells[spellIdx];
-        const newWand = { ...wand, spells: newSpells };
-        if (activeTab.isRealtime) syncWand(wandSlot, newWand);
-        return { ...prevWands, [wandSlot]: newWand };
-      }
+      const newSpells = { ...wand.spells };
+      if (spellId) newSpells[spellIdx] = spellId;
+      else delete newSpells[spellIdx];
+      const newWand = { ...wand, spells: newSpells };
+      if (activeTab.isRealtime) syncWand(wandSlot, newWand);
+      return { ...prevWands, [wandSlot]: newWand };
     }, spellId ? t('app.notification.change_spell') : t('app.notification.clear_slot', { idx: spellIdx }), spellId ? [spellId] : []);
     setPickerConfig(null);
-    if (isKeyboard && spellId && !spellIdx.startsWith('ac-')) {
+    if (isKeyboard && !isNaN(parseInt(spellIdx))) {
       const currentIdx = parseInt(spellIdx);
+
       const wand = activeTab.wands[wandSlot];
       if (wand && currentIdx < wand.deck_capacity) {
         setSelection({ wandSlot, indices: [currentIdx + 1], startIdx: currentIdx + 1 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor } from 'lucide-react';
-import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, WarehouseWand } from '../types';
+import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, WarehouseWand, WandSelection, SpellPickerTrigger } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
@@ -14,7 +14,7 @@ interface WandCardProps {
   activeTab: Tab;
   isConnected: boolean;
   spellDb: Record<string, SpellInfo>;
-  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
+  selection: WandSelection | null;
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: { wandSlot: string; idx: number; sid: string } | null;
   clipboard: { type: 'wand'; data: WandData } | null;
@@ -24,12 +24,12 @@ interface WandCardProps {
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
   handleSlotMouseLeave: () => void;
-  openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
+  openPicker: (slot: string, idx: string, e: SpellPickerTrigger) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   evalData?: { data: EvalResponse; id: number; loading?: boolean };

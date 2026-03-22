@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tab, WandData, AppSettings, SpellInfo, AppNotification } from '../types';
+import { Tab, WandData, AppSettings, SpellInfo, AppNotification, WandSelection, SpellPickerTrigger, PickerInsertAnchor, SpellPickerOpenOptions } from '../types';
+
 import { DEFAULT_WAND } from '../constants';
 
 export const useWandActions = (params: {
@@ -141,10 +142,10 @@ export const useWandActions = (params: {
     }
   }, [clipboard, updateWand]);
 
-  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => {
-    let x, y, initialSearch = '';
+  const openPicker = useCallback((wandSlot: string, spellIdx: string, e: SpellPickerTrigger) => {
+    let x: number, y: number, initialSearch = '';
     let rowTop: number | undefined;
-    let insertAnchor: { wandSlot: string; idx: number; isRightHalf: boolean } | null | undefined;
+    let insertAnchor: PickerInsertAnchor | null | undefined;
 
     if (e && 'currentTarget' in e && e.currentTarget) {
       const cellRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
