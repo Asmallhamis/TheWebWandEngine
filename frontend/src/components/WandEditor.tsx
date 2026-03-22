@@ -18,7 +18,7 @@ interface WandEditorProps {
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: { wandSlot: string; idx: number; sid: string } | null;
   updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number) => void;
   handleSlotMouseEnter: (slot: string, idx: number) => void;
   handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
@@ -113,6 +113,43 @@ export function WandEditor({
     };
   }, []);
 
+  const getPickerAnchor = React.useCallback((currentIdx: number) => {
+    const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement | null;
+    const rect = el?.getBoundingClientRect();
+    if (rect) {
+      return {
+        clientX: 0,
+        clientY: 0,
+        x: rect.left,
+        y: rect.bottom + 8,
+        rowTop: rect.top,
+        insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false }
+      };
+    }
+
+    const canvasEl = spellsRef.current?.querySelector('canvas') as HTMLCanvasElement | null;
+    if (canvasEl) {
+      const rect = canvasEl.getBoundingClientRect();
+      const logicalW = parseFloat(canvasEl.style.width) || rect.width;
+      const gap = settings.editorSpellGap || 0;
+      const baseCell = 48;
+      const cellOuter = baseCell + gap;
+      const totalSlots = Math.max(data.deck_capacity, 24);
+      const cols = isCanvasMode
+        ? Math.min(totalSlots, data.canvas_cells_per_row ?? settings.defaultCanvasCellsPerRow ?? 26)
+        : Math.max(1, Math.floor((logicalW || 800) / cellOuter) || 1);
+      const cellIdx = currentIdx - 1;
+      const col = cellIdx % cols;
+      const row = Math.floor(cellIdx / cols);
+      const x = rect.left + col * cellOuter + gap / 2;
+      const y = rect.top + row * cellOuter + gap / 2 + 20 + baseCell;
+      const rowTop = rect.top + row * cellOuter + gap / 2 + 20;
+      return { clientX: 0, clientY: 0, x, y, rowTop, insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false } };
+    }
+
+    return { clientX: 0, clientY: 0, x: window.innerWidth / 2, y: window.innerHeight / 2 + 8, insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false } };
+  }, [slot, settings.editorDragMode, settings.editorSpellGap, settings.defaultCanvasCellsPerRow, data.deck_capacity, data.canvas_cells_per_row, isCanvasMode]);
+
   // 处理格子的键盘导航和输入触发
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -126,12 +163,6 @@ export function WandEditor({
 
       const currentIdx = selection.indices[0];
       const maxCap = data.deck_capacity;
-      const getPickerAnchor = () => {
-        const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement | null;
-        const rect = el?.getBoundingClientRect();
-        if (!rect) return { clientX: 0, clientY: 0, insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false } };
-        return { clientX: 0, clientY: 0, x: rect.left, y: rect.bottom + 8 };
-      };
 
       // 1. 方向键和 Tab 导航
       if (e.key === 'Tab') {
@@ -163,7 +194,7 @@ export function WandEditor({
         // 如果是数字且当前格子有法术，可能是想直接用数字选词，但在格子界面我们倾向于开启搜索
         e.preventDefault();
         openPicker(slot, currentIdx.toString(), {
-          ...getPickerAnchor(),
+          ...getPickerAnchor(currentIdx),
           initialSearch: e.key
         } as any);
       }
@@ -171,7 +202,7 @@ export function WandEditor({
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         openPicker(slot, currentIdx.toString(), {
-          ...getPickerAnchor(),
+          ...getPickerAnchor(currentIdx),
           insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false },
           initialSearch: ''
         } as any);
@@ -193,7 +224,7 @@ export function WandEditor({
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selection, slot, data.deck_capacity, onMoveSelection, openPicker, t]);
+  }, [selection, slot, data.deck_capacity, data.canvas_cells_per_row, isCanvasMode, settings.editorSpellGap, settings.defaultCanvasCellsPerRow, onMoveSelection, openPicker, updateWand, t, getPickerAnchor]);
 
   const renderTimeInput = (label: string, frames: number, updateKey: keyof WandData) => {
     const primaryValue = settings.showStatsInFrames ? frames : parseFloat((frames / 60).toFixed(3));
@@ -731,7 +762,7 @@ export function WandEditor({
                         openWiki(sid);
                         return;
                       }
-                      handleSlotMouseDown(slot, acIdx, e.button === 2);
+                      handleSlotMouseDown(slot, acIdx, e.button === 2, { x: e.clientX, y: e.clientY });
                     }}
                     onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
                     onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}

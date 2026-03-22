@@ -28,8 +28,8 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 
 interface OverlayManagerProps {
   // Spell Picker
-  pickerConfig: (PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null;
-  setPickerConfig: (config: (PickerConfig & { insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) | null) => void;
+  pickerConfig: PickerConfig | null;
+  setPickerConfig: (config: PickerConfig | null) => void;
   pickerSearch: string;
   setPickerSearch: (search: string | ((prev: string) => string)) => void;
   pickSpell: (spellId: string | null, isKeyboard?: boolean) => void;

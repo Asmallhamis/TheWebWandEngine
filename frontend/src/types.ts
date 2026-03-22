@@ -207,14 +207,38 @@ export interface SmartTag {
   mode: 'strict' | 'contains';
 }
 
+export interface WandSelection {
+  wandSlot: string;
+  indices: number[];
+  startIdx: number;
+}
+
+export interface PickerInsertAnchor {
+  wandSlot: string;
+  idx: number;
+  isRightHalf: boolean;
+}
+
+export interface SpellPickerOpenOptions {
+  x: number;
+  y: number;
+  initialSearch?: string;
+  rowTop?: number;
+  insertAnchor?: PickerInsertAnchor | null;
+}
+
+export type SpellPickerTrigger = React.MouseEvent | SpellPickerOpenOptions;
+
 export interface PickerConfig {
   wandSlot: string;
   spellIdx: string;
   x: number;
   y: number;
+  initialSearch?: string;
   rowTop?: number;
-  isAlwaysCast?: boolean;
+  insertAnchor?: PickerInsertAnchor | null;
 }
+
 
 export interface Conflict {
   tabId: string;

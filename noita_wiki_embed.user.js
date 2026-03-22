@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Noita Wiki Wand Embed Evaluator
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @description  Embeds wand evaluation results (tree + shot info) directly below wand templates on Noita Wiki
+// @version      1.2
+// @description  Embeds wand evaluation results (tree + shot info) directly below wand templates on Noita Wiki (Optimized with MutationObserver)
 // @author       Antigravity
 // @match        https://noita.wiki.gg/wiki/*
 // @match        https://noita.wiki.gg/zh/wiki/*
@@ -14,7 +14,6 @@
     'use strict';
 
     const SIMULATOR_BASE_URL = 'https://asmallhamis.github.io/TheWebWandEngine/';
-    // const SIMULATOR_BASE_URL = 'https://asmallhamis.github.io/TheWebWandEngine/';
 
     function utf8_to_b64(str) {
         return window.btoa(unescape(encodeURIComponent(str)));
@@ -38,7 +37,6 @@
             box-sizing: border-box;
         `;
 
-        // 头部：标题 + 折叠按钮
         const header = document.createElement('div');
         header.style.cssText = `
             display: flex;
@@ -68,14 +66,13 @@
             color: #71717a;
             font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         `;
-        toggleBtn.textContent = '▼';
+        toggleBtn.textContent = '▶';
 
         header.appendChild(titleSpan);
         header.appendChild(toggleBtn);
 
-        // iframe 容器
         const iframeContainer = document.createElement('div');
-        iframeContainer.style.cssText = 'overflow: hidden; transition: height 0.3s ease;';
+        iframeContainer.style.cssText = 'overflow: hidden; transition: height 0.3s ease; display: none;';
 
         const b64 = utf8_to_b64(wandText);
         const url = `${SIMULATOR_BASE_URL}?embed&wand=${b64}`;
@@ -93,7 +90,6 @@
         iframe.setAttribute('loading', 'lazy');
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
 
-        // 加载占位符
         const loadingPlaceholder = document.createElement('div');
         loadingPlaceholder.style.cssText = `
             display: flex;
@@ -118,15 +114,11 @@
         iframeContainer.appendChild(loadingPlaceholder);
         iframeContainer.appendChild(iframe);
 
-        // iframe 加载完成后移除占位符
         iframe.onload = () => {
             loadingPlaceholder.style.display = 'none';
         };
 
-        // 折叠/展开（默认收起）
         let isCollapsed = true;
-        iframeContainer.style.display = 'none';
-        toggleBtn.textContent = '▶';
         header.addEventListener('click', () => {
             isCollapsed = !isCollapsed;
             iframeContainer.style.display = isCollapsed ? 'none' : 'block';
@@ -136,18 +128,11 @@
         wrapper.appendChild(header);
         wrapper.appendChild(iframeContainer);
 
-        return { wrapper, iframe };
+        return { wrapper };
     }
 
-    /**
-     * 将 embed wrapper 插入到法杖卡片的外部（更宽的父容器之后）
-     * 这样可以获得完整的页面宽度，而不是被卡片的窄宽度限制
-     */
     function insertAfterWandCard(cardElement, wrapper) {
-        // 向上查找最外层的法杖卡片容器
         const outerCard = cardElement.closest('.wand2-card, .wand2-mini') || cardElement;
-
-        // 插入到最外层容器之后
         if (outerCard.nextSibling) {
             outerCard.parentNode.insertBefore(wrapper, outerCard.nextSibling);
         } else {
@@ -155,10 +140,10 @@
         }
     }
 
-    /**
-     * 监听 iframe 的高度消息
-     */
     window.addEventListener('message', (event) => {
+        // Security check
+        if (event.origin !== new URL(SIMULATOR_BASE_URL).origin) return;
+        
         if (event.data && event.data.type === 'TWWE_EMBED_RESIZE') {
             const iframes = document.querySelectorAll('.twwe-embed-wrapper iframe');
             iframes.forEach(iframe => {
@@ -170,12 +155,9 @@
         }
     });
 
-    /**
-     * 注入嵌入式评估结果
-     */
-    function injectEmbeds() {
+    function injectEmbeds(container = document) {
         // --- 1. Chinese Wiki: wand-sim-link ---
-        const zhSimLinks = document.querySelectorAll('.wand-sim-link a:not([data-twwe-embed])');
+        const zhSimLinks = container.querySelectorAll('.wand-sim-link a:not([data-twwe-embed])');
         zhSimLinks.forEach(a => {
             const originalUrl = a.href;
             if (originalUrl.includes('spells=')) {
@@ -190,7 +172,7 @@
         });
 
         // --- 2. pre.w2copy (standard wand cards) ---
-        const preElements = document.querySelectorAll('pre.w2copy');
+        const preElements = container.querySelectorAll('pre.w2copy:not([data-twwe-embed])');
         preElements.forEach(pre => {
             const card = pre.closest('.wand2-card, .wand2-mini, .wand2-inner') || pre.parentNode;
             if (card.getAttribute('data-twwe-embed')) return;
@@ -201,13 +183,12 @@
                 insertAfterWandCard(card, wrapper);
                 card.setAttribute('data-twwe-embed', 'true');
             }
+            pre.setAttribute('data-twwe-embed', 'true');
         });
 
         // --- 3. data-template attributes ---
-        const templateDivs = document.querySelectorAll('[data-template*="{{Wand"]');
+        const templateDivs = container.querySelectorAll('[data-template*="{{Wand"]:not([data-twwe-embed])');
         templateDivs.forEach(div => {
-            if (div.getAttribute('data-twwe-embed')) return;
-
             const wandData = div.getAttribute('data-template');
             if (wandData) {
                 const { wrapper } = createEmbedContainer(wandData);
@@ -217,7 +198,7 @@
         });
 
         // --- 4. Fallback: copy buttons with data-text ---
-        const fallbackBtns = document.querySelectorAll('.copy-to-clipboard-button:not([data-twwe-embed])');
+        const fallbackBtns = container.querySelectorAll('.copy-to-clipboard-button:not([data-twwe-embed])');
         fallbackBtns.forEach(btn => {
             const wandData = btn.getAttribute('data-text');
             if (wandData && (wandData.includes('{{Wand2') || wandData.includes('{{Wand'))) {
@@ -235,23 +216,35 @@
     // 注入全局样式
     const style = document.createElement('style');
     style.textContent = `
-        @keyframes twwe-spin {
-            to { transform: rotate(360deg); }
-        }
-        .twwe-embed-wrapper:hover {
-            border-color: rgba(167, 139, 250, 0.2) !important;
-        }
-        /* 确保 embed 不被 wiki 布局压窄 */
-        .twwe-embed-wrapper {
-            clear: both;
-        }
+        @keyframes twwe-spin { to { transform: rotate(360deg); } }
+        .twwe-embed-wrapper:hover { border-color: rgba(167, 139, 250, 0.2) !important; }
+        .twwe-embed-wrapper { clear: both; }
     `;
     document.head.appendChild(style);
 
-    // 运行注入（延迟以等待 wiki 动态内容加载）
-    setTimeout(injectEmbeds, 1500);
-    // 定期检查新增法杖（处理动态加载的内容）
-    setInterval(injectEmbeds, 3000);
+    // Initial injection
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => injectEmbeds());
+    } else {
+        injectEmbeds();
+    }
 
-    console.log('Noita Wiki Wand Embed Evaluator loaded.');
+    // MutationObserver to handle dynamic content
+    const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length > 0) {
+                shouldCheck = true;
+                break;
+            }
+        }
+        if (shouldCheck) {
+            // Simple debounce or just call it (injectEmbeds filters out injected ones)
+            injectEmbeds();
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    console.log('Noita Wiki Wand Embed Evaluator (MutationObserver) loaded.');
 })();

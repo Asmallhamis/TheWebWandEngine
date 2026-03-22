@@ -113,7 +113,16 @@ export const useGlobalEvents = ({
   useEffect(() => {
     const handleMouseUp = () => {
       setIsSelecting(false);
-      if (dragSource) setDragSource(null);
+      if (dragSource) {
+        setDragSource(null);
+        useUIStore.getState().setHoveredSlot(null);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setIsSelecting(false);
+      setDragSource(null);
+      useUIStore.getState().setHoveredSlot(null);
     };
 
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -318,6 +327,7 @@ export const useGlobalEvents = ({
     };
 
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('paste', handleGlobalPaste);
     window.addEventListener('drop', handleGlobalDropEvent);
@@ -325,6 +335,7 @@ export const useGlobalEvents = ({
     window.addEventListener('dragleave', handleDragLeave);
     return () => {
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('paste', handleGlobalPaste);
       window.removeEventListener('drop', handleGlobalDropEvent);

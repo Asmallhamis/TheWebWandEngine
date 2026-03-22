@@ -156,33 +156,12 @@ export const useWandImport = ({
     const selection = useUIStore.getState().selection;
 
     if (!targetWandSlot && hoveredSlot) {
-      targetWandSlot = hoveredSlot.wandSlot;
       const hIdx = hoveredSlot.idx;
-      if (hIdx < 0) {
-        // Paste into Always Cast
-        const acIdx = (-hIdx) - 1;
-        const spellsList = text.split(',').map(s => s.trim()).filter(s => !!s).map(s => {
-          const norm = normalize(s);
-          return spellNameToId[norm] || s.toUpperCase();
-        });
-        if (spellsList.length > 0) {
-          performAction(prev => {
-            const next = { ...prev };
-            const w = { ...next[targetWandSlot!] };
-            const newAC = [...(w.always_cast || [])];
-            const insertPos = acIdx + (hoveredSlot.isRightHalf ? 1 : 0);
-            newAC.splice(insertPos, 0, ...spellsList);
-            w.always_cast = newAC;
-            next[targetWandSlot!] = w;
-            if (activeTab.isRealtime) syncWand(targetWandSlot!, w);
-            return next;
-          }, t('app.notification.paste_to_always_cast'));
-          return true;
-        }
-        return false;
-      }
+      if (hIdx < 0) return false; // Disable pasting into Always Cast
+      targetWandSlot = hoveredSlot.wandSlot;
       startIdx = hIdx + (hoveredSlot.isRightHalf ? 1 : 0);
     } else if (!targetWandSlot && selection) {
+
       targetWandSlot = selection.wandSlot;
       startIdx = Math.min(...selection.indices);
     }
