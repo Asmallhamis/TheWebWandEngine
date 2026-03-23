@@ -271,6 +271,12 @@ local function render_json(src, engine_data, out)
 		table.insert(out, tostring(src.recursion))
 	end
 
+	if src.source then
+		table.insert(out, ",\"source\":\"")
+		table.insert(out, src.source)
+		table.insert(out, "\"")
+	end
+
 	src.count = src.count or 1
 	table.insert(out, ",\"count\":")
 	table.insert(out, tostring(src.count))
