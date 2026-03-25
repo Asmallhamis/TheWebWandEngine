@@ -149,6 +149,7 @@ cd frontend && npm install && npm run dev
 - **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: 优秀的法杖编辑工具，本项目参考了其 UI 设计并使用了部分代码。
 - **[WandDBG](https://github.com/kaliuresis/WandDBG)**: 著名的 Noita 魔杖调试器。本项目在核心评估器逻辑及法术触发可视化方案的设计上深度借鉴了该项目的思路。
 - **[KuroLeaf's Noita Aliases](https://noita.wiki.gg/zh/wiki/User:KuroLeaf/aliases.csv)**: 拼音搜索的别名对照数据支持。
+- **[salinecitrine/noita-wand-simulator](https://github.com/salinecitrine/noita-wand-simulator)**: 本项目中 A/D（A=Action，D=Draw）节点来源标记机制的设计研究，学习并参考了该项目的 action source 思路。
 - **AI 辅助编程**: 本项目的大部分代码（包括前端 React 架构、后端 Python 服务及部分 Lua 逻辑）由 AI 辅助编写而成。
 
 ## 📝 许可证

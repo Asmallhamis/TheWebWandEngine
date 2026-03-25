@@ -35,6 +35,7 @@ export function SpellPicker({
 }: SpellPickerProps) {
   const { t, i18n } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [hasNavigatedSelection, setHasNavigatedSelection] = useState(false);
   const setHoveredSlot = useUIStore(s => s.setHoveredSlot);
   const resolveHoveredSlotAtPoint = useUIStore(s => s.resolveHoveredSlotAtPoint);
   
@@ -65,6 +66,7 @@ export function SpellPicker({
   // Reset selected index when search changes
   useEffect(() => {
     setSelectedIndex(0);
+    setHasNavigatedSelection(false);
   }, [pickerSearch]);
 
   useEffect(() => {
@@ -90,6 +92,10 @@ export function SpellPicker({
       window.removeEventListener('mousemove', handleMouseMove, true);
     };
   }, [pickerConfig, settings.pickerFirstSpaceBehavior, resolveHoveredSlotAtPoint, setHoveredSlot]);
+
+  useEffect(() => {
+    if (pickerConfig) setHasNavigatedSelection(false);
+  }, [pickerConfig]);
 
   const translateSpellType = (name: string) => {
     const mapping: Record<string, string> = {
@@ -197,7 +203,7 @@ export function SpellPicker({
             onKeyDown={e => {
               if (e.key === 'Escape') onClose();
 
-              if (e.key === ' ' && pickerSearch === '') {
+              if (e.key === ' ' && pickerSearch === '' && !hasNavigatedSelection) {
                 const behavior = settings.pickerFirstSpaceBehavior;
                 if (behavior === 'ignore') {
                   e.preventDefault();
@@ -224,7 +230,8 @@ export function SpellPicker({
               }
 
               if (flatSpells.length > 0) {
-                const rowCount = settings.wrapLimit || 10;
+                const itemEl = document.querySelector('[data-testid="spell-picker-item"]') as HTMLElement | null;
+                const colCount = Math.max(1, itemEl?.parentElement ? Array.from(itemEl.parentElement.children).filter(el => Math.abs((el as HTMLElement).offsetTop - itemEl.offsetTop) < 2).length : (settings.wrapLimit || 10));
 
                 // 处理 Shift + 数字：输入数字本身而不是符号 (例如 Shift+2 输入 2 而不是 @)
                 if (e.shiftKey && e.code.startsWith('Digit')) {
@@ -248,15 +255,29 @@ export function SpellPicker({
 
                 if (e.key === 'ArrowRight') {
                   setSelectedIndex(prev => Math.min(flatSpells.length - 1, prev + 1));
+                  setHasNavigatedSelection(true);
                   e.preventDefault();
                 } else if (e.key === 'ArrowLeft') {
                   setSelectedIndex(prev => Math.max(0, prev - 1));
+                  setHasNavigatedSelection(true);
                   e.preventDefault();
                 } else if (e.key === 'ArrowDown') {
-                  setSelectedIndex(prev => Math.min(flatSpells.length - 1, prev + rowCount));
+                  setSelectedIndex(prev => {
+                    const currentCol = prev % colCount;
+                    const currentRow = Math.floor(prev / colCount);
+                    const nextIdx = (currentRow + 1) * colCount + currentCol;
+                    return Math.min(flatSpells.length - 1, nextIdx);
+                  });
+                  setHasNavigatedSelection(true);
                   e.preventDefault();
                 } else if (e.key === 'ArrowUp') {
-                  setSelectedIndex(prev => Math.max(0, prev - rowCount));
+                  setSelectedIndex(prev => {
+                    const currentCol = prev % colCount;
+                    const currentRow = Math.floor(prev / colCount);
+                    const nextIdx = (currentRow - 1) * colCount + currentCol;
+                    return Math.max(0, nextIdx);
+                  });
+                  setHasNavigatedSelection(true);
                   e.preventDefault();
                 }
               }

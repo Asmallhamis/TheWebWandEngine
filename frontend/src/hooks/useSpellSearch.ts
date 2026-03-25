@@ -43,7 +43,7 @@ export const useSpellSearch = (
 
   const searchResults = useMemo(() => {
     if (!pickerSearch) return null;
-    const query = pickerSearch.toLowerCase().trim();
+    const query = pickerSearch.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
     if (!query) return null;
 
     const allSpells = Object.values(spellDb);
@@ -51,6 +51,10 @@ export const useSpellSearch = (
 
     // Score-based search
     const scored = allSpells.map(s => {
+      const pyVariants = (s.pinyin_variants || []).map(v => v.toLowerCase());
+      const pyInitVariants = (s.pinyin_initials_variants || []).map(v => v.toLowerCase());
+      const aliasPyVariants = (s.alias_pinyin_variants || []).map(v => v.toLowerCase());
+      const aliasInitVariants = (s.alias_initials_variants || []).map(v => v.toLowerCase());
       let score = 0;
       const id = s.id.toLowerCase();
       const name = s.name.toLowerCase();
@@ -74,9 +78,15 @@ export const useSpellSearch = (
       else if (!isEnglish && init.startsWith(query)) score += 55;
       else if (!isEnglish && py.startsWith(query)) score += 50;
       else if (!isEnglish && checkPinyinFuzzy(query, py, init)) score += 48;
+      else if (!isEnglish && pyInitVariants.some(v => v.startsWith(query))) score += 47;
+      else if (!isEnglish && pyVariants.some(v => v.startsWith(query))) score += 46;
+      else if (!isEnglish && pyVariants.some(v => pyInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 44;
       else if (!isEnglish && ainit.startsWith(query)) score += 45;
       else if (!isEnglish && apy.startsWith(query)) score += 40;
       else if (!isEnglish && checkPinyinFuzzy(query, apy, ainit)) score += 38;
+      else if (!isEnglish && aliasInitVariants.some(v => v.startsWith(query))) score += 37;
+      else if (!isEnglish && aliasPyVariants.some(v => v.startsWith(query))) score += 36;
+      else if (!isEnglish && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 34;
 
       // Includes
       else if (id.includes(query)) score += 30;
@@ -84,8 +94,13 @@ export const useSpellSearch = (
       else if (en.includes(query)) score += 20;
       else if (!isEnglish && init.includes(query)) score += 15;
       else if (!isEnglish && py.includes(query)) score += 10;
+      else if (!isEnglish && pyInitVariants.some(v => v.includes(query))) score += 9;
+      else if (!isEnglish && pyVariants.some(v => v.includes(query))) score += 8;
       else if (!isEnglish && ainit.includes(query)) score += 8;
+      else if (!isEnglish && aliasInitVariants.some(v => v.includes(query))) score += 7;
       else if (!isEnglish && apy.includes(query)) score += 5;
+      else if (!isEnglish && aliasPyVariants.some(v => v.includes(query))) score += 4;
+      else if (!isEnglish && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 3;
 
       return { spell: s, score };
     }).filter(x => x.score > 0);

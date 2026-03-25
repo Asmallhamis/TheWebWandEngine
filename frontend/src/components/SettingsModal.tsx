@@ -623,10 +623,10 @@ export function SettingsModal({
                       </div>
                     </div>
                     <button
-                      onClick={() => setSettings(s => ({ ...s, moveExistingWandToTopOnDuplicatePaste: !s.moveExistingWandToTopOnDuplicatePaste }))}
-                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.moveExistingWandToTopOnDuplicatePaste ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                      onClick={() => setSettings(s => ({ ...s, hideLabels: !s.hideLabels }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.moveExistingWandToTopOnDuplicatePaste ? 'left-6' : 'left-1'}`} />
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
                     </button>
                   </div>
                 )}

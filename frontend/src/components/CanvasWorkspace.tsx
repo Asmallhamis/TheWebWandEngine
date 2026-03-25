@@ -25,6 +25,7 @@ interface CanvasWorkspaceProps {
   isConnected: boolean;
   spellDb: SpellDb;
   selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
+  onMoveSelection: (wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: DragSource | null;
   clipboard: { type: 'wand'; data: WandData } | null;
@@ -558,6 +559,7 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
         <div className={isLocked ? '' : 'cancel-pan'}>
            <WandEditor 
              {...props}
+             onMoveSelection={(direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => props.onMoveSelection(slot, direction)}
              requestEvaluation={(wand: any, force?: boolean) => props.requestEvaluation(props.activeTab.id, slot, wand, force)}
              slot={slot}
              data={data}
@@ -596,6 +598,7 @@ function PinnedWandAttributes({ slot, data, wandName, colorDef, handleRename, pr
       <div className="relative w-max max-w-max min-w-[300px] cancel-pan">
          <WandEditor 
             {...props}
+            onMoveSelection={(direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => props.onMoveSelection(slot, direction)}
             requestEvaluation={(wand: any, force?: boolean) => props.requestEvaluation(props.activeTab.id, slot, wand, force)}
             slot={slot}
            data={data}

@@ -111,6 +111,7 @@ The following projects provided significant inspiration and reference during dev
 - **[Wand Editor](https://github.com/KagiamamaHIna/Wand-Editor)**: Excellent wand editing tool; this project referenced its UI design and used some of its code.
 - **[WandDBG](https://github.com/kaliuresis/WandDBG)**: The famous Noita wand debugger. This project deeply referenced its ideas for the core evaluator logic and spell trigger visualization.
 - **[KuroLeaf's Noita Aliases](https://noita.wiki.gg/zh/wiki/User:KuroLeaf/aliases.csv)**: Alias data support for Pinyin search.
+- **[salinecitrine/noita-wand-simulator](https://github.com/salinecitrine/noita-wand-simulator)**: The A/D (A = Action, D = Draw) node source annotation design in this project was studied from and inspired by that simulator's action source mechanism.
 - **AI-Assisted Development**: Most of the code in this project (including the frontend React architecture, backend Python services, and some Lua logic) was generated or co-authored with AI.
 
 ## 📝 License

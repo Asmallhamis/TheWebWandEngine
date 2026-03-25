@@ -222,6 +222,48 @@ function App() {
   const insertEmptySlot = (mode?: 'current_hover' | 'selection' | 'open_anchor', openAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null) =>
     _insertEmptySlot(updateWand, mode, openAnchor);
 
+  const moveSelection = useCallback((wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => {
+    const currentSelection = useUIStore.getState().selection as WandSelection | null;
+    if (!currentSelection || currentSelection.wandSlot !== wandSlot || currentSelection.indices.length !== 1) return;
+
+    const wand = activeTab.wands[wandSlot];
+    if (!wand) return;
+
+    const currentIdx = currentSelection.indices[0];
+    const totalSlots = Math.max(wand.deck_capacity, 24);
+    const cols = settings.isCanvasMode
+      ? Math.min(totalSlots, wand.canvas_cells_per_row ?? settings.defaultCanvasCellsPerRow ?? 26)
+      : (() => {
+          const canvasEl = document.querySelector(`[data-wand-slot-canvas="${wandSlot}"]`) as HTMLCanvasElement | null;
+          if (canvasEl) {
+            const logicalW = parseFloat(canvasEl.style.width) || canvasEl.getBoundingClientRect().width;
+            const cellOuter = 48 + (settings.editorSpellGap || 0);
+            return Math.max(1, Math.floor((logicalW || 800) / cellOuter) || 1);
+          }
+          return 1;
+        })();
+    const zeroBasedIdx = currentIdx - 1;
+    const currentCol = zeroBasedIdx % cols;
+    const currentRow = Math.floor(zeroBasedIdx / cols);
+
+    let nextIdx = currentIdx;
+    if (direction === 'next') nextIdx = currentIdx + 1;
+    else if (direction === 'prev') nextIdx = currentIdx - 1;
+    else if (direction === 'right') nextIdx = currentIdx + 1;
+    else if (direction === 'left') nextIdx = currentIdx - 1;
+    else if (direction === 'down') nextIdx = (currentRow + 1) * cols + currentCol + 1;
+    else if (direction === 'up') nextIdx = (currentRow - 1) * cols + currentCol + 1;
+
+    nextIdx = Math.max(1, Math.min(wand.deck_capacity, nextIdx));
+    if (nextIdx === currentIdx) return;
+
+    setSelection({
+      wandSlot,
+      indices: [nextIdx],
+      startIdx: nextIdx,
+    });
+  }, [activeTab.wands, settings.isCanvasMode, settings.defaultCanvasCellsPerRow, settings.editorSpellGap, setSelection]);
+
 
   const { importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng } = useWandImport({
     activeTab, activeTabId, spellDb, spellNameToId, settings, t, performAction, updateWand, syncWand, setTabs, setActiveTabId, setNotification: (n) => showNotification(n?.msg || '', n?.type)
@@ -359,6 +401,7 @@ function App() {
             isConnected={isConnected}
             spellDb={spellDb}
             selection={selection}
+            onMoveSelection={moveSelection}
             hoveredSlot={hoveredSlot}
             dragSource={dragSource}
             clipboard={clipboard}
@@ -386,6 +429,7 @@ function App() {
             activeTab={activeTab}
             isConnected={isConnected}
             spellDb={spellDb}
+            onMoveSelection={moveSelection}
             selection={selection}
             hoveredSlot={hoveredSlot}
             dragSource={dragSource}

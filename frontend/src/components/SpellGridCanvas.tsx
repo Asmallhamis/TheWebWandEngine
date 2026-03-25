@@ -113,6 +113,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   const resolverId = React.useMemo(() => `canvas-${slot}`, [slot]);
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number>(0);
+  const repaintVersionRef = useRef(0);
+  const pendingIconUrlsRef = useRef<Set<string>>(new Set());
   const paintRef = useRef<() => void>(() => {});
   const baseDirtyRef = useRef(true);
   const lastHoveredIdxRef = useRef<number>(-1);
@@ -156,18 +158,39 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   // ─── Preload visible icons ─────────────────────────────────
   useEffect(() => {
     const paths: string[] = [];
+    const nextPendingUrls = new Set<string>();
+    const currentVersion = ++repaintVersionRef.current;
     for (let i = 1; i <= data.deck_capacity; i++) {
       const sid = data.spells?.[i.toString()];
       if (sid) {
         const sp = spellDb[sid];
-        if (sp?.icon) paths.push(sp.icon);
+        if (sp?.icon) {
+          paths.push(sp.icon);
+          const img = getCachedIcon(sp.icon, isConnected, () => {
+            if (repaintVersionRef.current !== currentVersion) return;
+            baseDirtyRef.current = true;
+            scheduleRepaint();
+          });
+          if (!img) {
+            const url = getCachedIcon(sp.icon, isConnected)
+              ? null
+              : undefined;
+            if (url !== null) nextPendingUrls.add(sp.icon);
+          }
+        }
       }
     }
+    pendingIconUrlsRef.current = nextPendingUrls;
+
     if (paths.length > 0) {
       preloadIcons(paths, isConnected, () => {
+        if (repaintVersionRef.current !== currentVersion) return;
+        pendingIconUrlsRef.current.clear();
         baseDirtyRef.current = true;
         scheduleRepaint();
       });
+    } else {
+      pendingIconUrlsRef.current.clear();
     }
   }, [data.spells, data.deck_capacity, spellDb, isConnected, scheduleRepaint]);
 
@@ -303,10 +326,15 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
     if (spell) {
       const img = getCachedIcon(spell.icon, isConnected, () => {
+        pendingIconUrlsRef.current.delete(spell.icon);
         baseDirtyRef.current = true;
         scheduleRepaint();
       });
       if (img) {
+        if (pendingIconUrlsRef.current.has(spell.icon)) {
+          pendingIconUrlsRef.current.delete(spell.icon);
+          baseDirtyRef.current = true;
+        }
         ctx.save();
         if (isGrayscale) {
           ctx.globalAlpha = 0.5;
@@ -314,6 +342,12 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
         }
         ctx.imageSmoothingEnabled = false;
         ctx.drawImage(img, cx - ICON_SIZE / 2, cy - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE);
+        ctx.restore();
+      }
+      else {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(cx - ICON_SIZE / 2, cy - ICON_SIZE / 2, ICON_SIZE, ICON_SIZE);
         ctx.restore();
       }
     } else if (sid && !isLocked) {
@@ -878,7 +912,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     >
       <canvas
         ref={canvasRef}
-        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }}
+        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }} data-wand-slot-canvas={slot}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

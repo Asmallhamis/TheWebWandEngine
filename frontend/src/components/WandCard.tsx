@@ -15,6 +15,7 @@ interface WandCardProps {
   isConnected: boolean;
   spellDb: Record<string, SpellInfo>;
   selection: WandSelection | null;
+  onMoveSelection: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: { wandSlot: string; idx: number; sid: string } | null;
   clipboard: { type: 'wand'; data: WandData } | null;
@@ -45,6 +46,7 @@ export function WandCard({
   isConnected,
   spellDb,
   selection,
+  onMoveSelection,
   hoveredSlot,
   dragSource,
   clipboard,
@@ -237,6 +239,7 @@ export function WandCard({
             data={data}
             spellDb={spellDb}
             selection={selection}
+            onMoveSelection={onMoveSelection}
             hoveredSlot={hoveredSlot}
             dragSource={dragSource}
             updateWand={updateWand}

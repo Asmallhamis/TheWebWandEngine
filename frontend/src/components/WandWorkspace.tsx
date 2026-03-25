@@ -9,6 +9,7 @@ interface WandWorkspaceProps {
   isConnected: boolean;
   spellDb: SpellDb;
   selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
+  onMoveSelection: (wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
   dragSource: DragSource | null;
   clipboard: { type: 'wand'; data: WandData } | null;
@@ -37,6 +38,7 @@ export function WandWorkspace({
   isConnected,
   spellDb,
   selection,
+  onMoveSelection,
   hoveredSlot,
   dragSource,
   clipboard,
@@ -72,6 +74,7 @@ export function WandWorkspace({
           isConnected={isConnected}
           spellDb={spellDb}
           selection={selection}
+          onMoveSelection={(direction) => onMoveSelection(slot, direction)}
           hoveredSlot={hoveredSlot}
           dragSource={dragSource}
           clipboard={clipboard}

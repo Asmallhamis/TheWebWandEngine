@@ -335,7 +335,7 @@ T_SHAPE | 阵型 - 上下 | 阵型 - T | T阵型 阵型-上下 阵型-T 阵型T 
 T_SHOT |  | 复制法术 - T | 阵型复制-T 紫复制-T 三重紫复制 上下法术 复制法术-T 阵型复制T 阵型复制上下 复制法术 - T 复制法术 - T
 TAU | 陶 | 陶 | T τ 陶
 TELEPORT_CAST | 传送施放 | 传送施法 | 传送施放 传送施法
-TELEPORT_CLOSER | “归家”传送魔弹 | 抓取魔弹 | 抓取 抓取弹 “归家”传送魔弹 归家 抓取魔弹
+TELEPORT_PROJECTILE_CLOSER | “归家”传送魔弹 | 抓取魔弹 | 抓取 抓取弹 “归家”传送魔弹 归家 抓取魔弹
 TELEPORT_PROJECTILE | 传送魔弹 | 传送魔弹 | 大tp TP 传送魔弹
 TELEPORT_PROJECTILE_SHORT | 小传送魔弹 | 小传送弹 | 小tp tp 小传送魔弹 小传送弹
 TELEPORT_PROJECTILE_STATIC | 返回 | 闪回 | 返回 闪回

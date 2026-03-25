@@ -9,6 +9,21 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 const iconCache = new Map<string, HTMLImageElement>();
 const loadingSet = new Set<string>();
 const failedSet = new Set<string>();
+const listenersMap = new Map<string, Set<() => void>>();
+
+function addListener(url: string, listener?: () => void) {
+  if (!listener) return;
+  const listeners = listenersMap.get(url) ?? new Set<() => void>();
+  listeners.add(listener);
+  listenersMap.set(url, listeners);
+}
+
+function flushListeners(url: string) {
+  const listeners = listenersMap.get(url);
+  if (!listeners) return;
+  listenersMap.delete(url);
+  listeners.forEach(listener => listener());
+}
 
 /**
  * Get a cached HTMLImageElement for the given icon path.
@@ -28,7 +43,9 @@ export function getCachedIcon(
   const cached = iconCache.get(url);
   if (cached) return cached;
 
-  if (failedSet.has(url) || loadingSet.has(url)) return null;
+  if (failedSet.has(url)) return null;
+  addListener(url, onLoad);
+  if (loadingSet.has(url)) return null;
 
   // Start loading
   loadingSet.add(url);
@@ -37,11 +54,12 @@ export function getCachedIcon(
   img.onload = () => {
     loadingSet.delete(url);
     iconCache.set(url, img);
-    onLoad?.();
+    flushListeners(url);
   };
   img.onerror = () => {
     loadingSet.delete(url);
     failedSet.add(url);
+    flushListeners(url);
   };
   img.src = url;
   return null;
@@ -74,11 +92,13 @@ export function preloadIcons(
     img.onload = () => {
       loadingSet.delete(url);
       iconCache.set(url, img);
+      flushListeners(url);
       done();
     };
     img.onerror = () => {
       loadingSet.delete(url);
       failedSet.add(url);
+      flushListeners(url);
       done();
     };
     img.src = url;

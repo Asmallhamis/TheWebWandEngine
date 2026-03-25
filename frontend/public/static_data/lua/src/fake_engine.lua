@@ -282,6 +282,11 @@ end
 ---@param options options
 function M.initialise_engine(text_formatter, options)
 	dofile("data/scripts/gun/gun.lua")
+	local _play_action = play_action
+	function play_action(action)
+		M.pending_source = "draw"
+		return _play_action(action)
+	end
 	local _create_shot = create_shot
 	function create_shot(...)
 		local uv = { _create_shot(...) }
@@ -377,12 +382,15 @@ function M.initialise_engine(text_formatter, options)
 			local new = function(...)
 				---@cast clone action
 				local old_node = M.cur_node
+				local source = M.pending_source or "action"
+				M.pending_source = nil
 				local recursion_val = select(1, ...)
 				local iteration_val = select(2, ...)
 				local new_node = { 
 					name = v.id, 
 					children = {}, 
 					index = clone.deck_index,
+					source = source,
 					iteration = iteration_val,
 					recursion = (type(recursion_val) == "number" and recursion_val > 0) and recursion_val or nil,
 				}
@@ -502,6 +510,7 @@ local function reset_wand(options, text_formatter, spells)
 	M.cur_shot_ref = nil
 	M.active_shots = {}
 	M.pending_trigger_type = nil
+	M.pending_source = nil
 
 	_clear_deck(false)
 	for _, v in ipairs(spells) do

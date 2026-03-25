@@ -1,6 +1,7 @@
 import { LuaFactory } from 'wasmoon';
+import wasmoonWasmUrl from 'wasmoon/dist/glue.wasm?url';
 
-const factory = new LuaFactory();
+const factory = new LuaFactory(wasmoonWasmUrl);
 let lua: any = null;
 let VFS_CACHE: Record<string, string> | null = null;
 

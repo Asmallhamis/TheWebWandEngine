@@ -14,6 +14,78 @@ _TRANSLATIONS = {}
 _MAPPING_CACHE = {}
 
 
+PINYIN_VARIANT_SUBSTITUTIONS = {
+    "zhuan": ["chuan"],
+    "chuan": ["zhuan"],
+}
+
+
+def _normalize_search_text(text):
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r"[“”\"'‘’`·•]", '', text)
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def _variants_for_compact_pinyin(text):
+    normalized = _normalize_search_text(text).replace(" ", "")
+    if not normalized:
+        return []
+
+    variants = {normalized}
+    queue = [normalized]
+
+    while queue:
+        current = queue.pop()
+        for src, replacements in PINYIN_VARIANT_SUBSTITUTIONS.items():
+            if src not in current:
+                continue
+            for repl in replacements:
+                candidate = current.replace(src, repl)
+                if candidate not in variants:
+                    variants.add(candidate)
+                    queue.append(candidate)
+
+    return sorted(variants)
+
+
+def build_search_pinyin_variants(syllables):
+    if not syllables:
+        return [], []
+
+    normalized = [_normalize_search_text(item).replace(" ", "") for item in syllables if item]
+    if not normalized:
+        return [], []
+
+    variants = {tuple(normalized)}
+    queue = [normalized]
+
+    while queue:
+        current = queue.pop()
+        for idx, syllable in enumerate(current):
+            for src, replacements in PINYIN_VARIANT_SUBSTITUTIONS.items():
+                if syllable != src:
+                    continue
+                for repl in replacements:
+                    candidate = list(current)
+                    candidate[idx] = repl
+                    key = tuple(candidate)
+                    if key not in variants:
+                        variants.add(key)
+                        queue.append(candidate)
+
+    pinyin_variants = []
+    initials = set()
+    for variant in variants:
+        pinyin_variants.append("".join(variant))
+        initials.add("".join(s[0] for s in variant if s))
+
+    return sorted(set(pinyin_variants)), sorted(initials)
+
+
 def init_spell_db(base_dir, extracted_data_root):
     global _BASE_DIR, _EXTRACTED_DATA_ROOT
     _BASE_DIR = base_dir
@@ -26,9 +98,25 @@ def get_pinyin_data(text):
     try:
         full = "".join([item[0] for item in pinyin(text, style=Style.NORMAL)])
         initials = "".join([item[0] for item in pinyin(text, style=Style.FIRST_LETTER)])
+        full = _normalize_search_text(full).replace(" ", "")
+        initials = _normalize_search_text(initials).replace(" ", "")
         return full.lower(), initials.lower()
     except Exception:
         return "", ""
+
+
+def get_pinyin_syllables(text):
+    if not HAS_PYPINYIN or not text:
+        return []
+    try:
+        syllables = [item[0] for item in pinyin(text, style=Style.NORMAL)]
+        return [_normalize_search_text(item).replace(" ", "") for item in syllables if item]
+    except Exception:
+        return []
+
+
+def split_aliases(text):
+    return [item for item in (text or "").split() if item]
 
 
 def load_translations():
@@ -201,19 +289,43 @@ def load_spell_database():
                         zh_name = trans[trans_key]["zh"] or raw_name
 
                 py_full, py_init = get_pinyin_data(zh_name)
+                py_syllables = get_pinyin_syllables(zh_name)
+                py_variants, py_init_variants = build_search_pinyin_variants(py_syllables)
 
                 aliases = ""
                 alias_py = ""
                 alias_init = ""
+                alias_py_variants = []
+                alias_init_variants = []
                 if spell_id in mapping:
                     m = mapping[spell_id]
                     if zh_name == raw_name or not zh_name:
                         zh_name = m["mod"] or m["official"] or zh_name
                         py_full, py_init = get_pinyin_data(zh_name)
+                        py_syllables = get_pinyin_syllables(zh_name)
+                        py_variants, py_init_variants = build_search_pinyin_variants(py_syllables)
 
                     aliases = m["aliases"]
                     if aliases:
-                        alias_py, alias_init = get_pinyin_data(aliases)
+                        alias_parts = split_aliases(aliases)
+                        alias_fulls = []
+                        alias_initials = []
+                        variant_pool = []
+                        initials_pool = []
+                        for alias in alias_parts:
+                            full, init = get_pinyin_data(alias)
+                            if full:
+                                alias_fulls.append(full)
+                            if init:
+                                alias_initials.append(init)
+                            alias_syllables = get_pinyin_syllables(alias)
+                            alias_variants, alias_init_variants = build_search_pinyin_variants(alias_syllables)
+                            variant_pool.extend(alias_variants)
+                            initials_pool.extend(alias_init_variants)
+                        alias_py = " ".join(alias_fulls)
+                        alias_init = " ".join(alias_initials)
+                        alias_py_variants = sorted(set(variant_pool))
+                        alias_init_variants = sorted(set(initials_pool))
 
                 type_str = type_match.group(1) if type_match else "ACTION_TYPE_PROJECTILE"
                 db[spell_id] = {
@@ -222,9 +334,13 @@ def load_spell_database():
                     "en_name": en_name,
                     "pinyin": py_full,
                     "pinyin_initials": py_init,
+                    "pinyin_variants": py_variants,
+                    "pinyin_initials_variants": py_init_variants,
                     "aliases": aliases,
                     "alias_pinyin": alias_py,
                     "alias_initials": alias_init,
+                    "alias_pinyin_variants": alias_py_variants,
+                    "alias_initials_variants": alias_init_variants,
                     "type": type_map.get(type_str, 0),
                     "max_uses": int(uses_match.group(1)) if uses_match else None,
                 }

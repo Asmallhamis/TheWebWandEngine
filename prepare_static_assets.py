@@ -11,14 +11,97 @@ NOITA_DATA_PATH = os.environ.get("NOITA_DATA_PATH", r"./noitadata")
 FRONTEND_PUBLIC = Path("frontend/public/static_data")
 WAND_EVAL_SRC = Path("wand_eval_tree")
 
+PINYIN_VARIANT_SUBSTITUTIONS = {
+    "zhuan": ["chuan"],
+    "chuan": ["zhuan"],
+}
+
+
+def normalize_search_text(text):
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r"[“”\"'‘’`·•]", '', text)
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def variants_for_compact_pinyin(text):
+    normalized = normalize_search_text(text).replace(" ", "")
+    if not normalized:
+        return []
+
+    variants = {normalized}
+    queue = [normalized]
+
+    while queue:
+        current = queue.pop()
+        for src, replacements in PINYIN_VARIANT_SUBSTITUTIONS.items():
+            if src not in current:
+                continue
+            for repl in replacements:
+                candidate = current.replace(src, repl)
+                if candidate not in variants:
+                    variants.add(candidate)
+                    queue.append(candidate)
+
+    return sorted(variants)
+
+
+def build_search_pinyin_variants(syllables):
+    if not syllables:
+        return [], []
+
+    normalized = [normalize_search_text(item).replace(" ", "") for item in syllables if item]
+    if not normalized:
+        return [], []
+
+    variants = {tuple(normalized)}
+    queue = [normalized]
+
+    while queue:
+        current = queue.pop()
+        for idx, syllable in enumerate(current):
+            for src, replacements in PINYIN_VARIANT_SUBSTITUTIONS.items():
+                if syllable != src:
+                    continue
+                for repl in replacements:
+                    candidate = list(current)
+                    candidate[idx] = repl
+                    key = tuple(candidate)
+                    if key not in variants:
+                        variants.add(key)
+                        queue.append(candidate)
+
+    pinyin_variants = []
+    initials = set()
+    for variant in variants:
+        pinyin_variants.append("".join(variant))
+        initials.add("".join(s[0] for s in variant if s))
+
+    return sorted(set(pinyin_variants)), sorted(initials)
+
 def get_pinyin(text):
     try:
         from pypinyin import pinyin, Style
         full = "".join([item[0] for item in pinyin(text, style=Style.NORMAL)])
         initials = "".join([item[0] for item in pinyin(text, style=Style.FIRST_LETTER)])
-        return full.lower(), initials.lower()
+        return normalize_search_text(full).replace(" ", ""), normalize_search_text(initials).replace(" ", "")
     except ImportError:
         return "", ""
+
+def get_pinyin_syllables(text):
+    try:
+        from pypinyin import pinyin, Style
+        syllables = [item[0] for item in pinyin(text, style=Style.NORMAL)]
+        return [normalize_search_text(item).replace(" ", "") for item in syllables if item]
+    except ImportError:
+        return []
+
+
+def split_aliases(text):
+    return [item for item in (text or "").split() if item]
 
 def load_translations(data_path):
     trans = {}
@@ -137,6 +220,8 @@ def prepare_assets():
                     zh_name = trans[tk]["zh"] or raw_name
             
             py_full, py_init = get_pinyin(zh_name)
+            py_syllables = get_pinyin_syllables(zh_name)
+            py_variants, py_init_variants = build_search_pinyin_variants(py_syllables)
             
             # Merge from mapping
             aliases_list = []
@@ -146,6 +231,8 @@ def prepare_assets():
                 if zh_name == raw_name or not zh_name:
                     zh_name = m["mod"] or m["official"] or zh_name
                     py_full, py_init = get_pinyin(zh_name)
+                    py_syllables = get_pinyin_syllables(zh_name)
+                    py_variants, py_init_variants = build_search_pinyin_variants(py_syllables)
                 
                 # Add "汉化mod" to aliases if it's different from the display name
                 if m["mod"] and m["mod"] != zh_name:
@@ -161,8 +248,28 @@ def prepare_assets():
             aliases = " ".join(aliases_list)
             alias_py = ""
             alias_init = ""
+            alias_py_variants = []
+            alias_init_variants = []
             if aliases:
-                alias_py, alias_init = get_pinyin(aliases)
+                alias_parts = split_aliases(aliases)
+                alias_fulls = []
+                alias_initials = []
+                variant_pool = []
+                initials_pool = []
+                for alias in alias_parts:
+                    full, init = get_pinyin(alias)
+                    if full:
+                        alias_fulls.append(full)
+                    if init:
+                        alias_initials.append(init)
+                    alias_syllables = get_pinyin_syllables(alias)
+                    alias_variants, alias_init_variants = build_search_pinyin_variants(alias_syllables)
+                    variant_pool.extend(alias_variants)
+                    initials_pool.extend(alias_init_variants)
+                alias_py = " ".join(alias_fulls)
+                alias_init = " ".join(alias_initials)
+                alias_py_variants = sorted(set(variant_pool))
+                alias_init_variants = sorted(set(initials_pool))
 
             icon_path = sprite_match.group(1).lstrip("/")
             src_icon = Path(NOITA_DATA_PATH) / icon_path
@@ -179,9 +286,13 @@ def prepare_assets():
                 "en_name": en_name,
                 "pinyin": py_full,
                 "pinyin_initials": py_init,
+                "pinyin_variants": py_variants,
+                "pinyin_initials_variants": py_init_variants,
                 "aliases": aliases,
                 "alias_pinyin": alias_py,
                 "alias_initials": alias_init,
+                "alias_pinyin_variants": alias_py_variants,
+                "alias_initials_variants": alias_init_variants,
                 "type": TYPE_MAP.get(type_str, 0),
                 "max_uses": int(uses_match.group(1)) if uses_match else None
             }

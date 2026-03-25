@@ -5,9 +5,13 @@ export interface SpellInfo {
   en_name?: string;
   pinyin?: string;
   pinyin_initials?: string;
+  pinyin_variants?: string[];
+  pinyin_initials_variants?: string[];
   aliases?: string;
   alias_pinyin?: string;
   alias_initials?: string;
+  alias_pinyin_variants?: string[];
+  alias_initials_variants?: string[];
   type: number;
   max_uses?: number;
   icon_base64?: string;
@@ -159,6 +163,7 @@ export interface EvalNode {
   index: number[];
   shot_id?: number;
   iteration?: number;
+  source?: 'action' | 'draw';
   recursion?: number;
   children: EvalNode[];
 }

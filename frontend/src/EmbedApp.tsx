@@ -64,7 +64,9 @@ const DEFAULT_EMBED_SETTINGS: AppSettings = {
   showSpellId: false,
   defaultCanvasCellsPerRow: 26,
   maxCanvasCellsPerRow: 100,
-  enableCanvasEditorLock: false
+  enableCanvasEditorLock: false,
+  pickerFirstSpaceBehavior: 'ignore',
+  moveExistingWandToTopOnDuplicatePaste: false
 };
 
 function parseWandFromText(text: string, spellNameToId: Record<string, string>): WandData | null {

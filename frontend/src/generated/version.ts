@@ -7,7 +7,7 @@ export interface AppVersionInfo {
 
 export const APP_VERSION_INFO: AppVersionInfo = {
   name: 'TheWebWandEngine',
-  version: '2026-03-23.1',
-  label: 'TheWebWandEngine • 2026-03-23.1',
-  generatedAt: '2026-03-23 00:30:56',
+  version: '2026-03-25.8',
+  label: 'TheWebWandEngine • 2026-03-25.8',
+  generatedAt: '2026-03-25 18:13:23',
 };
