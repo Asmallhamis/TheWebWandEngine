@@ -154,6 +154,9 @@ export interface AppSettings {
   enableCanvasEditorLock: boolean;
   pickerFirstSpaceBehavior: 'ignore' | 'insert_at_current_hover' | 'insert_at_open_anchor';
   moveExistingWandToTopOnDuplicatePaste: boolean;
+  coolUIMode: boolean;
+  coolUITheme: string;
+  coolUIBackground: string;
 }
 
 export interface EvalNode {

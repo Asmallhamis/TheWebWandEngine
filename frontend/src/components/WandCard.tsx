@@ -5,6 +5,7 @@ import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
 import { getIconUrl, getWandSpriteUrl } from '../lib/evaluatorAdapter';
+import { TiltContainer } from './TiltContainer';
 import { Library } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -128,10 +129,15 @@ export function WandCard({
               const displayName = i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name;
 
               return (
-                <div key={idx} className="relative shrink-0">
+                <TiltContainer 
+                  key={idx} 
+                  className="relative shrink-0"
+                  maxAngle={15}
+                  scale={1.2}
+                >
                   <img
                     src={getIconUrl(spell.icon, isConnected)}
-                    className={`w-7 h-7 image-pixelated border rounded bg-black/20 transition-all ${isMarked ? 'border-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110 z-10' : 'border-white/10'} ${isGrayscale ? 'grayscale opacity-50' : ''}`}
+                    className={`w-7 h-7 image-pixelated border rounded transition-all ${isMarked ? 'border-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110 z-10' : 'bg-black/20 border-white/10'} ${isGrayscale ? 'grayscale opacity-50' : ''}`}
                     alt={displayName}
                     title={`${idx}: ${displayName}${uses !== undefined ? ` (${t('evaluator.cast_stats')} x${uses})` : ''}`}
                   />
@@ -147,7 +153,7 @@ export function WandCard({
                       {uses}
                     </div>
                   )}
-                </div>
+                </TiltContainer>
               );
             })}
           {Object.keys(data.spells || {}).length === 0 && (
@@ -258,9 +264,9 @@ export function WandCard({
           {evalData && evalData.data && (
             <div className={`px-4 pb-4 transition-opacity duration-300 ${evalData.loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
               {evalData.loading && (
-                <div className="flex items-center gap-2 mb-2 text-amber-500 animate-pulse">
-                  <Activity size={12} />
-                  <span className="text-[10px] font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
+                <div className="eval-loading-state flex items-center gap-2 mb-2 text-amber-500 animate-pulse">
+                  <Activity size={12} className="eval-loading-icon" />
+                  <span className="eval-loading-text text-[10px] font-black uppercase tracking-widest italic">{t('evaluator.analyzing')}</span>
                 </div>
               )}
               <WandEvaluator

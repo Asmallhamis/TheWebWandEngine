@@ -4,6 +4,7 @@ import { SpellInfo, WandData, AppSettings } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { useUIStore } from '../store/useUIStore';
+import { TiltContainer } from './TiltContainer';
 
 interface SpellCellProps {
   i: number;
@@ -56,7 +57,10 @@ const SpellCellComponent = ({
       onMouseMove={(e) => !isLocked && handleSlotMouseMove(e, slot, i + 1)}
       onMouseLeave={handleSlotMouseLeave}
     >
-      <div
+      <TiltContainer
+        isDragging={!!dragSource}
+        maxAngle={15}
+        scale={1.1}
         onMouseDown={(e) => {
           if (!isLocked) {
             if (e.ctrlKey && e.button === 1 && sid) {
@@ -302,7 +306,7 @@ const SpellCellComponent = ({
             {absoluteToOrdinal[i + 1]}
           </div>
         )}
-      </div>
+      </TiltContainer>
     </div>
   );
 };

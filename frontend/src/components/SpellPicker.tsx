@@ -218,7 +218,7 @@ export function SpellPicker({
               }
 
               // 空格和回车选词
-              if (e.key === 'Enter' || (e.key === ' ' && pickerSearch !== '')) {
+              if (e.key === 'Enter' || (e.key === ' ' && (pickerSearch !== '' || hasNavigatedSelection))) {
                 if (pickerSearch === '' && flatSpells.length === 0) {
                   handlePickSpell(null, true);
                 } else if (flatSpells[selectedIndex]) {

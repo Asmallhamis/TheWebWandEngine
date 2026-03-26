@@ -68,7 +68,10 @@ export const useSettings = () => {
       maxCanvasCellsPerRow: 100,
       enableCanvasEditorLock: false,
       pickerFirstSpaceBehavior: 'ignore',
-      moveExistingWandToTopOnDuplicatePaste: false
+      moveExistingWandToTopOnDuplicatePaste: false,
+      coolUIMode: false,
+      coolUITheme: 'gentleisland',
+      coolUIBackground: 'aurora'
     };
     if (saved) {
       try {

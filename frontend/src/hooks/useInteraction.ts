@@ -295,10 +295,16 @@ export const useInteraction = (params: {
       startIdx = Math.min(...stateSelection.indices.filter(i => i > 0));
     }
 
-    if (!targetWandSlot || startIdx === null || startIdx <= 0) return;
+    if (!targetWandSlot) {
+      return;
+    }
 
     const wand = activeTab.wands[targetWandSlot];
     if (!wand) return;
+
+    if (startIdx === null || startIdx <= 0) {
+      startIdx = Math.max(1, wand.deck_capacity + 1);
+    }
 
     const existingSpells: (string | null)[] = [];
     const maxIdx = Math.max(wand.deck_capacity, ...Object.keys(wand.spells).map(Number));
@@ -315,9 +321,9 @@ export const useInteraction = (params: {
       if (sid) finalSpellsObj[(i + 1).toString()] = sid;
     });
 
-    let newCapacity = wand.deck_capacity;
+    let newCapacity = Math.max(wand.deck_capacity + 1, startIdx);
     const lastSpellIdx = combined.reduce((acc, val, idx) => val !== null ? idx + 1 : acc, 0);
-    if (lastSpellIdx > wand.deck_capacity) {
+    if (lastSpellIdx > newCapacity) {
       newCapacity = lastSpellIdx;
     }
 

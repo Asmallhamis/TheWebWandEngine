@@ -1,0 +1,253 @@
+/* =========================================
+   EXCLUSIVE THEME: PURE PRISM (净世玄棱)
+   ========================================= */
+
+/* 1. Base Variables overrides for extreme crystal clarity */
+.theme-cool-ui[data-theme="pureprism"] {
+  --cool-primary: #a5f3fc; /* Cyan-200 */
+  --cool-secondary: #e0f2fe; /* Sky-100 */
+  --cool-bg-rgb: 5, 15, 25; /* Deep dark void to contrast with extreme glass */
+  --cool-panel-bg: rgba(255, 255, 255, 0.03) !important;
+  --cool-text-primary: #ffffff !important;
+  --cool-glow: 0 0 25px rgba(165, 243, 252, 0.5) !important;
+  --cool-glass-blur: blur(24px) !important; /* Extreme refraction blur */
+  --cool-glass-border: transparent !important;
+}
+
+/* 2. Crystal Bevels & Internal Refraction for Panels */
+.theme-cool-ui[data-theme="pureprism"] .glass-card,
+.theme-cool-ui[data-theme="pureprism"] .bg-zinc-800\/80,
+.theme-cool-ui[data-theme="pureprism"] .bg-black\/20,
+.theme-cool-ui[data-theme="pureprism"] .bg-zinc-900\/40,
+.theme-cool-ui[data-theme="pureprism"] .glass-panel {
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%) !important;
+  box-shadow: 
+    inset 0 0 15px rgba(255,255,255,0.02),
+    0 15px 35px rgba(0,0,0,0.6) !important;
+  border-top: 1px solid rgba(255,255,255,0.5) !important;
+  border-left: 1px solid rgba(255,255,255,0.25) !important;
+  border-right: 1px solid rgba(255,255,255,0.02) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+/* 3. Interactive Geometric Prism Shard (锐角物理色散) */
+.theme-cool-ui[data-theme="pureprism"] .group\/state::after,
+.theme-cool-ui[data-theme="pureprism"] .group\/cell::after,
+.theme-cool-ui[data-theme="pureprism"] .group\/treeh::after,
+.theme-cool-ui[data-theme="pureprism"] .neo-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+  z-index: 10;
+  
+  /* Premium Thin Crystal Shards (高级锐角晶体色散) */
+  background: 
+    /* Primary sharp light cone */
+    conic-gradient(
+      from calc(var(--mouse-y) * 20deg - var(--mouse-x) * 20deg + 130deg) 
+      at calc(50% - var(--mouse-x) * 40%) calc(50% - var(--mouse-y) * 40%),
+      transparent 0deg,
+      transparent 42.5deg,
+      rgba(0, 255, 255, 0.3) 43.5deg,
+      rgba(255, 255, 255, 0.8) 45deg,
+      rgba(255, 0, 255, 0.3) 46.5deg,
+      transparent 47.5deg,
+      transparent 360deg
+    ),
+    /* Secondary intersecting highlight */
+    conic-gradient(
+      from calc(var(--mouse-y) * 40deg - var(--mouse-x) * 40deg - 50deg) 
+      at calc(50% + var(--mouse-x) * 60%) calc(50% + var(--mouse-y) * 60%),
+      transparent 0deg,
+      transparent 20deg,
+      rgba(255, 255, 255, 0.0) 22deg,
+      rgba(255, 255, 255, 0.4) 25deg,
+      rgba(255, 255, 255, 0.0) 28deg,
+      transparent 30deg,
+      transparent 360deg
+    );
+}
+
+.theme-cool-ui[data-theme="pureprism"] .group\/state:hover::after,
+.theme-cool-ui[data-theme="pureprism"] .group\/cell:hover::after,
+.theme-cool-ui[data-theme="pureprism"] .group\/treeh:hover::after,
+.theme-cool-ui[data-theme="pureprism"] .neo-button:hover::after {
+  opacity: 1;
+  /* Crystal facet slice mask to create a true fragmented refraction look */
+  -webkit-mask-image: linear-gradient(
+    calc(var(--mouse-x) * 60deg + 45deg),
+    #000 0%,
+    #000 45%,
+    transparent 46%,
+    transparent 48%,
+    #000 49%,
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    calc(var(--mouse-x) * 60deg + 45deg),
+    #000 0%,
+    #000 45%,
+    transparent 46%,
+    transparent 48%,
+    #000 49%,
+    #000 100%
+  );
+}
+
+/* 4. Diamond Sharp Text Shadows (Without locking color) */
+.theme-cool-ui[data-theme="pureprism"] .text-indigo-400,
+.theme-cool-ui[data-theme="pureprism"] .text-indigo-500,
+.theme-cool-ui[data-theme="pureprism"] .text-cyan-400,
+.theme-cool-ui[data-theme="pureprism"] .text-emerald-400,
+.theme-cool-ui[data-theme="pureprism"] .text-zinc-500,
+.theme-cool-ui[data-theme="pureprism"] .text-amber-300,
+.theme-cool-ui[data-theme="pureprism"] .text-amber-400 {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 1px 1px 1px rgba(0, 255, 255, 0.2) !important;
+}
+
+/* 5. Optical Ripple Active State (Simulated clicking distortion) */
+.theme-cool-ui[data-theme="pureprism"] .neo-button:active,
+.theme-cool-ui[data-theme="pureprism"] .group\/cell:active,
+.theme-cool-ui[data-theme="pureprism"] .group\/state:active {
+  transform: scale(0.96);
+  box-shadow: 
+    inset 0 0 30px rgba(165, 243, 252, 0.4),
+    0 0 20px rgba(165, 243, 252, 0.2) !important;
+  border-color: rgba(165, 243, 252, 0.8) !important;
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Chromatic Aberration for Rare items (Example class: .chromatic-rare) */
+.theme-cool-ui[data-theme="pureprism"] .chromatic-rare {
+  text-shadow: 
+    2px 0 0 rgba(255, 0, 0, 0.7), 
+    -2px 0 0 rgba(0, 255, 255, 0.7) !important;
+}
+
+/* 6. Crystal Resonance Scan (Analyzing Wand Effect) */
+.theme-cool-ui[data-theme="pureprism"] .eval-loading-state {
+  animation: none !important; /* Suspend default amber pulse */
+  color: #a5f3fc !important; /* Cyber-cyan base */
+  text-shadow: 0 0 10px rgba(165, 243, 252, 0.4);
+}
+
+.theme-cool-ui[data-theme="pureprism"] .eval-loading-icon {
+  color: #ffffff;
+  animation: prism-analyze-spin 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  filter: drop-shadow(0 0 8px #00ffff) drop-shadow(0 0 2px #ffffff);
+}
+
+.theme-cool-ui[data-theme="pureprism"] .eval-loading-text {
+  position: relative;
+  display: inline-block;
+  color: transparent !important;
+  background: linear-gradient(
+    90deg,
+    rgba(165, 243, 252, 0.5) 0%,
+    rgba(165, 243, 252, 0.5) 40%,
+    rgba(255, 255, 255, 1) 48%,
+    rgba(255, 0, 255, 0.9) 50%,
+    rgba(0, 255, 255, 1) 52%,
+    rgba(165, 243, 252, 0.5) 60%,
+    rgba(165, 243, 252, 0.5) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: prism-scan-text 1.5s linear infinite;
+}
+
+@keyframes prism-analyze-spin {
+  0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 8px #00ffff) hue-rotate(0deg); }
+  25% { transform: rotate(90deg) scale(1.3); filter: drop-shadow(0 0 12px #ff00ff) hue-rotate(90deg); }
+  50% { transform: rotate(180deg) scale(0.9); filter: drop-shadow(0 0 8px #00ffff) hue-rotate(180deg); }
+  75% { transform: rotate(270deg) scale(1.3); filter: drop-shadow(0 0 12px #ff00ff) hue-rotate(270deg); }
+  100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 8px #00ffff) hue-rotate(360deg); }
+}
+
+@keyframes prism-scan-text {
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
+}
+
+/* =========================================
+   WOW FACTORS (Ultimate Premium Tweaks)
+   ========================================= */
+
+/* 7. Acrylic Specimen Box (Wand Container) */
+.theme-cool-ui[data-theme="pureprism"] .w-12.h-10.rounded.bg-zinc-800 {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.5) 100%) !important;
+  border-top: 1px solid rgba(255,255,255,0.6) !important;
+  border-left: 1px solid rgba(255,255,255,0.3) !important;
+  border-right: 1px solid rgba(0,0,0,0.8) !important;
+  border-bottom: 2px solid rgba(165,243,252,0.4) !important; /* Thick cyan icy base */
+  box-shadow: 
+    inset 0 0 10px rgba(0,0,0,0.8),
+    inset 0 -10px 10px -5px rgba(255,255,255,0.2),
+    0 10px 15px -3px rgba(0,0,0,0.8) !important;
+  border-radius: 8px !important;
+}
+
+/* 8. Laser-Cut Separators */
+.theme-cool-ui[data-theme="pureprism"] .border-l.border-white\/5,
+.theme-cool-ui[data-theme="pureprism"] .border-r.border-white\/5 {
+  border-color: transparent !important;
+  position: relative;
+}
+.theme-cool-ui[data-theme="pureprism"] .border-l.border-white\/5::before,
+.theme-cool-ui[data-theme="pureprism"] .border-r.border-white\/5::after {
+  content: '';
+  position: absolute;
+  top: 10%; bottom: 10%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(165, 243, 252, 0.6) 50%, transparent 100%);
+}
+.theme-cool-ui[data-theme="pureprism"] .border-l.border-white\/5::before { left: -1px; }
+.theme-cool-ui[data-theme="pureprism"] .border-r.border-white\/5::after { right: -1px; }
+
+/* 9. Holographic Spell Picker */
+.theme-cool-ui[data-theme="pureprism"] [data-testid="spell-picker"] {
+  backdrop-filter: blur(40px) !important;
+  background: linear-gradient(180deg, rgba(0, 15, 25, 0.4) 0%, rgba(0, 0, 0, 0.8) 100%) !important;
+  border: 1px solid rgba(165, 243, 252, 0.2) !important;
+  border-top-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 
+    0 0 40px rgba(0, 255, 255, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.02) !important;
+}
+.theme-cool-ui[data-theme="pureprism"] [data-testid="spell-picker"] > div:first-child {
+  background: linear-gradient(90deg, rgba(165, 243, 252, 0.1) 0%, transparent 100%) !important;
+  border-bottom: 1px solid rgba(165, 243, 252, 0.2) !important;
+}
+
+/* 10. Selected Spell "Crystal Overload" */
+.theme-cool-ui[data-theme="pureprism"] .ring-indigo-500 {
+  /* Override the generic indigo ring with an intense cyan/white crystal overload */
+  --tw-ring-color: rgba(165, 243, 252, 0.8) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255,255,255,0.5) !important;
+  box-shadow: 
+    0 0 15px rgba(165, 243, 252, 0.4),
+    inset 0 0 20px rgba(255, 255, 255, 0.2) !important;
+  animation: crystal-overload-pulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+@keyframes crystal-overload-pulse {
+  0% { box-shadow: 0 0 10px rgba(165, 243, 252, 0.2), inset 0 0 10px rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.3); }
+  100% { box-shadow: 0 0 30px rgba(165, 243, 252, 0.6), inset 0 0 30px rgba(255,255,255,0.3); border-color: #ffffff; }
+}
+
+/* 11. Ultimate Data Readability (Fixing faint evaluator labels) */
+.theme-cool-ui[data-theme="pureprism"] .text-zinc-400,
+.theme-cool-ui[data-theme="pureprism"] .text-zinc-500,
+.theme-cool-ui[data-theme="pureprism"] .text-\[8px\].text-zinc-400 {
+  color: rgba(255, 255, 255, 0.95) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-shadow: 0 0 8px rgba(165, 243, 252, 0.5), 0 1px 2px rgba(0,0,0,0.8) !important;
+}

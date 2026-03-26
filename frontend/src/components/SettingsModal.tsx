@@ -475,6 +475,73 @@ export function SettingsModal({
             {/* APPEARANCE */}
             {(searchQuery || activeCategory === 'appearance') && (
               <div className="space-y-6">
+                {/* COOL UI SETTINGS */}
+                {isMatch(t('settings.cool_ui_mode')) && (
+                  <div className="space-y-4 bg-purple-500/10 p-4 rounded-xl border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] relative overflow-hidden transition-all duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent mix-blend-overlay pointer-events-none" />
+                    
+                    <div className="flex justify-between items-center relative z-10">
+                      <div className="pr-4">
+                        <div className="text-[13px] font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]">
+                          {t('settings.cool_ui_mode')}
+                        </div>
+                        <div className="text-[10px] text-purple-200/70 mt-1">{t('settings.cool_ui_mode_desc')}</div>
+                      </div>
+                      <button
+                        onClick={() => setSettings(s => ({ ...s, coolUIMode: !s.coolUIMode }))}
+                        className={`shrink-0 w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner ${settings.coolUIMode ? 'bg-gradient-to-r from-purple-600 to-pink-600 shadow-[0_0_10px_rgba(236,72,153,0.5)]' : 'bg-black/50 border border-white/10'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-md ${settings.coolUIMode ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    {settings.coolUIMode && (
+                      <div className="pt-4 border-t border-purple-500/20 space-y-4 relative z-10 animate-fade-in">
+                        {/* Theme Selection */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_theme')}</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {Object.entries(t('settings.cool_ui_themes', { returnObjects: true }) as Record<string, string>).map(([key, name]) => (
+                               <button
+                                 key={key}
+                                 onClick={() => setSettings(s => ({ ...s, coolUITheme: key }))}
+                                 className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all border text-left flex justify-between items-center ${
+                                   settings.coolUITheme === key 
+                                   ? 'bg-purple-500/20 border-purple-400 text-purple-100 shadow-[0_0_8px_rgba(192,132,252,0.4)]' 
+                                   : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'
+                                 }`}
+                               >
+                                 <span className="truncate">{name}</span>
+                                 {settings.coolUITheme === key && <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_5px_#c084fc] shrink-0" />}
+                               </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Background Selection */}
+                        <div className="space-y-2 pt-2">
+                          <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_background')}</label>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(t('settings.cool_ui_backgrounds', { returnObjects: true }) as Record<string, string>).map(([key, name]) => (
+                              <button
+                                key={key}
+                                onClick={() => setSettings(s => ({ ...s, coolUIBackground: key }))}
+                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-all border ${
+                                  settings.coolUIBackground === key 
+                                  ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-purple-400/50 text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.3)]' 
+                                  : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {isMatch(t('settings.common_limit')) && (
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.common_limit')}</label>

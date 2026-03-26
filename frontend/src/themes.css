@@ -1,0 +1,248 @@
+@import url('./themes/pureprism.css');
+
+/* src/themes.css - 18 Themes for Cool UI Mode */
+
+.theme-cool-ui {
+  /* Default glassmorphism & cool effects base */
+  --cool-glass-blur: blur(12px);
+  --cool-glass-bg: rgba(var(--cool-bg-rgb), 0.2);
+  --cool-glass-border: rgba(255, 255, 255, 0.1);
+  --cool-glow-radius: 10px;
+  --cool-card-radius: 12px;
+  transition: background-color 0.5s ease;
+}
+
+/* 1. Orion Karma Fire (猎户业火) */
+.theme-cool-ui[data-theme="orionfire"] {
+  --cool-primary: #ff4500;
+  --cool-secondary: #ff8c00;
+  --cool-bg-rgb: 20, 5, 0;
+  --cool-panel-bg: rgba(20, 5, 0, 0.65);
+  --cool-text-primary: #fff5ee;
+  --cool-glow: 0 0 15px rgba(255, 69, 0, 0.6);
+}
+
+
+
+/* 3. Firmament Daybreak (苍穹破晓) */
+.theme-cool-ui[data-theme="horizondawn"] {
+  --cool-primary: #3b82f6;
+  --cool-secondary: #f59e0b;
+  --cool-bg-rgb: 15, 23, 42;
+  --cool-panel-bg: rgba(15, 23, 42, 0.5);
+  --cool-text-primary: #f8fafc;
+  --cool-glow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+/* 4. Gilded Divine Radiance (鎏金神曜) */
+.theme-cool-ui[data-theme="goldenglow"] {
+  --cool-primary: #ffd700;
+  --cool-secondary: #ffb300;
+  --cool-bg-rgb: 25, 20, 0;
+  --cool-panel-bg: rgba(30, 25, 0, 0.6);
+  --cool-text-primary: #fffbeb;
+  --cool-glow: 0 0 18px rgba(255, 215, 0, 0.6);
+}
+
+/* 5. Mirage Flowing Light (幻镜流光) */
+.theme-cool-ui[data-theme="mirrorlight"] {
+  --cool-primary: #c0c0c0;
+  --cool-secondary: #f8f8ff;
+  --cool-bg-rgb: 20, 20, 25;
+  --cool-panel-bg: rgba(200, 200, 255, 0.1);
+  --cool-text-primary: #f1f5f9;
+  --cool-glow: 0 0 15px rgba(192, 192, 192, 0.5);
+}
+
+/* 6. Gentle Waves Tranquil Islet (温澜谧屿) */
+.theme-cool-ui[data-theme="gentleisland"] {
+  --cool-primary: #0ea5e9;
+  --cool-secondary: #38bdf8;
+  --cool-bg-rgb: 5, 25, 35;
+  --cool-panel-bg: rgba(5, 25, 35, 0.5);
+  --cool-text-primary: #e0f2fe;
+  --cool-glow: 0 0 15px rgba(14, 165, 233, 0.5);
+}
+
+/* 7. Vast Sea Abyss Reef (沧海渊礁) */
+.theme-cool-ui[data-theme="oceanreef"] {
+  --cool-primary: #0f766e;
+  --cool-secondary: #0369a1;
+  --cool-bg-rgb: 2, 15, 20;
+  --cool-panel-bg: rgba(2, 15, 20, 0.7);
+  --cool-text-primary: #ccfbf1;
+  --cool-glow: 0 0 15px rgba(15, 118, 110, 0.5);
+}
+
+/* 8. Shadow Mist Whisper (影岚低语) */
+.theme-cool-ui[data-theme="whisperwind"] {
+  --cool-primary: #8b5cf6;
+  --cool-secondary: #c084fc;
+  --cool-bg-rgb: 20, 10, 30;
+  --cool-panel-bg: rgba(20, 10, 30, 0.6);
+  --cool-text-primary: #f3e8ff;
+  --cool-glow: 0 0 15px rgba(139, 92, 246, 0.5);
+}
+
+/* 9. Night Rain Elegy (夜雨挽歌) */
+.theme-cool-ui[data-theme="rainsong"] {
+  --cool-primary: #3b82f6;
+  --cool-secondary: #64748b;
+  --cool-bg-rgb: 10, 15, 25;
+  --cool-panel-bg: rgba(10, 15, 25, 0.6);
+  --cool-text-primary: #e2e8f0;
+  --cool-glow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* 10. Ashes Extinction Flame Song (烬灭炎歌) */
+.theme-cool-ui[data-theme="flamesong"] {
+  --cool-primary: #dc2626;
+  --cool-secondary: #ef4444;
+  --cool-bg-rgb: 30, 0, 0;
+  --cool-panel-bg: rgba(30, 0, 0, 0.7);
+  --cool-text-primary: #fef2f2;
+  --cool-glow: 0 0 20px rgba(220, 38, 38, 0.6);
+}
+
+/* 11. Monolith Calamity Flower (磐岩劫华) */
+.theme-cool-ui[data-theme="stonebloom"] {
+  --cool-primary: #a8a29e;
+  --cool-secondary: #d4af37;
+  --cool-bg-rgb: 25, 25, 25;
+  --cool-panel-bg: rgba(25, 25, 25, 0.7);
+  --cool-text-primary: #f5f5f4;
+  --cool-glow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+/* 12. Greedy Wolf Skimming Shadow (贪狼掠影) */
+.theme-cool-ui[data-theme="wolfstride"] {
+  --cool-primary: #0d9488;
+  --cool-secondary: #14b8a6;
+  --cool-bg-rgb: 5, 20, 20;
+  --cool-panel-bg: rgba(5, 20, 20, 0.7);
+  --cool-text-primary: #ccfbf1;
+  --cool-glow: 0 0 15px rgba(13, 148, 136, 0.5);
+}
+
+/* 13. Disaster Dark Fang (灾厄暗獠) */
+.theme-cool-ui[data-theme="blacktooth"] {
+  --cool-primary: #991b1b;
+  --cool-secondary: #7f1d1d;
+  --cool-bg-rgb: 5, 0, 0;
+  --cool-panel-bg: rgba(5, 0, 0, 0.85);
+  --cool-text-primary: #fecaca;
+  --cool-glow: 0 0 15px rgba(153, 27, 27, 0.6);
+}
+
+/* 14. Shadow-Devouring Edgeless (噬影无锋) */
+.theme-cool-ui[data-theme="toothless"] {
+  --cool-primary: #404040;
+  --cool-secondary: #171717;
+  --cool-bg-rgb: 0, 0, 0;
+  --cool-panel-bg: rgba(10, 10, 10, 0.9);
+  --cool-text-primary: #a3a3a3;
+  --cool-glow: 0 0 8px rgba(64, 64, 64, 0.4);
+}
+
+/* 15. Giant God Star Casting (巨神星铸) */
+.theme-cool-ui[data-theme="titanforge"] {
+  --cool-primary: #b45309;
+  --cool-secondary: #7e22ce;
+  --cool-bg-rgb: 15, 5, 20;
+  --cool-panel-bg: rgba(15, 5, 20, 0.7);
+  --cool-text-primary: #fef3c7;
+  --cool-glow: 0 0 18px rgba(180, 83, 9, 0.5);
+}
+
+/* 16. Severed Radiance (帝殒秋芒) */
+.theme-cool-ui[data-theme="kingfall"] {
+  --cool-primary: #ea580c;
+  --cool-secondary: #6b21a8;
+  --cool-bg-rgb: 25, 10, 15;
+  --cool-panel-bg: rgba(25, 10, 15, 0.7);
+  --cool-text-primary: #ffedd5;
+  --cool-glow: 0 0 15px rgba(234, 88, 12, 0.5);
+}
+
+/* 17. Dazzling Gold Divine Mane (耀金神鬣) */
+.theme-cool-ui[data-theme="goldmane"] {
+  --cool-primary: #facc15;
+  --cool-secondary: #fef08a;
+  --cool-bg-rgb: 25, 20, 0;
+  --cool-panel-bg: rgba(30, 25, 0, 0.6);
+  --cool-text-primary: #ffffff;
+  --cool-glow: 0 0 25px rgba(250, 204, 21, 0.7);
+}
+
+/* 18. Chaos Sequence (混沌序列) */
+.theme-cool-ui[data-theme="jfdksal98a"] {
+  --cool-primary: #10b981;
+  --cool-secondary: #059669;
+  --cool-bg-rgb: 0, 15, 5;
+  --cool-panel-bg: rgba(0, 15, 5, 0.7);
+  --cool-text-primary: #34d399;
+  --cool-glow: 0 0 15px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes aurora-breathe {
+  0% { transform: scale(1) translateY(0); opacity: 0.3; }
+  100% { transform: scale(1.1) translateY(10vh); opacity: 0.6; }
+}
+
+@keyframes neon-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+
+/* Theme Overrides for Tailwind Utility Classes */
+.theme-cool-ui .glass-card,
+.theme-cool-ui .bg-black\/20,
+.theme-cool-ui .bg-black\/40,
+.theme-cool-ui .bg-zinc-900\/40,
+.theme-cool-ui .bg-zinc-900\/20,
+.theme-cool-ui .bg-black\/30,
+.theme-cool-ui .bg-zinc-800 {
+  background: var(--cool-panel-bg) !important;
+  backdrop-filter: var(--cool-glass-blur) !important;
+  border-color: var(--cool-glass-border) !important;
+}
+
+.theme-cool-ui .text-indigo-400,
+.theme-cool-ui .text-indigo-500,
+.theme-cool-ui .text-zinc-500 {
+  color: var(--cool-text-primary) !important;
+}
+.theme-cool-ui .text-emerald-400,
+.theme-cool-ui .text-cyan-400 {
+  color: var(--cool-primary) !important;
+}
+.theme-cool-ui .text-amber-300,
+.theme-cool-ui .text-amber-400 {
+  color: var(--cool-secondary) !important;
+}
+
+.theme-cool-ui .bg-indigo-500,
+.theme-cool-ui .bg-indigo-600 {
+  background-color: var(--cool-primary) !important;
+}
+
+.theme-cool-ui .border-indigo-400,
+.theme-cool-ui .border-indigo-500,
+.theme-cool-ui .ring-indigo-500 {
+  border-color: var(--cool-primary) !important;
+  --tw-ring-color: var(--cool-primary) !important;
+}
+
+.theme-cool-ui .bg-zinc-800\/80 {
+  background-color: var(--cool-panel-bg) !important;
+  backdrop-filter: var(--cool-glass-blur) !important;
+}
+.theme-cool-ui .bg-zinc-700\/80,
+.theme-cool-ui .hover\:bg-zinc-700\/80:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+
+

@@ -322,7 +322,37 @@
     "spell_marking_picker_search": "Search spell or enter wildcard...",
     "spell_marking_picker_close": "Close",
     "spell_marking_add_custom": "Add: {{value}}",
-    "divide_chain": "Divide Chain"
+    "divide_chain": "Divide Chain",
+    "cool_ui_mode": "Cool UI Mode",
+    "cool_ui_mode_desc": "Enable extreme visual aesthetics: 3D tilt, glassmorphism, and neon glows.",
+    "cool_ui_theme": "Theme Skin",
+    "cool_ui_background": "Dynamic Background",
+    "cool_ui_themes": {
+      "orionfire": "Orion Karma Fire",
+      "pureprism": "World-Cleansing Mystic Prism",
+      "horizondawn": "Firmament Daybreak",
+      "goldenglow": "Gilded Divine Radiance",
+      "mirrorlight": "Mirage Flowing Light",
+      "gentleisland": "Gentle Waves Tranquil Islet",
+      "oceanreef": "Vast Sea Abyss Reef",
+      "whisperwind": "Shadow Mist Whisper",
+      "rainsong": "Night Rain Elegy",
+      "flamesong": "Ashes Extinction Flame Song",
+      "stonebloom": "Monolith Calamity Flower",
+      "wolfstride": "Greedy Wolf Skimming Shadow",
+      "blacktooth": "Disaster Dark Fang",
+      "toothless": "Shadow-Devouring Edgeless",
+      "titanforge": "Giant God Star Casting",
+      "kingfall": "Severed Radiance",
+      "goldmane": "Dazzling Gold Divine Mane",
+      "jfdksal98a": "Chaos Sequence"
+    },
+    "cool_ui_backgrounds": {
+      "aurora": "Aurora Flow",
+      "matrix": "Matrix Terminal",
+      "neon": "Neon Abyss",
+      "blank": "Pure Void"
+    }
   },
   "mod_manager": {
     "title": "Mod Environment Management",

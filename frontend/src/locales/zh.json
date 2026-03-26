@@ -322,7 +322,37 @@
     "spell_marking_picker_search": "搜索法术或输入通配...",
     "spell_marking_picker_close": "关闭",
     "spell_marking_add_custom": "添加: {{value}}",
-    "divide_chain": "一分链"
+    "divide_chain": "一分链",
+    "cool_ui_mode": "酷炫美学模式 (Cool UI Mode)",
+    "cool_ui_mode_desc": "开启极致的视觉享受：3D 倾斜、玻璃拟态与流光溢彩。",
+    "cool_ui_theme": "主题皮肤",
+    "cool_ui_background": "动态背景",
+    "cool_ui_themes": {
+      "orionfire": "猎户业火",
+      "pureprism": "净世玄棱",
+      "horizondawn": "苍穹破晓",
+      "goldenglow": "鎏金神曜",
+      "mirrorlight": "幻镜流光",
+      "gentleisland": "温澜谧屿",
+      "oceanreef": "沧海渊礁",
+      "whisperwind": "影岚低语",
+      "rainsong": "夜雨挽歌",
+      "flamesong": "烬灭炎歌",
+      "stonebloom": "磐岩劫华",
+      "wolfstride": "贪狼掠影",
+      "blacktooth": "灾厄暗獠",
+      "toothless": "噬影无锋",
+      "titanforge": "巨神星铸",
+      "kingfall": "帝殒秋芒",
+      "goldmane": "耀金神鬣",
+      "jfdksal98a": "混沌序列"
+    },
+    "cool_ui_backgrounds": {
+      "aurora": "极光流苏",
+      "matrix": "终端矩阵",
+      "neon": "霓虹深渊",
+      "blank": "纯粹虚无"
+    }
   },
   "mod_manager": {
     "title": "Mod 环境管理",

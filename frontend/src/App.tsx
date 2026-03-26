@@ -10,6 +10,7 @@ import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { WandWorkspace } from './components/WandWorkspace';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
+import { CoolBackground } from './components/CoolBackground';
 import { OverlayManager } from './components/OverlayManager';
 import { useSettings } from './hooks/useSettings';
 import { useGlobalEvents } from './hooks/useGlobalEvents';
@@ -360,12 +361,16 @@ function App() {
 
   return (
     <div
-      className="flex flex-col bg-zinc-950 overflow-hidden text-zinc-100 selection:bg-purple-500/30"
+      className={`flex flex-col overflow-hidden text-zinc-100 ${settings.coolUIMode ? 'theme-cool-ui selection:bg-[rgba(var(--cool-primary),0.3)]' : 'bg-zinc-950 selection:bg-purple-500/30'}`}
+      data-theme={settings.coolUIMode ? settings.coolUITheme : undefined}
       style={uiScale !== 100 ? {
         zoom: `${uiScale}%`,
         height: `${100 / (uiScale / 100)}vh`
       } : { height: '100vh' }}
     >
+      {settings.coolUIMode && (
+        <CoolBackground theme={settings.coolUITheme} type={settings.coolUIBackground} />
+      )}
       <Header
         tabs={tabs}
         activeTabId={activeTabId}

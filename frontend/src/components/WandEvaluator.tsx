@@ -3,6 +3,7 @@ import { EvalNode, ShotState, SpellInfo, AppSettings } from '../types';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
+import { TiltContainer } from './TiltContainer';
 
 interface Props {
   data: {
@@ -673,7 +674,7 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
   }
 
   return (
-    <div className="relative">
+    <TiltContainer className="relative" maxAngle={10} scale={1.05} glareClassName="bg-white/10 rounded-xl">
       {/* A类: Source spell icon — OUTSIDE the card (Centered on top-left vertex) */}
       {mainIcon && (
         <div
@@ -757,7 +758,7 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
             })}
         </div>
       </div>
-    </div>
+    </TiltContainer>
   );
 });
 
@@ -789,7 +790,10 @@ const TreeNode: React.FC<{
             <div className="w-6 h-px bg-zinc-800 shrink-0"></div>
           )}
 
-          <div
+          <TiltContainer
+            maxAngle={20}
+            scale={1.2}
+            glareClassName="bg-white/20 rounded"
             onMouseEnter={() => {
               node.index && onHover?.(node.index);
               node.shot_id && onHoverShotId?.(node.shot_id);
@@ -912,7 +916,7 @@ const TreeNode: React.FC<{
                 {node.extra}
               </div>
             )}
-          </div>
+          </TiltContainer>
         </div>
 
         {/* 子节点渲染：如果是最后一级，不需要右侧间距 */}
