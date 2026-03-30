@@ -1,6 +1,6 @@
 import React from 'react';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor } from 'lucide-react';
-import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, WarehouseWand, WandSelection, SpellPickerTrigger } from '../types';
+import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
@@ -15,10 +15,10 @@ interface WandCardProps {
   activeTab: Tab;
   isConnected: boolean;
   spellDb: Record<string, SpellInfo>;
-  selection: WandSelection | null;
+  selection: SpellAreaSelection | null;
   onMoveSelection: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
-  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
-  dragSource: { wandSlot: string; idx: number; sid: string } | null;
+  hoveredSlot: HoveredSpellSlot | null;
+  dragSource: SpellDragSource | null;
   clipboard: { type: 'wand'; data: WandData } | null;
   toggleExpand: (slot: string) => void;
   deleteWand: (slot: string) => void;
@@ -26,10 +26,10 @@ interface WandCardProps {
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }) => void;
-  handleSlotMouseUp: (slot: string, idx: number) => void;
-  handleSlotMouseEnter: (slot: string, idx: number) => void;
-  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }, area?: SpellArea) => void;
+  handleSlotMouseUp: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseEnter: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: SpellPickerTrigger) => void;
   setSelection: (s: any) => void;

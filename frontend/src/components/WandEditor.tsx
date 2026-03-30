@@ -1,27 +1,25 @@
 import React from 'react';
-import { X, RefreshCw, Image as ImageIcon, Camera } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Camera } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { WandData, SpellInfo, AppSettings } from '../types';
+import { WandData, SpellInfo, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource } from '../types';
 import { PropInput } from './Common';
-import { getIconUrl, getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
-import { getUnknownSpellInfo } from '../hooks/useSpellDb';
+import { getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
 import { detectPatterns, getMergedRules, type PatternMatch } from '../lib/spellPatterns';
-import { SpellCell } from './SpellCell';
 import { SpellGridCanvas } from './SpellGridCanvas';
 
 interface WandEditorProps {
   slot: string;
   data: WandData;
   spellDb: Record<string, SpellInfo>;
-  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
-  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
-  dragSource: { wandSlot: string; idx: number; sid: string } | null;
+  selection: SpellAreaSelection | null;
+  hoveredSlot: HoveredSpellSlot | null;
+  dragSource: SpellDragSource | null;
   updateWand: (slot: string, partial: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
-  handleSlotMouseUp: (slot: string, idx: number) => void;
-  handleSlotMouseEnter: (slot: string, idx: number) => void;
-  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }, area?: SpellArea) => void;
+  handleSlotMouseUp: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseEnter: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
@@ -113,7 +111,32 @@ export function WandEditor({
     };
   }, []);
 
-  const getPickerAnchor = React.useCallback((currentIdx: number) => {
+  const getPickerAnchor = React.useCallback((currentIdx: number, area: SpellArea = 'main') => {
+    if (area === 'always_cast') {
+      const canvasEl = spellsRef.current?.querySelector('canvas[data-spell-grid-area="always_cast"]') as HTMLCanvasElement | null;
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        const gap = settings.editorSpellGap || 0;
+        const baseCell = 48;
+        const cellOuter = baseCell + gap;
+        const cellIdx = currentIdx - 1;
+        const col = Math.max(0, cellIdx);
+        const x = rect.left + col * cellOuter + gap / 2;
+        const y = rect.top + baseCell + gap / 2 + 12;
+        const rowTop = rect.top + gap / 2;
+        return {
+          clientX: 0,
+          clientY: 0,
+          x,
+          y,
+          rowTop,
+          insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false }
+        };
+      }
+
+      return { clientX: 0, clientY: 0, x: window.innerWidth / 2, y: window.innerHeight / 2 + 8, insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false } };
+    }
+
     const el = spellsRef.current?.querySelector(`[data-slot-idx="${currentIdx}"]`) as HTMLElement | null;
     const rect = el?.getBoundingClientRect();
     if (rect) {
@@ -127,7 +150,7 @@ export function WandEditor({
       };
     }
 
-    const canvasEl = spellsRef.current?.querySelector('canvas') as HTMLCanvasElement | null;
+    const canvasEl = spellsRef.current?.querySelector('canvas[data-spell-grid-area="main"]') as HTMLCanvasElement | null;
     if (canvasEl) {
       const rect = canvasEl.getBoundingClientRect();
       const logicalW = parseFloat(canvasEl.style.width) || rect.width;
@@ -159,6 +182,7 @@ export function WandEditor({
       }
 
       const isSelected = selection?.wandSlot === slot;
+      const selectionArea = selection?.area ?? 'main';
       if (!isSelected || selection.indices.length !== 1) return;
 
       const currentIdx = selection.indices[0];
@@ -193,16 +217,20 @@ export function WandEditor({
       if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && e.key !== ' ') {
         // 如果是数字且当前格子有法术，可能是想直接用数字选词，但在格子界面我们倾向于开启搜索
         e.preventDefault();
-        openPicker(slot, currentIdx.toString(), {
-          ...getPickerAnchor(currentIdx),
+        const anchor = getPickerAnchor(currentIdx, selectionArea);
+        const pickerIdx = selectionArea === 'always_cast' ? `ac-${currentIdx - 1}` : currentIdx.toString();
+        openPicker(slot, pickerIdx, {
+          ...anchor,
           initialSearch: e.key
         } as any);
       }
 
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openPicker(slot, currentIdx.toString(), {
-          ...getPickerAnchor(currentIdx),
+        const anchor = getPickerAnchor(currentIdx, selectionArea);
+        const pickerIdx = selectionArea === 'always_cast' ? `ac-${currentIdx - 1}` : currentIdx.toString();
+        openPicker(slot, pickerIdx, {
+          ...anchor,
           insertAnchor: { wandSlot: slot, idx: currentIdx, isRightHalf: false },
           initialSearch: ''
         } as any);
@@ -210,15 +238,25 @@ export function WandEditor({
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        updateWand(slot, (curr) => {
-          const sid = curr.spells[currentIdx.toString()];
-          if (!sid) return {};
-          const newSpells = { ...curr.spells };
-          const newSpellUses = { ...(curr.spell_uses || {}) };
-          delete newSpells[currentIdx.toString()];
-          delete newSpellUses[currentIdx.toString()];
-          return { spells: newSpells, spell_uses: newSpellUses };
-        }, t('app.notification.delete_spell'));
+        if (selectionArea === 'always_cast') {
+          updateWand(slot, (curr) => {
+            const nextAlwaysCast = [...(curr.always_cast || [])];
+            const idx = currentIdx - 1;
+            while (nextAlwaysCast.length <= idx) nextAlwaysCast.push('');
+            nextAlwaysCast[idx] = '';
+            return { always_cast: nextAlwaysCast };
+          }, t('app.notification.delete_spell'));
+        } else {
+          updateWand(slot, (curr) => {
+            const sid = curr.spells[currentIdx.toString()];
+            if (!sid) return {};
+            const newSpells = { ...curr.spells };
+            const newSpellUses = { ...(curr.spell_uses || {}) };
+            delete newSpells[currentIdx.toString()];
+            delete newSpellUses[currentIdx.toString()];
+            return { spells: newSpells, spell_uses: newSpellUses };
+          }, t('app.notification.delete_spell'));
+        }
       }
     };
 
@@ -244,6 +282,7 @@ export function WandEditor({
 
   const getWand2Text = () => {
     const sequence = Array.from({ length: data.deck_capacity }).map((_, i) => data.spells[(i + 1).toString()] || "");
+    const alwaysCasts = (data.always_cast || []).map(s => s || '').filter(Boolean);
     const wikiPic = spritePathToWikiName(data.appearance);
 
     // 构建参数列表，兼容 CE 风格：只输出有意义的字段
@@ -259,8 +298,8 @@ export function WandEditor({
     lines.push(`| capacity     = ${data.deck_capacity}`);
     lines.push(`| spread       = ${data.spread_degrees}`);
     lines.push(`| speed        = ${data.speed_multiplier.toFixed(2)}`);
-    if (data.always_cast && data.always_cast.length > 0) {
-      lines.push(`| alwaysCasts  = ${data.always_cast.join(',')}`);
+    if (alwaysCasts.length > 0) {
+      lines.push(`| alwaysCasts  = ${alwaysCasts.join(',')}`);
     }
     lines.push(`| spells       = ${sequence.join(',')}`);
     lines.push('}}');
@@ -605,9 +644,10 @@ export function WandEditor({
   };
 
   return (
-    <div ref={wandRef} className={`px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
+    <div ref={wandRef} data-wand-editor-root className={`px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
       {!hideAttributes && <div className="flex items-start gap-8 attributes-container">
         <div
+          data-wand-attributes-box
           className={`flex flex-wrap items-center glass rounded-xl p-1 pr-6 shadow-2xl wand-attributes-box ${settings.compactAttributes ? 'min-w-0' : 'min-w-[600px]'}`}
           style={settings.wandAttributesScale && settings.wandAttributesScale !== 100 ? {
             zoom: `${settings.wandAttributesScale}%`
@@ -744,106 +784,31 @@ export function WandEditor({
               <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em]">{t('editor.always_cast_slots')}</span>
               <div className="h-px flex-1 bg-gradient-to-l from-amber-500/30 to-transparent" />
             </div>
-            <div className="flex flex-wrap gap-3">
-              {data.always_cast.map((sid, i) => {
-                const spell = spellDb[sid];
-                const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : sid;
-                const acIdx = -(i + 1);
-                const isHovered = hoveredSlot?.wandSlot === slot && hoveredSlot?.idx === acIdx;
-
-                return (
-                  <div
-                    key={i}
-                    className="group/ac relative"
-                    onMouseDown={(e) => {
-                      if (e.ctrlKey && e.button === 1 && sid) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openWiki(sid);
-                        return;
-                      }
-                      handleSlotMouseDown(slot, acIdx, e.button === 2, { x: e.clientX, y: e.clientY });
-                    }}
-                    onMouseUp={() => handleSlotMouseUp(slot, acIdx)}
-                    onMouseMove={(e) => handleSlotMouseMove(e, slot, acIdx)}
-                    onMouseLeave={handleSlotMouseLeave}
-                    onClick={(e) => {
-                      if (e.altKey) {
-                        updateWand(slot, (curr) => {
-                          const newAC = [...(curr.always_cast || [])];
-                          newAC.splice(i, 1);
-                          return { always_cast: newAC };
-                        }, "删除始终施放法术");
-                        return;
-                      }
-                      openPicker(slot, `ac-${i}`, {
-                        x: e.clientX,
-                        y: e.clientY,
-                        insertAnchor: {
-                          wandSlot: slot,
-                          idx: acIdx,
-                          isRightHalf: e.clientX > (e.currentTarget as HTMLElement).getBoundingClientRect().left + (e.currentTarget as HTMLElement).getBoundingClientRect().width / 2,
-                        }
-                      });
-                    }}
-                  >
-                    <div className={`
-                    w-12 h-12 rounded-lg border flex items-center justify-center relative shadow-[0_0_15px_rgba(245,158,11,0.1)] transition-transform hover:scale-105
-                    ${selection?.wandSlot === slot && selection.indices.includes(acIdx)
-                        ? 'border-indigo-500 bg-indigo-500/20 scale-105 z-10'
-                        : isHovered && settings.dragSpellMode === 'noita_swap' && dragSource
-                          ? 'border-amber-500 bg-amber-500/20 scale-105 z-10'
-                          : isHovered
-                            ? 'border-white/20 bg-white/5'
-                            : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05]'}
-                  `}>
-                      {isHovered && settings.dragSpellMode !== 'noita_swap' && dragSource && (
-                        <div
-                          className="absolute top-0 bottom-0 w-1 bg-indigo-400 z-50 animate-pulse rounded-full"
-                          style={{ [hoveredSlot.isRightHalf ? 'right' : 'left']: `-6px` }}
-                        />
-                      )}
-                      {spell ? (
-                        <img
-                          src={getIconUrl(spell.icon, isConnected)}
-                          className="w-10 h-10 image-pixelated"
-                          alt=""
-                          title={`Always Cast: ${displayName}\nID: ${sid}\n(Alt+Click to remove)`}
-                        />
-                      ) : sid ? (
-                        <div className="w-10 h-10 flex flex-col items-center justify-center overflow-hidden px-0.5" title={(() => {
-                          const info = getUnknownSpellInfo(sid);
-                          return info?.mod_id
-                            ? t('editor.unknown_spell_tip_with_mod', { id: sid, mod: info.mod_id })
-                            : t('editor.unknown_spell_tip', { id: sid });
-                        })()}>
-                          {(() => {
-                            const info = getUnknownSpellInfo(sid);
-                            return info?.mod_id
-                              ? <span className="text-cyan-400/80 text-[8px] font-bold leading-none truncate max-w-full">@{info.mod_id}</span>
-                              : <span className="text-orange-400 text-xs font-black leading-none">?</span>;
-                          })()}
-                          <span className="text-orange-400/70 text-[8px] font-mono leading-tight text-center break-all line-clamp-2 max-w-full">{sid}</span>
-                        </div>
-                      ) : (
-                        <span className="text-amber-500/20 text-xs">?</span>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newAC = [...data.always_cast];
-                          newAC.splice(i, 1);
-                          updateWand(slot, { always_cast: newAC });
-                        }}
-                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/ac:opacity-100 transition-opacity z-10 shadow-lg"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <SpellGridCanvas
+              slot={slot}
+              data={data}
+              spellDb={spellDb}
+              area="always_cast"
+              alwaysCastSlots={data.always_cast}
+              title={t('editor.always_cast_slots')}
+              settings={settings}
+              isConnected={isConnected}
+              isAltPressed={isAltPressed}
+              absoluteToOrdinal={{}}
+              patternMatches={[]}
+              isCanvasMode={isCanvasMode}
+              handleSlotMouseMove={handleSlotMouseMove}
+              handleSlotMouseLeave={handleSlotMouseLeave}
+              handleSlotMouseDown={handleSlotMouseDown}
+              handleSlotMouseUp={handleSlotMouseUp}
+              handleSlotMouseEnter={handleSlotMouseEnter}
+              openPicker={openPicker}
+              setSelection={setSelection}
+              updateWand={updateWand}
+              openWiki={openWiki}
+              setSettings={setSettings}
+              t={t}
+            />
           </div>
         )}
 

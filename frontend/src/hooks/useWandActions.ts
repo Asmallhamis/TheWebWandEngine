@@ -4,6 +4,9 @@ import { Tab, WandData, AppSettings, SpellInfo, AppNotification, WandSelection, 
 
 import { DEFAULT_WAND } from '../constants';
 
+const compactAlwaysCast = (spells?: (string | null | undefined)[]) =>
+  (spells || []).map(s => s || '').filter(Boolean);
+
 export const useWandActions = (params: {
   tabs: Tab[],
   activeTab: Tab,
@@ -95,6 +98,7 @@ export const useWandActions = (params: {
 | capacity     = ${wand.deck_capacity || 0}
 | spread       = ${wand.spread_degrees || 0}
 | speed        = ${(wand.speed_multiplier || 1).toFixed(2)}
+| alwaysCasts  = ${compactAlwaysCast(wand.always_cast).join(',')}
 | spells       = ${Array.from({ length: wand.deck_capacity }).map((_, i) => wand.spells[(i + 1).toString()] || "").join(',')}
 }}`;
       try {
@@ -109,12 +113,13 @@ export const useWandActions = (params: {
   const copyLegacyWand = useCallback(async (slot: string) => {
     const wand = activeTab.wands[slot];
     if (wand) {
+      const alwaysCasts = compactAlwaysCast(wand.always_cast).map(id => spellDb[id]?.en_name || id).join(',');
       let wikiText = `{{Wand
 | wandPic =
 | capacity = ${wand.deck_capacity}
 | shuffle = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
 | spellsCast = ${wand.actions_per_round}
-| alwaysCasts = ${wand.always_cast ? wand.always_cast.map(id => spellDb[id]?.en_name || id).join(',') : ''}
+| alwaysCasts = ${alwaysCasts}
 `;
       for (let i = 1; i <= wand.deck_capacity; i++) {
         const sid = wand.spells[i.toString()];

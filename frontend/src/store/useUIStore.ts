@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { AppNotification } from '../types';
+import { AppNotification, HoveredSpellSlot, SpellAreaSelection, SpellDragSource } from '../types';
 
-type HoveredSlot = { wandSlot: string, idx: number, isRightHalf: boolean } | null;
+type HoveredSlot = HoveredSpellSlot | null;
 type HoverResolver = (clientX: number, clientY: number) => HoveredSlot;
 
 interface UIState {
@@ -20,8 +20,8 @@ interface UIState {
     modBundleInfo: { active: number; total: number; bundleId: string | null };
 
     // Interaction States
-    selection: { wandSlot: string, indices: number[], startIdx: number } | null;
-    dragSource: { wandSlot: string, idx: number, sid: string } | null;
+    selection: SpellAreaSelection | null;
+    dragSource: SpellDragSource | null;
     hoveredSlot: HoveredSlot;
     hoverResolvers: Record<string, HoverResolver>;
 
@@ -35,8 +35,8 @@ interface UIState {
     setSettingsCategoryOverride: (category: 'general' | 'appearance' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data' | null) => void;
     setSettingsExpandedBundleId: (id: string | null) => void;
 
-    setSelection: (s: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
-    setDragSource: (s: { wandSlot: string, idx: number, sid: string } | null) => void;
+    setSelection: (s: SpellAreaSelection | null) => void;
+    setDragSource: (s: SpellDragSource | null) => void;
     setHoveredSlot: (s: HoveredSlot) => void;
     registerHoverResolver: (id: string, resolver: HoverResolver) => void;
     unregisterHoverResolver: (id: string) => void;

@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { WandData, Tab, AppSettings } from '../types';
+import { WandData, Tab, AppSettings, SpellArea } from '../types';
 import { DEFAULT_WAND } from '../constants';
 import { useUIStore } from '../store/useUIStore';
+
+const normalizeAlwaysCast = (spells: (string | null | undefined)[]) =>
+  spells.map(s => s ?? '');
 
 export const useInteraction = (params: {
   activeTab: Tab;
@@ -26,36 +29,100 @@ export const useInteraction = (params: {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // --- Mouse Handlers ---
-  const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false, pointer?: { x: number; y: number }) => {
+  const handleSlotMouseDown = useCallback((wandSlot: string, idx: number, isRightClick: boolean = false, pointer?: { x: number; y: number }, area: SpellArea = 'main') => {
     const isHandMode = settings.editorDragMode === 'hand';
 
     // 允许正常格子的拖拽
     if (idx >= 0 && (isRightClick || (isHandMode && !isRightClick))) {
       const wand = activeTab.wands[wandSlot];
-      const sid = wand?.spells[idx.toString()];
+      const sid = area === 'always_cast' ? wand?.always_cast[idx - 1] : wand?.spells[idx.toString()];
       if (sid) {
         if (pointer) setMousePos(pointer);
-        setHoveredSlot({ wandSlot, idx, isRightHalf: !!isRightClick });
-        setDragSource({ wandSlot, idx, sid });
+        setHoveredSlot({ wandSlot, area, idx, isRightHalf: !!isRightClick });
+        setDragSource({ wandSlot, area, idx, sid });
       }
     }
 
     if (idx < 0 || isRightClick || isHandMode) return;
     setIsSelecting(true);
-    setSelection({ wandSlot, indices: [idx], startIdx: idx });
+    setSelection({ wandSlot, area, indices: [idx], startIdx: idx });
 
 
   }, [activeTab.wands, settings.editorDragMode, setDragSource, setSelection, setHoveredSlot]);
 
-  const handleSlotMouseUp = useCallback((wandSlot: string, idx: number) => {
+  const insertIntoAlwaysCast = useCallback((wand: WandData, targetIdx: number, sid: string, hoveredRightHalf: boolean) => {
+    const nextWand = { ...wand };
+    const targetPos = Math.max(1, targetIdx + (hoveredRightHalf ? 1 : 0));
+    const acSlots = [...(nextWand.always_cast || [])];
+    while (acSlots.length < targetPos - 1) acSlots.push('');
+    acSlots.splice(Math.max(0, targetPos - 1), 0, sid);
+    nextWand.always_cast = normalizeAlwaysCast(acSlots);
+    return nextWand;
+  }, []);
+
+  const moveIntoAlwaysCast = useCallback((wand: WandData, sourceArea: SpellArea, sourceIdx: number, targetIdx: number, sid: string, hoveredRightHalf: boolean) => {
+    const nextWand = { ...wand };
+    const targetPos = Math.max(1, targetIdx + (hoveredRightHalf ? 1 : 0));
+    const acSlots = [...(nextWand.always_cast || [])];
+
+    if (sourceArea === 'main') {
+      const nextSpells = { ...nextWand.spells };
+      const nextUses = { ...(nextWand.spell_uses || {}) };
+      delete nextSpells[sourceIdx.toString()];
+      delete nextUses[sourceIdx.toString()];
+      nextWand.spells = nextSpells;
+      nextWand.spell_uses = nextUses;
+    } else {
+      acSlots.splice(sourceIdx - 1, 1);
+    }
+
+    const insertPos = sourceArea === 'always_cast' && sourceIdx < targetPos ? targetPos - 1 : targetPos;
+    while (acSlots.length < insertPos - 1) acSlots.push('');
+    acSlots.splice(Math.max(0, insertPos - 1), 0, sid);
+    nextWand.always_cast = normalizeAlwaysCast(acSlots);
+    return nextWand;
+  }, []);
+
+  const moveFromAlwaysCastToMain = useCallback((wand: WandData, sourceIdx: number, targetIdx: number, sid: string, hoveredRightHalf: boolean) => {
+    const nextWand = { ...wand };
+    nextWand.always_cast = normalizeAlwaysCast((nextWand.always_cast || []).filter((_, i) => i !== sourceIdx - 1));
+    const insertIdx = Math.max(1, targetIdx + (hoveredRightHalf ? 1 : 0));
+    const maxIdx = Math.max(nextWand.deck_capacity, ...Object.keys(nextWand.spells).map(Number));
+    const slots: { sid: string, uses?: number }[] = [];
+    for (let i = 1; i <= maxIdx; i++) slots.push({ sid: nextWand.spells[i.toString()] || '', uses: nextWand.spell_uses?.[i.toString()] });
+    slots.splice(Math.max(0, insertIdx - 1), 0, { sid });
+    nextWand.spells = Object.fromEntries(slots.map((item, i) => item.sid ? [[(i + 1).toString(), item.sid]] : []).flat());
+    nextWand.spell_uses = Object.fromEntries(slots.map((item, i) => item.sid && item.uses !== undefined ? [[(i + 1).toString(), item.uses]] : []).flat());
+    nextWand.deck_capacity = Math.max(nextWand.deck_capacity, slots.length);
+    return nextWand;
+  }, []);
+
+  const handleSlotMouseUp = useCallback((wandSlot: string, idx: number, area: SpellArea = 'main') => {
     const dragSource = useUIStore.getState().dragSource;
     if (dragSource) {
       const sourceWandSlot = dragSource.wandSlot;
+      const sourceArea = dragSource.area;
       const sourceIdx = dragSource.idx;
       const targetWandSlot = wandSlot;
       const targetIdx = idx;
 
       if (targetIdx < 0) {
+        performAction((prevWands: Record<string, WandData>) => {
+          const sourceWand = prevWands[sourceWandSlot];
+          const sid = sourceArea === 'always_cast' ? sourceWand?.always_cast[sourceIdx - 1] : sourceWand?.spells[sourceIdx.toString()];
+          if (!sid) return prevWands;
+          const nextWands = { ...prevWands };
+          const hovered = useUIStore.getState().hoveredSlot;
+          const nextSourceWand = moveIntoAlwaysCast(sourceWand, sourceArea, sourceIdx, Math.max(1, (sourceWand.always_cast || []).length + 1), sid, !!hovered?.isRightHalf);
+
+          nextWands[sourceWandSlot] = nextSourceWand;
+          if (activeTab.isRealtime) {
+            syncWand(sourceWandSlot, nextSourceWand);
+          }
+          return nextWands;
+        }, t('app.notification.move_spell'), [dragSource.sid]);
+
+        setHoveredSlot(null);
         setDragSource(null);
         setIsSelecting(false);
         return;
@@ -63,12 +130,67 @@ export const useInteraction = (params: {
 
       performAction((prevWands: Record<string, WandData>) => {
         const nextWands = { ...prevWands };
+        const hovered = useUIStore.getState().hoveredSlot;
+
+        if (sourceArea === 'always_cast' || area === 'always_cast') {
+          const sourceWand = prevWands[sourceWandSlot];
+          const targetWand = sourceWandSlot === targetWandSlot ? sourceWand : prevWands[targetWandSlot];
+          const sid = sourceArea === 'always_cast'
+            ? sourceWand?.always_cast[sourceIdx - 1]
+            : sourceWand?.spells[sourceIdx.toString()];
+
+          if (!sid || !sourceWand || !targetWand) return prevWands;
+
+          if (sourceArea === 'always_cast' && area === 'always_cast') {
+            if (sourceWandSlot === targetWandSlot) {
+              const nextTargetWand = moveIntoAlwaysCast(targetWand, 'always_cast', sourceIdx, targetIdx, sid, !!hovered?.isRightHalf);
+              nextWands[targetWandSlot] = nextTargetWand;
+              if (activeTab.isRealtime) syncWand(targetWandSlot, nextTargetWand);
+            } else {
+              const nextSourceWand = {
+                ...sourceWand,
+                always_cast: normalizeAlwaysCast((sourceWand.always_cast || []).filter((_, i) => i !== sourceIdx - 1))
+              };
+              const nextTargetWand = insertIntoAlwaysCast(targetWand, targetIdx, sid, !!hovered?.isRightHalf);
+              nextWands[sourceWandSlot] = nextSourceWand;
+              nextWands[targetWandSlot] = nextTargetWand;
+              if (activeTab.isRealtime) {
+                syncWand(sourceWandSlot, nextSourceWand);
+                syncWand(targetWandSlot, nextTargetWand);
+              }
+            }
+            return nextWands;
+          }
+
+          if (sourceArea === 'main' && area === 'always_cast') {
+            const nextSourceWand = moveIntoAlwaysCast(sourceWand, 'main', sourceIdx, targetIdx, sid, !!hovered?.isRightHalf);
+            nextWands[sourceWandSlot] = nextSourceWand;
+            if (activeTab.isRealtime) syncWand(sourceWandSlot, nextSourceWand);
+            return nextWands;
+          }
+
+          if (sourceArea === 'always_cast' && area === 'main') {
+            const nextTargetWand = moveFromAlwaysCastToMain(targetWand, sourceIdx, targetIdx, sid, !!hovered?.isRightHalf);
+            if (sourceWandSlot !== targetWandSlot) {
+              const nextSourceWand = { ...sourceWand, always_cast: normalizeAlwaysCast(sourceWand.always_cast.filter((_, i) => i !== sourceIdx - 1)) };
+              nextWands[sourceWandSlot] = nextSourceWand;
+              nextWands[targetWandSlot] = nextTargetWand;
+              if (activeTab.isRealtime) { syncWand(sourceWandSlot, nextSourceWand); syncWand(targetWandSlot, nextTargetWand); }
+            } else {
+              nextWands[targetWandSlot] = nextTargetWand;
+              if (activeTab.isRealtime) syncWand(targetWandSlot, nextTargetWand);
+            }
+            return nextWands;
+          }
+        }
+
+        if (sourceArea !== 'main' || area !== 'main') return prevWands;
         const sourceWand = { ...nextWands[sourceWandSlot] };
 
         const sid = sourceWand.spells[sourceIdx.toString()];
         const uses = sourceWand.spell_uses?.[sourceIdx.toString()];
 
-        const newSourceSpells = { ...sourceWand.spells };
+       const newSourceSpells = { ...sourceWand.spells };
         const newSourceUses = { ...(sourceWand.spell_uses || {}) };
         delete newSourceSpells[sourceIdx.toString()];
         delete newSourceUses[sourceIdx.toString()];
@@ -243,12 +365,12 @@ export const useInteraction = (params: {
       setHoveredSlot(null);
     }
     setIsSelecting(false);
-  }, [activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t, setDragSource, setHoveredSlot]);
+  }, [activeTab.isRealtime, settings.dragSpellMode, performAction, syncWand, t, setDragSource, setHoveredSlot, insertIntoAlwaysCast, moveIntoAlwaysCast, moveFromAlwaysCastToMain]);
 
 
-  const handleSlotMouseEnter = useCallback((wandSlot: string, idx: number) => {
+  const handleSlotMouseEnter = useCallback((wandSlot: string, idx: number, area: SpellArea = 'main') => {
     const selection = useUIStore.getState().selection;
-    if (isSelectingRef.current && selection && selection.wandSlot === wandSlot) {
+    if (isSelectingRef.current && selection && selection.wandSlot === wandSlot && selection.area === area) {
       const start = selection.startIdx;
       const end = idx;
       const min = Math.min(start, end);
@@ -259,10 +381,10 @@ export const useInteraction = (params: {
     }
   }, [setSelection]);
 
-  const handleSlotMouseMove = useCallback((e: React.MouseEvent, wandSlot: string, idx: number) => {
+  const handleSlotMouseMove = useCallback((e: React.MouseEvent, wandSlot: string, idx: number, area: SpellArea = 'main') => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const isRightHalf = e.clientX > rect.left + rect.width / 2;
-    setHoveredSlot({ wandSlot, idx, isRightHalf });
+    setHoveredSlot({ wandSlot, area, idx, isRightHalf });
   }, [setHoveredSlot]);
 
   const handleSlotMouseLeave = useCallback(() => {
@@ -275,9 +397,11 @@ export const useInteraction = (params: {
 
     let targetWandSlot: string | undefined;
     let startIdx: number | null = null;
+    let targetArea: SpellArea = 'main';
 
     if (mode === 'open_anchor' && openAnchor) {
       targetWandSlot = openAnchor.wandSlot;
+      targetArea = 'main';
       startIdx = openAnchor.idx > 0
         ? (openAnchor.idx + (openAnchor.isRightHalf ? 1 : 0))
         : null;
@@ -285,6 +409,7 @@ export const useInteraction = (params: {
 
     if (startIdx === null && mode !== 'selection' && stateHoveredSlot) {
       targetWandSlot = stateHoveredSlot.wandSlot;
+      targetArea = stateHoveredSlot.area;
       startIdx = stateHoveredSlot.idx > 0
         ? (stateHoveredSlot.idx + (stateHoveredSlot.isRightHalf ? 1 : 0))
         : null;
@@ -292,6 +417,7 @@ export const useInteraction = (params: {
 
     if ((startIdx === null || !targetWandSlot) && stateSelection) {
       targetWandSlot = stateSelection.wandSlot;
+      targetArea = stateSelection.area;
       startIdx = Math.min(...stateSelection.indices.filter(i => i > 0));
     }
 
@@ -301,6 +427,21 @@ export const useInteraction = (params: {
 
     const wand = activeTab.wands[targetWandSlot];
     if (!wand) return;
+
+    if (targetArea === 'always_cast') {
+      const insertAt = startIdx === null || startIdx <= 0
+        ? Math.max(1, (wand.always_cast || []).length + 1)
+        : startIdx;
+
+      const nextAlwaysCast = [...(wand.always_cast || [])];
+      while (nextAlwaysCast.length < insertAt - 1) nextAlwaysCast.push('');
+      nextAlwaysCast.splice(Math.max(0, insertAt - 1), 0, '');
+
+      updateWand(targetWandSlot, {
+        always_cast: nextAlwaysCast,
+      }, t('app.notification.insert_empty_slot'));
+      return;
+    }
 
     if (startIdx === null || startIdx <= 0) {
       startIdx = Math.max(1, wand.deck_capacity + 1);

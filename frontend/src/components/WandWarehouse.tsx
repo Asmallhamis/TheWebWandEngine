@@ -66,13 +66,13 @@ interface WandWarehouseProps {
   pullBones: () => Promise<void>;
   pushBones: () => Promise<void>;
   // WandEditor 交互 props
-  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
-  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
-  dragSource: { wandSlot: string; idx: number; sid: string } | null;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
-  handleSlotMouseUp: (slot: string, idx: number) => void;
-  handleSlotMouseEnter: (slot: string, idx: number) => void;
-  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  selection: import('../types').SpellAreaSelection | null;
+  hoveredSlot: import('../types').HoveredSpellSlot | null;
+  dragSource: import('../types').SpellDragSource | null;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }, area?: import('../types').SpellArea) => void;
+  handleSlotMouseUp: (slot: string, idx: number, area?: import('../types').SpellArea) => void;
+  handleSlotMouseEnter: (slot: string, idx: number, area?: import('../types').SpellArea) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number, area?: import('../types').SpellArea) => void;
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
   setSelection: (s: any) => void;

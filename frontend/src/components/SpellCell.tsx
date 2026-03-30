@@ -172,10 +172,10 @@ const SpellCellComponent = ({
           }
         }}
         className={`
-          w-full h-full rounded-lg border flex items-center justify-center relative group/cell transition-all active:scale-95
+          w-full h-full rounded-lg border flex items-center justify-center relative group/cell spell-cell-hover-fx ${settings.coolUIMode ? `spell-theme-${settings.coolUITheme}` : ''} transition-all active:scale-95
           ${isLocked ? 'bg-black/40 border-transparent opacity-10' : `${sid && !spell ? 'bg-orange-950/30 border-orange-500/30 shadow-inner hover:bg-orange-900/30' : 'bg-zinc-800/80 border-white/5 shadow-inner hover:bg-zinc-700/80'} ${settings.editorDragMode === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-          ${isSelected ? 'ring-2 ring-indigo-500 ring-inset bg-indigo-500/40 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] z-10 scale-[1.02]' : ''}
-          ${isHovered && dragSource && settings.dragSpellMode === 'noita_swap' ? 'border-indigo-500 bg-indigo-500/30 scale-105 z-20' : 'hover:border-indigo-500/50'}
+          ${isSelected ? 'spell-cell-selected ring-2 ring-indigo-500 ring-inset bg-indigo-500/40 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] z-10 scale-[1.02]' : ''}
+          ${isHovered && dragSource && settings.dragSpellMode === 'noita_swap' ? 'spell-cell-drag-swap border-indigo-500 bg-indigo-500/30 scale-105 z-20' : 'hover:border-indigo-500/50'}
         `}
       >
         {isHovered && hoveredSlot && (

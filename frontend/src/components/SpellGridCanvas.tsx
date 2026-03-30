@@ -12,7 +12,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { WandData, SpellInfo, AppSettings } from '../types';
+import { WandData, SpellInfo, AppSettings, SpellArea } from '../types';
 import { getCachedIcon, preloadIcons } from '../hooks/useSpellIconCache';
 import { useUIStore } from '../store/useUIStore';
 import { getUnknownSpellInfo } from '../hooks/useSpellDb';
@@ -46,6 +46,8 @@ const C = {
   usesBg:         'rgba(0,0,0,0.9)',
   triggerColor:   '#ef4444',
   indexVisible:   '#22d3ee',
+  indexAlwaysCast: '#f59e0b',
+  indexAlwaysCastBg: 'rgba(245,158,11,0.16)',
   indexHidden:    'rgba(255,255,255,0.02)',
   unknownPrimary: '#f97316',
   unknownMod:     'rgba(34,211,238,0.8)',
@@ -67,11 +69,72 @@ function roundRect(
   ctx.closePath();
 }
 
+// ─── Theme Resolver ──────────────────────────────────────────────────
+const themePaletteCache = {
+  themeName: '',
+  palette: C,
+};
+
+function resolveThemePalette(themeName: string | undefined): typeof C {
+  if (!themeName || themeName === 'none') {
+    // User might have turned off cool UI or reset
+    themePaletteCache.themeName = '';
+    themePaletteCache.palette = C;
+    return C;
+  }
+  if (themePaletteCache.themeName === themeName) {
+    return themePaletteCache.palette;
+  }
+
+  const el = document.querySelector('.theme-cool-ui') as HTMLElement;
+  if (!el) return C;
+
+  const computed = window.getComputedStyle(el);
+  const primary = computed.getPropertyValue('--cool-primary').trim();
+  const bgRgb = computed.getPropertyValue('--cool-bg-rgb').trim();
+
+  if (!primary || !bgRgb) return C;
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    let h = hex.replace('#', '').trim();
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    if (h.length !== 6) return `rgba(99, 102, 241, ${alpha})`;
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    if (isNaN(r)) return `rgba(99, 102, 241, ${alpha})`;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const isDeepAbyssal = themeName === 'pureprism' || themeName === 'blacktooth';
+
+  const palette = {
+    ...C,
+    bgNormal:       `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
+    bgHover:        `rgba(${bgRgb}, 0.8)`,
+    bgSelected:     hexToRgba(primary, 0.4),
+    bgDragSwap:     hexToRgba(primary, 0.3),
+    borderNormal:   isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)',
+    borderHover:    hexToRgba(primary, 0.6),
+    borderSelected: primary,
+    borderDragSwap: primary,
+    selectionGlow:  hexToRgba(primary, 0.4),
+    hoverLine:      primary,
+  };
+
+  themePaletteCache.themeName = themeName;
+  themePaletteCache.palette = palette;
+  return palette;
+}
+
 // ─── Props ──────────────────────────────────────────────────────────
 export interface SpellGridCanvasProps {
   slot: string;
   data: WandData;
   spellDb: Record<string, SpellInfo>;
+  area?: SpellArea;
+  alwaysCastSlots?: string[];
+  title?: string;
   settings: AppSettings;
   isConnected: boolean;
   isAltPressed: boolean;
@@ -79,10 +142,10 @@ export interface SpellGridCanvasProps {
   patternMatches: PatternMatch[];
   isCanvasMode?: boolean;
 
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }) => void;
-  handleSlotMouseUp: (slot: string, idx: number) => void;
-  handleSlotMouseEnter: (slot: string, idx: number) => void;
-  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, pointer?: { x: number; y: number }, area?: SpellArea) => void;
+  handleSlotMouseUp: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseEnter: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number; y: number; initialSearch?: string; rowTop?: number; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
@@ -102,15 +165,19 @@ function computeGridLayout(containerWidth: number, totalSlots: number, gap: numb
 
 // ─── Component ──────────────────────────────────────────────────────
 export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
-  slot, data, spellDb, settings, isConnected, isAltPressed,
+  slot, data, spellDb, area = 'main', alwaysCastSlots, title, settings, isConnected, isAltPressed,
   absoluteToOrdinal, patternMatches, isCanvasMode,
   handleSlotMouseDown, handleSlotMouseUp, handleSlotMouseEnter,
   handleSlotMouseMove, handleSlotMouseLeave,
   openPicker, setSelection, updateWand, openWiki, setSettings, t,
 }) => {
+  const areaSlots = area === 'always_cast'
+    ? (alwaysCastSlots ?? data.always_cast ?? [])
+    : null;
+  const normalizedTitle = title ?? (area === 'always_cast' ? t('editor.always_cast_slots') : undefined);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const resolverId = React.useMemo(() => `canvas-${slot}`, [slot]);
+  const resolverId = React.useMemo(() => `canvas-${slot}-${area}`, [slot, area]);
   const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number>(0);
   const repaintVersionRef = useRef(0);
@@ -125,17 +192,22 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
   // ─── Derived values ─────────────────────────────────────────
   const gap = settings.editorSpellGap || 0;
-  const totalSlots = Math.max(data.deck_capacity, 24);
+  const totalSlots = area === 'always_cast'
+    ? Math.max(areaSlots?.length || 0, 1)
+    : Math.max(data.deck_capacity, 24);
   const layout = useMemo(() => {
     if (isCanvasMode) {
       const cellOuter = BASE_CELL + gap;
+      if (area === 'always_cast') {
+        return { cols: Math.max(1, totalSlots), rows: 1, cellOuter, cellInner: BASE_CELL };
+      }
       const cellsPerRow = data.canvas_cells_per_row ?? settings.defaultCanvasCellsPerRow ?? 26;
       const cols = Math.min(totalSlots, cellsPerRow);
       const rows = Math.ceil(totalSlots / Math.max(1, cols));
       return { cols, rows, cellOuter, cellInner: BASE_CELL };
     }
     return computeGridLayout(containerWidth || 800, totalSlots, gap);
-  }, [containerWidth, totalSlots, gap, isCanvasMode, data.canvas_cells_per_row, settings.defaultCanvasCellsPerRow]);
+  }, [area, areaSlots?.length, containerWidth, totalSlots, gap, isCanvasMode, data.canvas_cells_per_row, settings.defaultCanvasCellsPerRow]);
 
   // Pattern match lookup
   const slotMatchMap = useMemo(() => {
@@ -160,8 +232,10 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const paths: string[] = [];
     const nextPendingUrls = new Set<string>();
     const currentVersion = ++repaintVersionRef.current;
-    for (let i = 1; i <= data.deck_capacity; i++) {
-      const sid = data.spells?.[i.toString()];
+    for (let i = 1; i <= totalSlots; i++) {
+      const sid = area === 'always_cast'
+        ? areaSlots?.[i - 1]
+        : data.spells?.[i.toString()];
       if (sid) {
         const sp = spellDb[sid];
         if (sp?.icon) {
@@ -192,7 +266,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     } else {
       pendingIconUrlsRef.current.clear();
     }
-  }, [data.spells, data.deck_capacity, spellDb, isConnected, scheduleRepaint]);
+  }, [area, areaSlots, data.spells, data.deck_capacity, spellDb, isConnected, scheduleRepaint, totalSlots]);
 
   // ─── Container width tracking ──────────────────────────────
   useEffect(() => {
@@ -222,21 +296,26 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     skipOverlay: boolean,
     _selection: any,
     _hovered: any,
-    _drag: any
+    _drag: any,
+    palette: typeof C
   ) => {
     const slotIdx = i + 1;
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = col * cellOuter + _gap / 2;
     const y = row * cellOuter + _gap / 2;
-    const isLocked = i >= data.deck_capacity;
+    const isLocked = area === 'main' && i >= data.deck_capacity;
 
-    const sid = data.spells?.[slotIdx.toString()] ?? null;
+    const sid = area === 'always_cast'
+      ? areaSlots?.[slotIdx - 1] ?? null
+      : data.spells?.[slotIdx.toString()] ?? null;
     const spell = sid ? spellDb[sid] : null;
-    const uses = (data.spell_uses || {})[slotIdx.toString()] ?? spell?.max_uses;
+    const uses = area === 'always_cast'
+      ? undefined
+      : (data.spell_uses || {})[slotIdx.toString()] ?? spell?.max_uses;
 
-    const isSelected = !skipOverlay && _selection?.wandSlot === slot && _selection.indices.includes(slotIdx);
-    const isHovered = !skipOverlay && _hovered?.wandSlot === slot && _hovered.idx === slotIdx;
+    const isSelected = !skipOverlay && _selection?.wandSlot === slot && _selection?.area === area && _selection.indices.includes(slotIdx);
+    const isHovered = !skipOverlay && _hovered?.wandSlot === slot && _hovered?.area === area && _hovered.idx === slotIdx;
     const isDragSwap = isHovered && _drag && settings.dragSpellMode === 'noita_swap';
     const isMarked = Array.isArray(data.marked_slots) && data.marked_slots.includes(slotIdx);
 
@@ -244,6 +323,38 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       (sid === 'IF_PROJECTILE' && settings.simulateManyProjectiles) ||
       (sid === 'IF_ENEMY' && settings.simulateManyEnemies);
     const isGrayscale = uses === 0 || isTriggered;
+
+    // --- Dynamic Neon Spell Coloring based on Spell Types ---
+    let spellThemeColor = palette.borderSelected;
+    let spellGlowColor = palette.selectionGlow;
+    let spellSecColor = themePaletteCache.themeName === 'pureprism' ? 'rgba(217, 70, 239, 0.9)' : 'rgba(255, 0, 0, 0.8)';
+    
+    if (spell && settings.spellTypes) {
+      const tc = settings.spellTypes.find(t => t.id === spell.type);
+      if (tc && tc.color) {
+        // Boost dark Noita UI colors into highly emissive neon Canvas colors
+        const getNeon = (hex: string, alpha: number, boost = 1.0) => {
+          let h = hex.replace('#', '').trim();
+          if (h.length === 3) h = h.split('').map(c => c + c).join('');
+          if (h.length !== 6) return `rgba(255,255,255,${alpha})`;
+          let r = parseInt(h.substring(0, 2), 16);
+          let g = parseInt(h.substring(2, 4), 16);
+          let b = parseInt(h.substring(4, 6), 16);
+          const max = Math.max(r, g, b);
+          if (max < 50) boost *= 3.5;
+          else if (max < 150) boost *= 2.0;
+          else boost *= 1.2;
+          r = Math.min(255, Math.floor(r * boost));
+          g = Math.min(255, Math.floor(g * boost));
+          b = Math.min(255, Math.floor(b * boost));
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+        
+        spellThemeColor = getNeon(tc.color, 0.9);
+        spellGlowColor = getNeon(tc.color, 0.4);
+        spellSecColor = getNeon(tc.color, 0.7, 1.5);
+      }
+    }
 
     ctx.save();
     if (isLocked) {
@@ -258,33 +369,79 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Cell bg
     roundRect(ctx, x, y, cellInner, cellInner, BORDER_RADIUS);
     if (isSelected) {
-      ctx.fillStyle = C.bgSelected;
+      ctx.fillStyle = palette.bgSelected;
     } else if (isDragSwap) {
-      ctx.fillStyle = C.bgDragSwap;
+      ctx.fillStyle = palette.bgDragSwap;
     } else if (sid && !spell) {
-      ctx.fillStyle = C.bgUnknown;
+      ctx.fillStyle = palette.bgUnknown;
     } else {
-      ctx.fillStyle = C.bgNormal;
+      ctx.fillStyle = palette.bgNormal;
     }
     ctx.fill();
 
     // Border
     roundRect(ctx, x + 0.5, y + 0.5, cellInner - 1, cellInner - 1, BORDER_RADIUS);
-    ctx.strokeStyle = isSelected ? C.borderSelected
-      : isDragSwap ? C.borderDragSwap
-      : isHovered ? C.borderHover
-      : sid && !spell ? C.borderUnknown
-      : C.borderNormal;
+    ctx.strokeStyle = isSelected ? spellThemeColor
+      : isDragSwap ? palette.borderDragSwap
+      : isHovered ? spellThemeColor
+      : sid && !spell ? palette.borderUnknown
+      : palette.borderNormal;
     ctx.lineWidth = isSelected || isDragSwap ? 2 : 1;
     ctx.stroke();
 
-    // Selection ring
+    // Selection ring / Shards rendering
+    const isSingleSelect = _selection?.indices.length === 1 && isSelected;
+    const isFocalPoint = isSingleSelect || (isHovered && !isDragSwap);
+    const isAbyssal = themePaletteCache.themeName === 'pureprism' || themePaletteCache.themeName === 'blacktooth';
+
     if (isSelected) {
       ctx.save();
       roundRect(ctx, x - 1, y - 1, cellInner + 2, cellInner + 2, BORDER_RADIUS + 1);
-      ctx.strokeStyle = C.selectionGlow;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = spellGlowColor; // Using the dynamic neon spell color glow
+      ctx.lineWidth = isAbyssal ? 2 : 3;
       ctx.stroke();
+      ctx.restore();
+    }
+
+    if (isFocalPoint && isAbyssal && !!sid) {
+      const colorTert = 'rgba(255, 255, 255, 0.9)';
+
+      ctx.save();
+      ctx.lineJoin = 'miter';
+      ctx.miterLimit = 10;
+      
+      // Draw geometric shattered shards breaking out of the box using spell type colors
+      ctx.translate(x + cellInner/2, y + cellInner/2); 
+      
+      const drawShard = (angle: number, color: string, length: number, width: number, offset: number) => {
+         ctx.save();
+         ctx.rotate(angle);
+         ctx.translate(cellInner/2 + offset, 0); 
+         ctx.beginPath();
+         ctx.moveTo(0, -width/2);
+         ctx.lineTo(length, 0); 
+         ctx.lineTo(0, width/2);
+         ctx.fillStyle = color;
+         ctx.shadowColor = color;
+         ctx.shadowBlur = 8;
+         ctx.fill();
+         ctx.restore();
+      };
+
+      // Top Left Cluster
+      drawShard(-Math.PI * 0.75, spellThemeColor, 12, 6, -2);
+      drawShard(-Math.PI * 0.85, colorTert, 18, 2, -1);
+      drawShard(-Math.PI * 0.65, spellSecColor, 8, 4, 0);
+
+      // Bottom Right Cluster
+      drawShard(Math.PI * 0.25, spellThemeColor, 16, 8, -2);
+      drawShard(Math.PI * 0.15, spellSecColor, 10, 3, -1);
+      drawShard(Math.PI * 0.35, colorTert, 14, 2, 0);
+      
+      // Minor asymmetrical side shards
+      drawShard(Math.PI * 0.8, spellThemeColor, 6, 3, -1); 
+      drawShard(-Math.PI * 0.1, spellSecColor, 5, 2, 0); 
+
       ctx.restore();
     }
 
@@ -292,7 +449,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     if (isMarked) {
       ctx.save();
       roundRect(ctx, x - 1, y - 1, cellInner + 2, cellInner + 2, BORDER_RADIUS + 1);
-      ctx.strokeStyle = C.markedRing;
+      ctx.strokeStyle = palette.markedRing;
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.restore();
@@ -301,11 +458,31 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Hover indicator line
     if (isHovered && _hovered && !isDragSwap) {
       const lineX = _hovered.isRightHalf ? x + cellInner + _gap / 2 + 1 : x - _gap / 2 - 1;
-      ctx.save();
-      roundRect(ctx, lineX - 2, y, 4, cellInner, 2);
-      ctx.fillStyle = C.hoverLine;
-      ctx.fill();
-      ctx.restore();
+      
+      if (isAbyssal) {
+        ctx.save();
+        ctx.shadowColor = spellThemeColor;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        // Sharp glowing diamond thread instead of a blunt 4px block
+        ctx.moveTo(lineX, y - 6);
+        ctx.lineTo(lineX + 1.5, y + cellInner / 2);
+        ctx.lineTo(lineX, y + cellInner + 6);
+        ctx.lineTo(lineX - 1.5, y + cellInner / 2);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(lineX - 0.5, y, 1, cellInner);
+        ctx.restore();
+      } else {
+        ctx.save();
+        roundRect(ctx, lineX - 2, y, 4, cellInner, 2);
+        ctx.fillStyle = palette.hoverLine;
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // Drag swap overlay
@@ -356,15 +533,15 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       if (info?.mod_id) {
-        ctx.fillStyle = C.unknownMod;
+        ctx.fillStyle = palette.unknownMod;
         ctx.font = 'bold 9px sans-serif';
         ctx.fillText(`@${info.mod_id}`, cx, cy - 6, cellInner - 4);
       } else {
-        ctx.fillStyle = C.unknownPrimary;
+        ctx.fillStyle = palette.unknownPrimary;
         ctx.font = 'bold 14px sans-serif';
         ctx.fillText('?', cx, cy - 4);
       }
-      ctx.fillStyle = C.unknownSec;
+      ctx.fillStyle = palette.unknownSec;
       ctx.font = '9px monospace';
       const displaySid = sid.length > 8 ? sid.substring(0, 7) + '…' : sid;
       ctx.fillText(displaySid, cx, cy + 8, cellInner - 4);
@@ -373,14 +550,14 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = C.plus;
+      ctx.fillStyle = palette.plus;
       ctx.font = '300 24px sans-serif';
       ctx.fillText('+', cx, cy);
       ctx.restore();
     }
 
     // Pattern bar
-    const pm = slotMatchMap[slotIdx];
+    const pm = area === 'main' ? slotMatchMap[slotIdx] : undefined;
     if (pm) {
       const barH = 3;
       const barY = y + cellInner - barH;
@@ -395,7 +572,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Trigger triangle
     if (isTriggered) {
       ctx.save();
-      ctx.fillStyle = C.triggerColor;
+      ctx.fillStyle = palette.triggerColor;
       ctx.beginPath();
       ctx.moveTo(x, y + cellInner);
       ctx.lineTo(x + 12, y + cellInner);
@@ -406,7 +583,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     }
 
     // Uses badge
-    if (spell && uses !== undefined && (settings.showSpellCharges || uses === 0) && uses !== -1 && !isTriggered) {
+    if (area === 'main' && spell && uses !== undefined && (settings.showSpellCharges || uses === 0) && uses !== -1 && !isTriggered) {
       const usesStr = String(uses);
       ctx.save();
       ctx.font = 'bold 10px monospace';
@@ -416,9 +593,9 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       const bx = x;
       const by = y + cellInner - bh;
       roundRect(ctx, bx, by, bw, bh, 2);
-      ctx.fillStyle = C.usesBg;
+      ctx.fillStyle = palette.usesBg;
       ctx.fill();
-      ctx.fillStyle = uses === 0 ? C.usesZero : C.usesNormal;
+      ctx.fillStyle = uses === 0 ? palette.usesZero : palette.usesNormal;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(usesStr, bx + 3, by + bh / 2);
@@ -427,20 +604,48 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
     // Index number
     const ordinal = absoluteToOrdinal[slotIdx];
-    if (ordinal) {
-      const showIdx = isAltPressed || settings.showIndices;
+    const alwaysCastLabel = area === 'always_cast'
+      ? -(areaSlots
+        ?.slice(0, slotIdx)
+        .filter(Boolean)
+        .length ?? 0)
+      : null;
+    const showMainOrdinal = area === 'main' && !!ordinal;
+    const showAlwaysCastIndex = area === 'always_cast' && !!sid && !!alwaysCastLabel;
+    if (showMainOrdinal || showAlwaysCastIndex) {
+      const showIdx = area === 'always_cast'
+        ? true
+        : (isAltPressed || settings.showIndices);
+      const label = showMainOrdinal
+        ? String(ordinal)
+        : String(alwaysCastLabel);
+
       ctx.save();
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'bottom';
-      ctx.fillStyle = showIdx ? C.indexVisible : C.indexHidden;
+      const isAlwaysCastIndex = area === 'always_cast';
+      ctx.fillStyle = showIdx
+        ? (isAlwaysCastIndex ? palette.indexAlwaysCast : palette.indexVisible)
+        : palette.indexHidden;
+      if (showIdx && isAlwaysCastIndex) {
+        const metrics = ctx.measureText(label);
+        const badgeW = Math.max(12, metrics.width + 6);
+        const badgeH = 12;
+        const badgeX = x + cellInner - badgeW - 1;
+        const badgeY = y + cellInner - badgeH - 1;
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
+        ctx.fillStyle = palette.indexAlwaysCastBg;
+        ctx.fill();
+        ctx.fillStyle = palette.indexAlwaysCast;
+      }
       if (showIdx) {
         ctx.strokeStyle = 'rgba(0,0,0,0.8)';
         ctx.lineWidth = 2;
         ctx.lineJoin = 'round';
-        ctx.strokeText(String(ordinal), x + cellInner - 2, y + cellInner - 2);
+        ctx.strokeText(label, x + cellInner - 2, y + cellInner - 2);
       }
-      ctx.fillText(String(ordinal), x + cellInner - 2, y + cellInner - 2);
+      ctx.fillText(label, x + cellInner - 2, y + cellInner - 2);
       ctx.restore();
     }
 
@@ -452,7 +657,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       ctx.save();
       ctx.beginPath();
       ctx.arc(dbX, dbY, dbSize / 2, 0, Math.PI * 2);
-      ctx.fillStyle = C.deleteCircle;
+      ctx.fillStyle = palette.deleteCircle;
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 12px sans-serif';
@@ -506,12 +711,13 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       baseDirtyRef.current = false;
       const bctx = baseCanvas.getContext('2d')!;
       bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const palette = resolveThemePalette(settings.coolUITheme);
       bctx.clearRect(0, 0, canvasW, canvasH);
       // Paint all cells without hover/selection overlays
       for (let i = 0; i < totalSlots; i++) {
         bctx.save();
         bctx.translate(0, CANVAS_PADDING_TOP);
-        paintCell(bctx, i, _gap, cols, cellOuter, cellInner, true, null, null, null);
+        paintCell(bctx, i, _gap, cols, cellOuter, cellInner, true, null, null, null, palette);
         bctx.restore();
       }
     }
@@ -531,12 +737,12 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const overlayCells = new Set<number>();
 
     // Hovered cell
-    if (_hovered?.wandSlot === slot && _hovered.idx >= 1 && _hovered.idx <= totalSlots) {
+    if (_hovered?.wandSlot === slot && _hovered?.area === area && _hovered.idx >= 1 && _hovered.idx <= totalSlots) {
       overlayCells.add(_hovered.idx - 1);
     }
 
     // Selected cells
-    if (_selection?.wandSlot === slot) {
+    if (_selection?.wandSlot === slot && _selection?.area === area) {
       for (const idx of _selection.indices) {
         if (idx >= 1 && idx <= totalSlots) overlayCells.add(idx - 1);
       }
@@ -566,7 +772,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       // So we need to translate context here too to match.
       ctx.save();
       ctx.translate(0, CANVAS_PADDING_TOP);
-      paintCell(ctx, i, _gap, cols, cellOuter, cellInner, false, _selection, _hovered, _drag);
+      const palette = resolveThemePalette(settings.coolUITheme);
+      paintCell(ctx, i, _gap, cols, cellOuter, cellInner, false, _selection, _hovered, _drag, palette);
       ctx.restore();
     }
   };
@@ -579,10 +786,11 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     baseDirtyRef.current = true;
     scheduleRepaint();
   }, [
-    data.spells, data.deck_capacity, data.spell_uses, data.marked_slots,
+    area, areaSlots, data.spells, data.deck_capacity, data.spell_uses, data.marked_slots,
     isAltPressed, settings.showIndices, settings.showSpellCharges,
     settings.editorDragMode, settings.dragSpellMode,
     settings.simulateLowHp, settings.simulateManyProjectiles, settings.simulateManyEnemies,
+    settings.coolUITheme,
     absoluteToOrdinal, patternMatches, slotMatchMap,
     layout, containerWidth, scheduleRepaint,
   ]);
@@ -641,7 +849,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     if (i < 0 || i >= totalSlots) return null;
     const slotIdx = i + 1;
 
-    if (i >= data.deck_capacity) return null;
+    if (area === 'main' && i >= data.deck_capacity) return null;
 
     const cellLocalX = mx - col * cellOuter;
     const isRightHalf = cellLocalX > cellOuter / 2;
@@ -663,6 +871,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       if (!hit) return null;
       return {
         wandSlot: slot,
+        area,
         idx: hit.slotIdx,
         isRightHalf: hit.isRightHalf,
       };
@@ -676,10 +885,10 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   const updateHoverFromClientPoint = useCallback((clientX: number, clientY: number) => {
     const hit = hitTest(clientX, clientY);
     if (hit) {
-      setHoveredSlot({ wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
+      setHoveredSlot({ wandSlot: slot, area, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
       if (lastHoveredIdxRef.current !== hit.slotIdx) {
         lastHoveredIdxRef.current = hit.slotIdx;
-        handleSlotMouseEnter(slot, hit.slotIdx);
+        handleSlotMouseEnter(slot, hit.slotIdx, area);
       }
     } else {
       if (lastHoveredIdxRef.current !== -1) {
@@ -687,11 +896,17 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       }
       handleSlotMouseLeave();
     }
-  }, [hitTest, slot, setHoveredSlot, handleSlotMouseEnter, handleSlotMouseLeave]);
+  }, [area, hitTest, slot, setHoveredSlot, handleSlotMouseEnter, handleSlotMouseLeave]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const resolved = useUIStore.getState().resolveHoveredSlotAtPoint(e.clientX, e.clientY);
+    if (resolved && resolved.wandSlot === slot && resolved.area !== area) {
+      setHoveredSlot(resolved);
+      handleSlotMouseEnter(slot, resolved.idx, resolved.area);
+      return;
+    }
     updateHoverFromClientPoint(e.clientX, e.clientY);
-  }, [updateHoverFromClientPoint]);
+  }, [area, handleSlotMouseEnter, setHoveredSlot, slot, updateHoverFromClientPoint]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     // 允许通过 capture 进行拖拽，防止原生冲突
@@ -703,8 +918,16 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       return;
     }
 
-    setHoveredSlot({ wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
+    setHoveredSlot({ wandSlot: slot, area, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
     lastHoveredIdxRef.current = hit.slotIdx;
+
+    if (area === 'always_cast') {
+      if (e.button === 0 || e.button === 2) {
+        mouseDownIdxRef.current = hit.slotIdx;
+        handleSlotMouseDown(slot, hit.slotIdx, e.button === 2, { x: e.clientX, y: e.clientY }, area);
+      }
+      return;
+    }
 
     if (e.button === 1) { // Middle click
       const sid = data.spells?.[hit.slotIdx.toString()];
@@ -727,9 +950,9 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
     if (e.button === 0 || e.button === 2) {
       mouseDownIdxRef.current = hit.slotIdx;
-      handleSlotMouseDown(slot, hit.slotIdx, e.button === 2, { x: e.clientX, y: e.clientY });
+      handleSlotMouseDown(slot, hit.slotIdx, e.button === 2, { x: e.clientX, y: e.clientY }, area);
     }
-  }, [hitTest, slot, data.spells, spellDb, handleSlotMouseDown, updateWand, openWiki]);
+  }, [area, hitTest, slot, data.spells, spellDb, handleSlotMouseDown, updateWand, openWiki]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const target = e.target as HTMLElement;
@@ -738,21 +961,66 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     }
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
-      handleSlotMouseUp(slot, hit.slotIdx);
+      handleSlotMouseUp(slot, hit.slotIdx, area);
     } else {
-      handleSlotMouseLeave();
-      lastHoveredIdxRef.current = -1;
+      const resolved = useUIStore.getState().resolveHoveredSlotAtPoint(e.clientX, e.clientY);
+      if (resolved && resolved.wandSlot === slot && resolved.area !== area) {
+        handleSlotMouseUp(slot, resolved.idx, resolved.area);
+        return;
+      }
+      const attrBox = area === 'main' ? containerRef.current?.closest('[data-wand-editor-root]')?.querySelector('[data-wand-attributes-box]') as HTMLElement | null : null;
+      const inlineAttrRect = attrBox?.getBoundingClientRect();
+      const canvasAttrNode = document.getElementById(`canvas-attrs-${slot}`);
+      const canvasAttrRect = canvasAttrNode?.getBoundingClientRect();
+      const isWithinRect = (rect?: DOMRect | null) => !!rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      const isOverAttrBox = isWithinRect(inlineAttrRect) || isWithinRect(canvasAttrRect);
+
+      if (isOverAttrBox) {
+        handleSlotMouseUp(slot, -1000);
+      } else {
+        handleSlotMouseLeave();
+        lastHoveredIdxRef.current = -1;
+      }
     }
-  }, [hitTest, slot, handleSlotMouseUp, handleSlotMouseLeave]);
+  }, [area, hitTest, slot, handleSlotMouseUp, handleSlotMouseLeave]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const hit = hitTest(e.clientX, e.clientY);
     if (!hit) return;
 
-    const sid = data.spells?.[hit.slotIdx.toString()] ?? null;
+    const sid = area === 'always_cast'
+      ? areaSlots?.[hit.slotIdx - 1] ?? null
+      : data.spells?.[hit.slotIdx.toString()] ?? null;
     const spell = sid ? spellDb[sid] : null;
     const idx = hit.slotIdx.toString();
-    const uses = (data.spell_uses || {})[idx] ?? spell?.max_uses;
+    const uses = area === 'main' ? (data.spell_uses || {})[idx] ?? spell?.max_uses : undefined;
+
+    if (area === 'always_cast') {
+      if (hit.isDelete && sid) {
+        e.stopPropagation();
+        updateWand(slot, (curr) => {
+          const nextAlwaysCast = [...(curr.always_cast || [])];
+          const idx = hit.slotIdx - 1;
+          while (nextAlwaysCast.length <= idx) nextAlwaysCast.push('');
+          nextAlwaysCast[idx] = '';
+          return { always_cast: nextAlwaysCast };
+        }, t('app.notification.delete_spell'));
+        return;
+      }
+
+      const downIdx = mouseDownIdxRef.current;
+      mouseDownIdxRef.current = -1;
+      if (downIdx !== -1 && downIdx !== hit.slotIdx) {
+        return;
+      }
+
+      openPicker(slot, `ac-${hit.slotIdx - 1}`, {
+        x: e.clientX,
+        y: e.clientY,
+        insertAnchor: { wandSlot: slot, idx: hit.slotIdx, isRightHalf: hit.isRightHalf }
+      });
+      return;
+    }
 
     // Check delete button
     if (hit.isDelete && spell) {
@@ -885,15 +1153,17 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
         });
       }
     }
-  }, [hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t]);
+  }, [area, areaSlots, hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     const hit = hitTest(e.clientX, e.clientY);
     if (hit) {
-      const sid = data.spells?.[hit.slotIdx.toString()];
+      const sid = area === 'always_cast'
+        ? areaSlots?.[hit.slotIdx - 1]
+        : data.spells?.[hit.slotIdx.toString()];
       if (sid) e.preventDefault();
     }
-  }, [hitTest, data.spells]);
+  }, [area, areaSlots, hitTest, data.spells]);
 
   const handleMouseLeave = useCallback(() => {
     handleSlotMouseLeave();
@@ -905,6 +1175,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   return (
     <div
       ref={containerRef}
+      data-spell-grid-canvas-container
       className={isCanvasMode
         ? 'p-1 select-none'
         : 'max-h-[600px] overflow-y-auto custom-scrollbar p-1 select-none'
@@ -912,7 +1183,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     >
       <canvas
         ref={canvasRef}
-        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }} data-wand-slot-canvas={slot}
+        data-spell-grid-area={area}
+        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }} data-wand-slot-canvas={`${slot}-${area}`}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
