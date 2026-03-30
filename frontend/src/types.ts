@@ -222,6 +222,29 @@ export interface WandSelection {
   startIdx: number;
 }
 
+export type SpellArea = 'main' | 'always_cast';
+
+export interface SpellAreaSelection {
+  wandSlot: string;
+  area: SpellArea;
+  indices: number[];
+  startIdx: number;
+}
+
+export interface HoveredSpellSlot {
+  wandSlot: string;
+  area: SpellArea;
+  idx: number;
+  isRightHalf: boolean;
+}
+
+export interface SpellDragSource {
+  wandSlot: string;
+  area: SpellArea;
+  idx: number;
+  sid: string;
+}
+
 export interface PickerInsertAnchor {
   wandSlot: string;
   idx: number;

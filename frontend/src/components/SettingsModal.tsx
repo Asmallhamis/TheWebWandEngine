@@ -1930,7 +1930,7 @@ export function SettingsModal({
                 <ShortcutItem keys={['L-Click']} label={t('guide.shortcuts.select_toggle')} />
                 <ShortcutItem keys={['L-Drag']} label={t('guide.shortcuts.box_select')} />
                 <ShortcutItem keys={['R-Drag']} label={t('guide.shortcuts.move_spells')} />
-                <ShortcutItem keys={['Right Half', 'AC Zone']} label={t('guide.shortcuts.to_always_cast')} />
+                <ShortcutItem keys={['Wand Info Panel']} label={t('guide.shortcuts.to_always_cast')} />
               </div>
             </section>
 

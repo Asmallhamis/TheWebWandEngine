@@ -131,7 +131,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
       // 1. Connection lines to children
       if (cn.children.length > 0) {
-        ctx.strokeStyle = '#27272a'; // Zinc-800
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
         ctx.lineWidth = 1;
 
         const startX = x + nodeW;
@@ -360,13 +360,17 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
       // Indices
       if (showIndices && node.index && node.index.length > 0) {
-        ctx.fillStyle = '#22d3ee'; // Cyan-400
         ctx.font = 'black 10px Inter';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
         ctx.shadowBlur = 3;
-        const idxText = node.index.map((idx: number) => absoluteToOrdinal?.[idx] ?? idx).join(',');
+        const idxValues = node.index
+          .map((idx: number) => absoluteToOrdinal?.[idx])
+          .filter((value): value is number => typeof value === 'number' && value > 0);
+        const isAlwaysCastNode = idxValues.length === 0;
+        const idxText = (isAlwaysCastNode ? node.index : idxValues).join(',');
+        ctx.fillStyle = isAlwaysCastNode ? '#f59e0b' : '#22d3ee';
         ctx.fillText(idxText, x + nodeW + 4, y + nodeH);
         ctx.shadowBlur = 0;
       }
@@ -511,7 +515,7 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
     }
 
     const roots: ComputedNode[] = [];
-    let currentY = 20;
+    let currentY = 8;
 
     if (data.name === 'Wand' && data.children && data.children.length > 0) {
       for (const child of data.children) {
