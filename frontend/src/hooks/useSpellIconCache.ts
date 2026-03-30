@@ -8,8 +8,25 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 
 const iconCache = new Map<string, HTMLImageElement>();
 const loadingSet = new Set<string>();
-const failedSet = new Set<string>();
 const listenersMap = new Map<string, Set<() => void>>();
+
+function shouldUseAnonymousCors(url: string) {
+  if (!url) return false;
+  if (url.startsWith('data:') || url.startsWith('blob:')) return false;
+  if (url.startsWith('/')) return false;
+  try {
+    const resolved = new URL(url, window.location.href);
+    return resolved.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function configureImage(img: HTMLImageElement, url: string) {
+  if (shouldUseAnonymousCors(url)) {
+    img.crossOrigin = 'anonymous';
+  }
+}
 
 function addListener(url: string, listener?: () => void) {
   if (!listener) return;
@@ -43,14 +60,13 @@ export function getCachedIcon(
   const cached = iconCache.get(url);
   if (cached) return cached;
 
-  if (failedSet.has(url)) return null;
   addListener(url, onLoad);
   if (loadingSet.has(url)) return null;
 
   // Start loading
   loadingSet.add(url);
   const img = new Image();
-  img.crossOrigin = 'anonymous';
+  configureImage(img, url);
   img.onload = () => {
     loadingSet.delete(url);
     iconCache.set(url, img);
@@ -58,7 +74,6 @@ export function getCachedIcon(
   };
   img.onerror = () => {
     loadingSet.delete(url);
-    failedSet.add(url);
     flushListeners(url);
   };
   img.src = url;
@@ -83,12 +98,12 @@ export function preloadIcons(
   for (const path of iconPaths) {
     if (!path) continue;
     const url = getIconUrl(path, isConnected);
-    if (!url || iconCache.has(url) || failedSet.has(url) || loadingSet.has(url)) continue;
+    if (!url || iconCache.has(url) || loadingSet.has(url)) continue;
 
     pending++;
     loadingSet.add(url);
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    configureImage(img, url);
     img.onload = () => {
       loadingSet.delete(url);
       iconCache.set(url, img);
@@ -97,7 +112,6 @@ export function preloadIcons(
     };
     img.onerror = () => {
       loadingSet.delete(url);
-      failedSet.add(url);
       flushListeners(url);
       done();
     };

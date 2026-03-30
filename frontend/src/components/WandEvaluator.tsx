@@ -115,14 +115,14 @@ const ShotTree: React.FC<{
   settings: AppSettings
 }> = ({ nodes, hoveredShotId, currentCast, spellDb, isRoot, settings }) => {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {nodes.map((node) => (
         <div key={node.state.id} className="flex items-start shrink-0">
           <div className="relative flex items-start">
             {/* 左侧连接线 + 卡片头部对齐容器 */}
-            <div className="flex items-center h-[44px] shrink-0">
+            <div className="flex items-center h-[56px] shrink-0">
               {!isRoot && (
-                <div className="w-8 h-px bg-zinc-800 shrink-0"></div>
+                <div className="w-10 h-[2px] eval-tree-line shrink-0"></div>
               )}
             </div>
 
@@ -135,8 +135,8 @@ const ShotTree: React.FC<{
 
             {/* 子节点渲染 */}
             {node.children.length > 0 && (
-              <div className="flex flex-col gap-6 relative">
-                <div className="flex flex-col gap-6 ml-0 shrink-0">
+              <div className="flex flex-col gap-5 relative">
+                <div className="flex flex-col gap-5 ml-0 shrink-0">
                   <ShotTree
                     nodes={node.children}
                     hoveredShotId={hoveredShotId}
@@ -148,7 +148,7 @@ const ShotTree: React.FC<{
                 </div>
                 {/* 垂直分支线 */}
                 {node.children.length > 1 && (
-                  <div className="absolute left-0 top-[22px] bottom-[22px] w-px bg-zinc-800"></div>
+                  <div className="absolute left-0 top-[28px] bottom-[28px] w-[2px] eval-tree-line"></div>
                 )}
               </div>
             )}
@@ -276,7 +276,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
   }, [data, settings.groupIdenticalCasts]);
 
   return (
-    <div className={isCanvas ? "space-y-6" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500"}>
+    <div className={isCanvas ? "space-y-6 eval-orionfire-region" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
       {/* Overall Spell Counts Section */}
       {(renderMode === 'all' || renderMode === 'stats') && sortedOverallCounts.length > 0 && (
         <section data-testid="eval-overall-counts">
@@ -291,17 +291,17 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
               const spell = spellDb[id];
               const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
               return (
-                <div key={id} data-testid={`eval-overall-count-item-${id}`} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0.5 rounded-md transition-all group/count">
+                <div key={id} data-testid={`eval-overall-count-item-${id}`} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0 rounded-md transition-all group/count min-h-[28px]">
                   {spell ? (
                     <img src={getIconUrl(spell.icon, false)} alt={id} className="w-5 h-5 image-pixelated" />
                   ) : (
                     <div className="w-5 h-5 bg-zinc-800 rounded flex items-center justify-center text-[8px] text-zinc-500 font-mono">?</div>
                   )}
-                  <div className="flex flex-col -space-y-1">
-                    <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter truncate max-w-[60px]" title={id}>
+                  <div className="flex flex-col justify-center leading-none py-0">
+                    <span className="text-[8px] leading-none font-bold text-zinc-500 uppercase tracking-tighter truncate max-w-[60px]" title={id}>
                       {displayName}
                     </span>
-                    <span className="text-[9px] font-black text-amber-500/80 font-mono">
+                    <span className="text-[9px] leading-none font-black text-amber-500/80 font-mono mt-0.5">
                       {count.toLocaleString()}
                     </span>
                   </div>
@@ -477,7 +477,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                     {(!isRange || !isShowingAll) ? (
                       // 预览模式或单轮：显示树
                       <div>
-                        <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
+                        <div className="flex-1 overflow-x-auto px-8 pt-4 pb-8 custom-scrollbar">
                           <div className="w-fit">
                             <TreeNode
                               node={group.node}
@@ -507,7 +507,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-[8px] font-black text-zinc-600 uppercase"># {cNum}</span>
                             </div>
-                            <div className="flex-1 overflow-x-auto p-12 custom-scrollbar">
+                            <div className="flex-1 overflow-x-auto px-8 pt-4 pb-8 custom-scrollbar">
                               <div className="w-fit">
                                 <TreeNode
                                   node={cNode}
@@ -681,13 +681,13 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
           className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 z-30 flex items-center"
           title={mainIconSpellId}
         >
-          <div className={`relative w-7 h-7 rounded bg-zinc-900 border ${triggerStyle ? triggerStyle.border + ' ' + triggerStyle.bg : 'border-zinc-700'} shadow-2xl flex items-center justify-center p-0.5`}>
-            <img src={getIconUrl(mainIcon, false)} alt={mainIconSpellId || ''} className="w-5 h-5 image-pixelated" />
+          <div className={`relative w-10 h-10 rounded-md bg-zinc-900 border ${triggerStyle ? triggerStyle.border + ' ' + triggerStyle.bg : 'border-zinc-700'} shadow-2xl flex items-center justify-center p-1`}>
+            <img src={getIconUrl(mainIcon, false)} alt={mainIconSpellId || ''} className="w-7 h-7 image-pixelated" />
             
             {/* Filter: If we are showin the payload icon, the trigger badge goes on top */}
             {settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && (
-              <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-sm border ${triggerStyle.border} ${triggerStyle.bg} flex items-center justify-center shadow-md animate-in fade-in zoom-in duration-300`}>
-                <span className={`text-[6px] font-black ${triggerStyle.color}`}>
+              <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-sm border ${triggerStyle.border} ${triggerStyle.bg} flex items-center justify-center shadow-md animate-in fade-in zoom-in duration-300`}>
+                <span className={`text-[8px] font-black ${triggerStyle.color}`}>
                   {triggerStyle.label}
                 </span>
               </div>
@@ -696,18 +696,18 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
           
           {/* Explicit mode: Show the trigger label next to the icon */}
           {settings.triggerVisualizationMode === 'standard' && triggerStyle && (
-            <div className={`ml-1 px-1 py-0.5 rounded border text-[7px] font-black shadow-lg ${triggerStyle.color} ${triggerStyle.bg} ${triggerStyle.border} bg-zinc-900 animate-in slide-in-from-left-1 duration-300`}>
+            <div className={`ml-1.5 px-1.5 py-0.5 rounded border text-[9px] font-black shadow-lg ${triggerStyle.color} ${triggerStyle.bg} ${triggerStyle.border} bg-zinc-900 animate-in slide-in-from-left-1 duration-300`}>
               {triggerStyle.label}
             </div>
           )}
         </div>
       )}
-      <div className={`flex-shrink-0 w-56 p-3 glass-card transition-all duration-300 group/state ${isHighlighted ? 'glow-border-active scale-105 z-10' : 'hover:glow-border'}`}>
-        <div className={`text-[10px] font-mono font-bold mb-3 border-b border-white/5 pb-1.5 flex justify-between items-center uppercase tracking-tighter ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
-          <div className="flex items-center gap-2">
+      <div className={`flex-shrink-0 w-72 px-4 pt-1.5 pb-4 glass-card transition-all duration-300 group/state ${isHighlighted ? 'glow-border-active scale-105 z-10' : 'hover:glow-border'}`}>
+        <div className={`text-[13px] font-mono font-bold mb-2 border-b border-white/5 pb-1 flex justify-between items-center uppercase tracking-tight ${isHighlighted ? 'text-white' : 'text-blue-400'}`}>
+          <div className="flex items-center gap-2.5">
             {/* B类: Projectiles in this shot — INSIDE the card header (Moved to extreme left) */}
             {projectiles && projectiles.length > 0 && spellDb && (
-              <div className="flex items-center gap-0.5 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap min-h-[28px]">
                 {(settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && projectiles.length > 0
                   ? projectiles.slice(1) // Hide the payload as it's now the "Caster" icon
                   : projectiles
@@ -719,23 +719,23 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
                       src={getIconUrl(spell.icon, false)}
                       alt={spellId}
                       title={spellId}
-                      className="w-5 h-5 image-pixelated"
+                      className="w-7 h-7 image-pixelated"
                     />
                   ) : (
-                    <div key={`${spellId}-${i}`} className="w-5 h-5 bg-zinc-800 rounded flex items-center justify-center text-[7px] text-zinc-500 font-mono" title={spellId}>?</div>
+                    <div key={`${spellId}-${i}`} className="w-7 h-7 bg-zinc-800 rounded flex items-center justify-center text-[9px] text-zinc-500 font-mono" title={spellId}>?</div>
                   );
                 })}
               </div>
             )}
             
             {/* state.id (Moved away from top-left) */}
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border transition-colors ${isHighlighted ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-zinc-800 border-white/10 text-zinc-400'}`}>
               {state.id}
             </div>
           </div>
-          <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[8px] text-zinc-600 transition-opacity`}>{t('evaluator.shot_state_label')}</span>
+          <span className={`${isHighlighted ? 'opacity-100' : 'opacity-0'} group-hover/state:opacity-100 text-[10px] text-zinc-600 transition-opacity`}>{t('evaluator.shot_state_label')}</span>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {Object.entries(state.stats)
             .filter(([key]) => !['reload_time', 'fire_rate_wait'].includes(key))
             .map(([key, value]) => {
@@ -748,8 +748,8 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
                 }
               }
               return (
-                <div key={key} className="flex justify-between text-[10px] font-mono leading-none">
-                  <span className="text-zinc-500 uppercase text-[9px]">{key.replace(/_/g, ' ')}</span>
+                <div key={key} className="flex justify-between items-center text-[12px] font-mono leading-none gap-4">
+                  <span className="text-zinc-500 uppercase text-[11px]">{key.replace(/_/g, ' ')}</span>
                   <span className={color}>
                     {value}
                   </span>
@@ -787,7 +787,7 @@ const TreeNode: React.FC<{
         {/* 左侧连接线 + 节点卡片 包装器 */}
         <div className="flex items-center h-[46px] shrink-0">
           {!isRoot && (
-            <div className="w-6 h-px bg-zinc-800 shrink-0"></div>
+            <div className="w-6 h-[2px] eval-tree-line shrink-0"></div>
           )}
 
           <TiltContainer
@@ -941,7 +941,7 @@ const TreeNode: React.FC<{
             </div>
             {/* 垂直分支线 */}
             {node.children.length > 1 && (
-              <div className="absolute left-0 top-[23px] bottom-[23px] w-px bg-zinc-800"></div>
+              <div className="absolute left-0 top-[23px] bottom-[23px] w-[2px] eval-tree-line"></div>
             )}
           </div>
         )}

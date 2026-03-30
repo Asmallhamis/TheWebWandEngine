@@ -1,5 +1,9 @@
 import { WandData, EvalResponse } from '../types';
 
+
+const compactAlwaysCast = (spells?: (string | null | undefined)[]) =>
+  (spells || []).map(s => s || '').filter(Boolean);
+
 import { getActiveModBundle, ModBundle } from './modStorage';
 let worker: Worker | null = null;
 let lastRequestId = 0;
@@ -264,7 +268,7 @@ export async function evaluateWand(
           actions_per_round: wand.actions_per_round,
           spells: spells,
           spell_uses: wand.spell_uses || {},
-          always_cast: wand.always_cast || [],
+          always_cast: compactAlwaysCast(wand.always_cast),
           number_of_casts: settings.numCasts || 3,
           unlimited_spells: settings.unlimitedSpells,
           initial_if_half: settings.initialIfHalf,

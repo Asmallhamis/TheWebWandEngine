@@ -70,4 +70,12 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
   }
+
+  .eval-tree-line {
+    background: rgba(255, 255, 255, 0.32);
+    background-color: rgba(255, 255, 255, 0.32);
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
 }

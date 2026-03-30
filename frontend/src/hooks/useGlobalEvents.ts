@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tab, WandData, AppSettings, AppNotification, DragSource, MousePos } from '../types';
+import { Tab, WandData, AppSettings, AppNotification, SpellDragSource, MousePos } from '../types';
 import { useUIStore } from '../store/useUIStore';
 
 interface UseGlobalEventsProps {
@@ -9,7 +9,7 @@ interface UseGlobalEventsProps {
   tabs: Tab[];
   settings: AppSettings;
   spellDb: Record<string, any>;
-  dragSource: DragSource | null;
+  dragSource: SpellDragSource | null;
   pickerConfig: any;
   notification: AppNotification | null;
   
@@ -19,7 +19,7 @@ interface UseGlobalEventsProps {
   setIsWarehouseOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setSelection: (s: any) => void;
   setIsSelecting: (s: boolean) => void;
-  setDragSource: (s: DragSource | null) => void;
+  setDragSource: (s: SpellDragSource | null) => void;
   setMousePos: (p: MousePos) => void;
   setIsDraggingFile: (s: boolean) => void;
   setNotification: (n: AppNotification | null) => void;
@@ -146,8 +146,22 @@ export const useGlobalEvents = ({
             e.preventDefault();
             const wand = activeTab.wands[targetSlot];
             if (wand) {
-              const allIndices = Array.from({ length: wand.deck_capacity }, (_, i) => i + 1);
-              setSelection({ wandSlot: targetSlot, indices: allIndices, startIdx: 1 });
+              const targetArea = hoveredSlot?.wandSlot === targetSlot
+                ? hoveredSlot.area
+                : selection?.wandSlot === targetSlot
+                  ? selection.area
+                  : 'main';
+
+              if (targetArea === 'always_cast') {
+                const total = (wand.always_cast || []).length;
+                if (total > 0) {
+                  const allIndices = Array.from({ length: total }, (_, i) => i + 1);
+                  setSelection({ wandSlot: targetSlot, area: 'always_cast', indices: allIndices, startIdx: 1 });
+                }
+              } else {
+                const allIndices = Array.from({ length: wand.deck_capacity }, (_, i) => i + 1);
+                setSelection({ wandSlot: targetSlot, area: 'main', indices: allIndices, startIdx: 1 });
+              }
             }
           }
         } else if (e.key === 'c') {
@@ -167,7 +181,7 @@ export const useGlobalEvents = ({
         let targetSlot: string | null = null;
         let targetIndices: number[] = [];
 
-        if (sel && hovered && hovered.wandSlot === sel.wandSlot && sel.indices.includes(hovered.idx)) {
+        if (sel && hovered && hovered.wandSlot === sel.wandSlot && hovered.area === sel.area && sel.indices.includes(hovered.idx)) {
           targetSlot = sel.wandSlot;
           targetIndices = sel.indices;
         } else if (hovered && hovered.wandSlot) {
@@ -181,46 +195,76 @@ export const useGlobalEvents = ({
         if (targetSlot) {
           e.preventDefault();
           const wand = activeTab.wands[targetSlot];
+          const targetArea = sel && hovered && hovered.wandSlot === sel.wandSlot && hovered.area === sel.area && sel.indices.includes(hovered.idx)
+            ? sel.area
+            : hovered?.wandSlot === targetSlot
+              ? hovered.area
+              : sel?.wandSlot === targetSlot
+                ? sel.area
+                : 'main';
+
           if (wand) {
-            if (settings.deleteEmptySlots && e.key === 'Delete') {
-              const indicesToRem = new Set(targetIndices.filter(i => i <= wand.deck_capacity));
+            if (targetArea === 'always_cast') {
+              const indicesToRem = new Set(targetIndices.filter(i => i >= 1));
               if (indicesToRem.size > 0) {
-                const newSpells: Record<string, string> = {};
-                const newSpellUses: Record<string, number> = {};
-                let nextIdx = 1;
-                for (let i = 1; i <= wand.deck_capacity; i++) {
-                  if (indicesToRem.has(i)) continue;
-                  if (wand.spells[i.toString()]) {
-                    newSpells[nextIdx.toString()] = wand.spells[i.toString()];
-                    if (wand.spell_uses?.[i.toString()] !== undefined) {
-                      newSpellUses[nextIdx.toString()] = wand.spell_uses[i.toString()];
-                    }
-                  }
-                  nextIdx++;
-                }
-                const newCap = Math.max(1, wand.deck_capacity - indicesToRem.size);
-                updateWand(targetSlot, {
-                  spells: newSpells,
-                  spell_uses: newSpellUses,
-                  deck_capacity: newCap
-                }, t('app.notification.delete_wand_slot'));
+                const nextAlwaysCast = [...(wand.always_cast || [])];
+                const maxIdx = Math.max(...Array.from(indicesToRem));
+                while (nextAlwaysCast.length < maxIdx) nextAlwaysCast.push('');
+                indicesToRem.forEach((idx) => {
+                  nextAlwaysCast[idx - 1] = '';
+                });
+                updateWand(targetSlot, { always_cast: nextAlwaysCast }, t('app.notification.delete_spell'));
                 setSelection(null);
               }
             } else {
-              const newSpells = { ...wand.spells };
-              const newSpellUses = { ...(wand.spell_uses || {}) };
-              targetIndices.forEach(idx => {
-                delete newSpells[idx];
-                delete newSpellUses[idx];
-              });
-              updateWand(targetSlot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
+              if (settings.deleteEmptySlots && e.key === 'Delete') {
+                const indicesToRem = new Set(targetIndices.filter(i => i <= wand.deck_capacity));
+                if (indicesToRem.size > 0) {
+                  const newSpells: Record<string, string> = {};
+                  const newSpellUses: Record<string, number> = {};
+                  let nextIdx = 1;
+                  for (let i = 1; i <= wand.deck_capacity; i++) {
+                    if (indicesToRem.has(i)) continue;
+                    if (wand.spells[i.toString()]) {
+                      newSpells[nextIdx.toString()] = wand.spells[i.toString()];
+                      if (wand.spell_uses?.[i.toString()] !== undefined) {
+                        newSpellUses[nextIdx.toString()] = wand.spell_uses[i.toString()];
+                      }
+                    }
+                    nextIdx++;
+                  }
+                  const newCap = Math.max(1, wand.deck_capacity - indicesToRem.size);
+                  updateWand(targetSlot, {
+                    spells: newSpells,
+                    spell_uses: newSpellUses,
+                    deck_capacity: newCap
+                  }, t('app.notification.delete_wand_slot'));
+                  setSelection(null);
+                }
+              } else {
+                const newSpells = { ...wand.spells };
+                const newSpellUses = { ...(wand.spell_uses || {}) };
+                targetIndices.forEach(idx => {
+                  delete newSpells[idx];
+                  delete newSpellUses[idx];
+                });
+                updateWand(targetSlot, { spells: newSpells, spell_uses: newSpellUses }, t('app.notification.delete_spell'));
+              }
             }
           }
         }
       } else if (e.key === ' ') {
         if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
           e.preventDefault();
-          insertEmptySlot('current_hover');
+          const hovered = useUIStore.getState().hoveredSlot;
+          const selection = useUIStore.getState().selection;
+          if (hovered) {
+            insertEmptySlot('current_hover');
+          } else if (selection) {
+            insertEmptySlot('selection');
+          } else {
+            insertEmptySlot('current_hover');
+          }
         }
       }
 

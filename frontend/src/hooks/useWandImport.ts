@@ -85,6 +85,9 @@ export const useWandImport = ({
   setNotification
 }: UseWandImportProps) => {
 
+  const compactAlwaysCast = useCallback((spells?: (string | null | undefined)[]) =>
+    (spells || []).map(s => s || '').filter(Boolean), []);
+
   const areWandsIdentical = useCallback((w1: WandData, w2: WandData) => {
     const normalizeWand = (w: WandData) => ({
       mana_max: Math.round(w.mana_max),
@@ -98,7 +101,7 @@ export const useWandImport = ({
       speed_multiplier: Math.round((w.speed_multiplier || 1) * 100) / 100,
       // 只比较非空法术
       spells: Object.fromEntries(Object.entries(w.spells).filter(([_, id]) => !!id)),
-      always_cast: w.always_cast || [],
+      always_cast: compactAlwaysCast(w.always_cast),
       appearance: w.appearance ? {
         sprite: w.appearance.sprite,
         item_sprite: w.appearance.item_sprite
@@ -108,7 +111,7 @@ export const useWandImport = ({
     const s1 = JSON.stringify(normalizeWand(w1));
     const s2 = JSON.stringify(normalizeWand(w2));
     return s1 === s2;
-  }, []);
+  }, [compactAlwaysCast]);
 
   const importFromText = useCallback(async (text: string, forceTarget?: { slot: string, idx: number }) => {
     // 兼容外部模拟器 URL 粘贴
@@ -156,10 +159,13 @@ export const useWandImport = ({
     const selection = useUIStore.getState().selection;
 
     if (!targetWandSlot && hoveredSlot) {
-      const hIdx = hoveredSlot.idx;
-      if (hIdx < 0) return false; // Disable pasting into Always Cast
       targetWandSlot = hoveredSlot.wandSlot;
-      startIdx = hIdx + (hoveredSlot.isRightHalf ? 1 : 0);
+      if (hoveredSlot.area === 'always_cast') {
+        startIdx = Math.max(1, hoveredSlot.idx + (hoveredSlot.isRightHalf ? 1 : 0));
+      } else {
+        const hIdx = hoveredSlot.idx;
+        startIdx = hIdx + (hoveredSlot.isRightHalf ? 1 : 0);
+      }
     } else if (!targetWandSlot && selection) {
 
       targetWandSlot = selection.wandSlot;
@@ -375,6 +381,17 @@ export const useWandImport = ({
       updateWand(targetWandSlot, { ...updates, spells: newSpells }, t('app.notification.paste_wand_data'), Object.values(newSpells));
       return true;
     } else {
+      if (hoveredSlot?.wandSlot === targetWandSlot && hoveredSlot.area === 'always_cast') {
+        const nextAlwaysCast = [...(wand.always_cast || [])];
+        const insertAt = Math.max(0, (startIdx || 1) - 1);
+        while (nextAlwaysCast.length < insertAt) nextAlwaysCast.push('');
+        nextAlwaysCast.splice(insertAt, 0, ...text.split(',').map(s => s.trim()).map(s => {
+          const norm = normalize(s);
+          return spellNameToId[norm] || s.toUpperCase();
+        }).filter(Boolean));
+        updateWand(targetWandSlot, { always_cast: nextAlwaysCast }, t('app.notification.insert_spell_sequence'), nextAlwaysCast.filter(Boolean));
+        return true;
+      }
       const newSpellsList = text.split(',').map(s => s.trim()).map(s => {
         const norm = normalize(s);
         return spellNameToId[norm] || s.toUpperCase();
@@ -417,19 +434,23 @@ export const useWandImport = ({
   const copyToClipboard = useCallback(async (isCut = false) => {
     let wandSlot: string;
     let indices: number[];
+    let targetArea: 'main' | 'always_cast' = 'main';
 
     const sel = useUIStore.getState().selection;
     const hovered = useUIStore.getState().hoveredSlot;
 
-    if (sel && hovered && hovered.wandSlot === sel.wandSlot && sel.indices.includes(hovered.idx)) {
+    if (sel && hovered && hovered.wandSlot === sel.wandSlot && hovered.area === sel.area && sel.indices.includes(hovered.idx)) {
       wandSlot = sel.wandSlot;
       indices = sel.indices;
+      targetArea = sel.area;
     } else if (hovered && hovered.wandSlot) {
       wandSlot = hovered.wandSlot;
       indices = [hovered.idx];
+      targetArea = hovered.area;
     } else if (sel) {
       wandSlot = sel.wandSlot;
       indices = sel.indices;
+      targetArea = sel.area;
     } else {
       return;
     }
@@ -443,15 +464,16 @@ export const useWandImport = ({
     let textToCopy = "";
     // Get sequence including empty slots (empty strings)
     const sequence = sortedIndices.map(i => {
-      if (i < 0) return wand.always_cast[(-i) - 1] || "";
+      if (targetArea === 'always_cast') return wand.always_cast[i - 1] || "";
       return wand.spells[i.toString()] || "";
     });
 
     if (sequence.length === 1 && !sequence[0] && !isCut) return;
 
-    if (sortedIndices.length >= wand.deck_capacity && sortedIndices.length > 1) {
+    if (targetArea === 'main' && sortedIndices.length >= wand.deck_capacity && sortedIndices.length > 1) {
       // Full wand format (兼容 CE 的 Wand2 模板风格)
       const wikiPic = spritePathToWikiName(wand.appearance);
+      const alwaysCasts = (wand.always_cast || []).map(s => s || '').filter(Boolean);
       let lines = ['{{Wand2'];
       lines.push('| wandCard     = Yes');
       if (wikiPic) lines.push(`| wandPic      = ${wikiPic}`);
@@ -464,8 +486,8 @@ export const useWandImport = ({
       lines.push(`| capacity     = ${wand.deck_capacity}`);
       lines.push(`| spread       = ${wand.spread_degrees}`);
       lines.push(`| speed        = ${wand.speed_multiplier.toFixed(2)}`);
-      if (wand.always_cast && wand.always_cast.length > 0) {
-        lines.push(`| alwaysCasts  = ${wand.always_cast.join(',')}`);
+      if (alwaysCasts.length > 0) {
+        lines.push(`| alwaysCasts  = ${alwaysCasts.join(',')}`);
       }
       lines.push(`| spells       = ${sequence.join(',')}`);
       lines.push('}}');
@@ -480,15 +502,27 @@ export const useWandImport = ({
       setNotification({ msg: isCut ? t('app.notification.cut_to_clipboard') : t('app.notification.copied_to_clipboard'), type: 'success' });
 
       if (isCut) {
-         updateWand(wandSlot, (curr) => {
-           const newSpells = { ...curr.spells };
-           const newSpellUses = { ...(curr.spell_uses || {}) };
-           indices.forEach(i => {
-             delete newSpells[i.toString()];
-             delete newSpellUses[i.toString()];
-           });
-           return { spells: newSpells, spell_uses: newSpellUses };
-         }, t('app.notification.cut_spell'), sequence.filter(s => s));
+         if (targetArea === 'always_cast') {
+           updateWand(wandSlot, (curr) => {
+             const nextAlwaysCast = [...(curr.always_cast || [])];
+             const maxIdx = Math.max(...indices);
+             while (nextAlwaysCast.length < maxIdx) nextAlwaysCast.push('');
+             indices.forEach(i => {
+               nextAlwaysCast[i - 1] = '';
+             });
+             return { always_cast: nextAlwaysCast };
+           }, t('app.notification.cut_spell'), sequence.filter(s => s));
+         } else {
+           updateWand(wandSlot, (curr) => {
+             const newSpells = { ...curr.spells };
+             const newSpellUses = { ...(curr.spell_uses || {}) };
+             indices.forEach(i => {
+               delete newSpells[i.toString()];
+               delete newSpellUses[i.toString()];
+             });
+             return { spells: newSpells, spell_uses: newSpellUses };
+           }, t('app.notification.cut_spell'), sequence.filter(s => s));
+         }
       }
     }
   }, [activeTab, t, setNotification, updateWand]);

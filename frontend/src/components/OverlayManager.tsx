@@ -13,6 +13,7 @@ import {
   SpellInfo,
   PickerConfig,
   SpellDb,
+  SpellArea,
   WandData,
   SpellStats,
   AppSettings,
@@ -21,7 +22,9 @@ import {
   WarehouseWand,
   WarehouseFolder,
   SmartTag,
-  DragSource,
+  SpellDragSource,
+  SpellAreaSelection,
+  HoveredSpellSlot,
   MousePos
 } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
@@ -84,17 +87,17 @@ interface OverlayManagerProps {
   syncWand: (slot: string, data: WandData | null, isDelete?: boolean) => void;
 
   // Interaction
-  dragSource: DragSource | null;
+  dragSource: SpellDragSource | null;
   mousePos: MousePos;
   isDraggingFile: boolean;
-  setSelection: (selection: { wandSlot: string, indices: number[], startIdx: number } | null) => void;
+  setSelection: (selection: SpellAreaSelection | null) => void;
   // WandEditor 交互 props (用于智能标签编辑器)
-  selection: { wandSlot: string; indices: number[]; startIdx: number } | null;
-  hoveredSlot: { wandSlot: string; idx: number; isRightHalf: boolean } | null;
-  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean) => void;
-  handleSlotMouseUp: (slot: string, idx: number) => void;
-  handleSlotMouseEnter: (slot: string, idx: number) => void;
-  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number) => void;
+  selection: SpellAreaSelection | null;
+  hoveredSlot: HoveredSpellSlot | null;
+  handleSlotMouseDown: (slot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }, area?: SpellArea) => void;
+  handleSlotMouseUp: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseEnter: (slot: string, idx: number, area?: SpellArea) => void;
+  handleSlotMouseMove: (e: React.MouseEvent, slot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseLeave: () => void;
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
 }
