@@ -1,0 +1,335 @@
+/* =========================================
+   EXCLUSIVE THEME: ORION FIRE (猎户业火)
+   Deep Space Stellar Combustion Edition
+   ========================================= */
+
+/* 1. Base Variables overrides for deep space combustion */
+.theme-cool-ui[data-theme="orionfire"] {
+  --cool-primary: #ff4500; /* OrangeRed for intense flame */
+  --cool-secondary: #dc2626; /* Red-600 for deep ember */
+  --cool-bg-rgb: 12, 10, 9; /* Obsidian black background (Zinc 950) */
+  --cool-panel-bg: rgba(12, 10, 9, 0.6) !important;
+  --cool-text-primary: #fff5ee !important; /* Seashell white */
+  --cool-glow: 0 0 15px rgba(255, 69, 0, 0.1) !important;
+  --cool-glass-blur: blur(25px) saturate(150%) !important;
+  --cool-glass-border: transparent !important;
+}
+
+/* 2. Comprehensive Background Overrides (Obsidian Conversion) */
+.theme-cool-ui[data-theme="orionfire"] .glass-card,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-800\/80,
+.theme-cool-ui[data-theme="orionfire"] .bg-black\/20,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-900\/40,
+.theme-cool-ui[data-theme="orionfire"] .glass-panel,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-950,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-950\/30,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-950\/80,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-950\/95,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-900,
+.theme-cool-ui[data-theme="orionfire"] .bg-zinc-800,
+.theme-cool-ui[data-theme="orionfire"] .bg-black\/40,
+.theme-cool-ui[data-theme="orionfire"] .bg-black\/60,
+.theme-cool-ui[data-theme="orionfire"] .glass {
+  background-color: rgba(15, 10, 10, 0.8) !important;
+  background-image: linear-gradient(135deg, rgba(40, 20, 15, 0.5) 0%, rgba(0, 0, 0, 0.9) 100%) !important;
+  backdrop-filter: blur(20px) saturate(140%) !important;
+}
+
+/* Apply aggressive sharp structural shadows and ember highlights */
+.theme-cool-ui[data-theme="orionfire"] .glass-card,
+.theme-cool-ui[data-theme="orionfire"] .glass-panel,
+.theme-cool-ui[data-theme="orionfire"] .glass,
+.theme-cool-ui[data-theme="orionfire"] .rounded-xl.bg-zinc-800\/80,
+.theme-cool-ui[data-theme="orionfire"] .rounded-lg.bg-zinc-950\/30 {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 100, 50, 0.15),
+    inset 1px 0 1px rgba(255, 100, 50, 0.05),
+    inset -1px -1px 2px rgba(255, 69, 0, 0.2), /* Orange bottom reflection */
+    0 20px 40px -10px rgba(0, 0, 0, 0.8) !important;
+  border-color: rgba(255, 100, 50, 0.05) !important;
+  border-top-color: rgba(255, 100, 50, 0.2) !important;
+  border-left-color: rgba(255, 100, 50, 0.1) !important;
+}
+
+/* Suppress noisy borders, reintroduce sharp ember edges */
+.theme-cool-ui[data-theme="orionfire"] .border-white\/5,
+.theme-cool-ui[data-theme="orionfire"] .border-white\/10,
+.theme-cool-ui[data-theme="orionfire"] .border-white\/20,
+.theme-cool-ui[data-theme="orionfire"] .border-zinc-700,
+.theme-cool-ui[data-theme="orionfire"] .border-zinc-800 {
+  border-color: rgba(255, 69, 0, 0.1) !important;
+}
+
+/* Ensure hover states glow with intense heat */
+.theme-cool-ui[data-theme="orionfire"] .hover\:bg-zinc-900\/20:hover,
+.theme-cool-ui[data-theme="orionfire"] .hover\:bg-zinc-700\/80:hover,
+.theme-cool-ui[data-theme="orionfire"] .hover\:bg-black\/40:hover {
+  background-color: rgba(255, 69, 0, 0.15) !important;
+}
+
+/* 3. Text and Legibility Upgrades (Combustion Mode) */
+.theme-cool-ui[data-theme="orionfire"] .text-zinc-400,
+.theme-cool-ui[data-theme="orionfire"] .text-zinc-500,
+.theme-cool-ui[data-theme="orionfire"] .text-\[8px\].text-zinc-400 {
+  color: #a8a29e !important; /* Stone 400 */
+  text-shadow: 0 0 10px rgba(168, 162, 158, 0.2) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .text-white {
+  text-shadow: 0 0 15px rgba(255, 245, 238, 0.4) !important;
+}
+
+/* Enhance specific color classes for fire theme */
+.theme-cool-ui[data-theme="orionfire"] .text-indigo-400 {
+  color: #fdba74 !important; /* Orange 300 to replace Indigo */
+  text-shadow: 0 0 15px rgba(253, 186, 116, 0.5) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .text-cyan-400 {
+  color: #fca5a5 !important; /* Red 300 to replace Cyan */
+  text-shadow: 0 0 15px rgba(252, 165, 165, 0.5) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .text-amber-400 {
+  color: #fbbf24 !important;
+  text-shadow: 0 0 15px rgba(251, 191, 36, 0.7) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .text-red-400 {
+  color: #ef4444 !important;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.8) !important;
+}
+
+
+/* 4. Deep Heat Absorption (Hover State backdrop, real fire handled by Canvas) */
+.theme-cool-ui[data-theme="orionfire"] .group\/state:hover,
+.theme-cool-ui[data-theme="orionfire"] .group\/cell:hover,
+.theme-cool-ui[data-theme="orionfire"] .group\/treeh:hover,
+.theme-cool-ui[data-theme="orionfire"] .neo-button:hover {
+  background-color: rgba(30, 10, 5, 0.85) !important;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 100, 50, 0.3),
+    inset 0 0 30px rgba(255, 69, 0, 0.15),
+    0 5px 20px -5px rgba(255, 69, 0, 0.3) !important;
+  border-color: rgba(255, 100, 50, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* 5. Explosive Ripple Active State */
+.theme-cool-ui[data-theme="orionfire"] .neo-button:active,
+.theme-cool-ui[data-theme="orionfire"] .group\/cell:active,
+.theme-cool-ui[data-theme="orionfire"] .group\/state:active {
+  transform: scale(0.96);
+  box-shadow:
+    inset 0 0 30px rgba(255, 69, 0, 0.4),
+    0 0 20px rgba(220, 38, 38, 0.3) !important;
+  border-color: rgba(255, 69, 0, 0.8) !important;
+  transition: all 0.05s cubic-bezier(0.1, 0, 0.1, 1);
+}
+
+/* 6. Stellar Ignition Scan (Analyzing Wand Effect) */
+.theme-cool-ui[data-theme="orionfire"] .eval-loading-state {
+  animation: none !important;
+  color: #ff4500 !important; /* OrangeRed */
+  text-shadow: 0 0 12px rgba(255, 69, 0, 0.6);
+}
+
+.theme-cool-ui[data-theme="orionfire"] .eval-loading-icon {
+  color: #ffecd1;
+  animation: stellar-ignition-spin 1.8s cubic-bezier(0.8, -0.4, 0.2, 1.4) infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.8));
+}
+
+.theme-cool-ui[data-theme="orionfire"] .eval-loading-text {
+  position: relative;
+  display: inline-block;
+  color: transparent !important;
+  background: linear-gradient(90deg,
+      rgba(255, 245, 238, 0.3) 0%,
+      rgba(255, 245, 238, 0.3) 40%,
+      rgba(255, 69, 0, 1) 48%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(220, 38, 38, 1) 52%,
+      rgba(255, 245, 238, 0.3) 60%,
+      rgba(255, 245, 238, 0.3) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+}
+
+@keyframes stellar-ignition-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+    filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6)) hue-rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(90deg) scale(1.4);
+    filter: drop-shadow(0 0 15px rgba(255, 69, 0, 1)) hue-rotate(-15deg);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(0.9);
+    filter: drop-shadow(0 0 8px rgba(255, 165, 0, 0.6)) hue-rotate(-30deg);
+  }
+
+  75% {
+    transform: rotate(270deg) scale(1.4);
+    filter: drop-shadow(0 0 15px rgba(255, 69, 0, 1)) hue-rotate(-15deg);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+    filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6)) hue-rotate(0deg);
+  }
+}
+
+@keyframes orion-scan-text {
+  0% {
+    background-position: 150% 0;
+  }
+
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+/* 7. Extractor Furnace (Wand Container) */
+.theme-cool-ui[data-theme="orionfire"] .w-12.h-10.rounded.bg-zinc-800 {
+  background: linear-gradient(135deg, rgba(30, 15, 10, 0.8) 0%, rgba(10, 0, 0, 0.9) 100%) !important;
+  border-top: 1px solid rgba(255, 100, 50, 0.3) !important;
+  border-left: 1px solid rgba(255, 100, 50, 0.1) !important;
+  border-right: 1px solid rgba(255, 100, 50, 0.05) !important;
+  border-bottom: 2px solid rgba(255, 69, 0, 0.6) !important;
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.8),
+    inset 0 -10px 15px -5px rgba(255, 69, 0, 0.2),
+    0 10px 20px -5px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 6px !important;
+}
+
+/* 8. Plasma-Cut Separators */
+.theme-cool-ui[data-theme="orionfire"] .border-l.border-white\/5,
+.theme-cool-ui[data-theme="orionfire"] .border-r.border-white\/5 {
+  border-color: transparent !important;
+  position: relative;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .border-l.border-white\/5::before,
+.theme-cool-ui[data-theme="orionfire"] .border-r.border-white\/5::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(255, 69, 0, 0.6) 20%, rgba(255, 200, 100, 0.8) 50%, rgba(220, 38, 38, 0.6) 80%, transparent 100%);
+  box-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
+}
+
+.theme-cool-ui[data-theme="orionfire"] .border-l.border-white\/5::before {
+  left: -1px;
+}
+
+.theme-cool-ui[data-theme="orionfire"] .border-r.border-white\/5::after {
+  right: -1px;
+}
+
+/* 9. Smoldering Spell Picker */
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"] {
+  backdrop-filter: blur(25px) saturate(140%) !important;
+  background: linear-gradient(180deg, rgba(20, 10, 8, 0.85) 0%, rgba(10, 5, 5, 0.95) 100%) !important;
+  border: 1px solid rgba(255, 69, 0, 0.15) !important;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.8),
+    inset 0 1px 1px rgba(255, 100, 50, 0.15),
+    inset 0 0 30px rgba(255, 69, 0, 0.08) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"]>div:first-child {
+  background: linear-gradient(90deg, rgba(255, 69, 0, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
+  border-bottom: 1px solid rgba(255, 69, 0, 0.1) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"] .bg-white\/5,
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"] .bg-black\/20 {
+  background-color: rgba(255, 100, 50, 0.04) !important;
+  border-color: rgba(255, 69, 0, 0.08) !important;
+}
+
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"] .hover\:bg-black\/40:hover,
+.theme-cool-ui[data-theme="orionfire"] [data-testid="spell-picker"] .hover\:bg-white\/10:hover {
+  background-color: rgba(255, 69, 0, 0.25) !important;
+}
+
+/* 10. Selected Spell "Supernova Overload" */
+.theme-cool-ui[data-theme="orionfire"] .group\/cell.spell-cell-selected {
+  --tw-ring-color: transparent !important;
+  background-color: rgba(15, 10, 10, 0.9) !important;
+  border-color: rgba(255, 69, 0, 0.9) !important;
+  box-shadow:
+    0 0 15px rgba(255, 69, 0, 0.3),
+    inset 0 0 15px rgba(255, 69, 0, 0.2) !important;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Supernova Flare Dom Shard */
+.theme-cool-ui[data-theme="orionfire"] .group\/cell.spell-cell-selected.spell-theme-orionfire::before {
+  content: '';
+  position: absolute;
+  inset: -8px; /* Slightly larger spread */
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='100%25' height='100%25' viewBox='0 0 100 100' preserveAspectRatio='none' overflow='visible' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M -10 -10 L 15 -10 L -10 15 Z' fill='%23ff4500' filter='drop-shadow(0 0 3px %23ff4500)'/%3E%3Cpath d='M 110 -10 L 110 15 L 85 -10 Z' fill='%23ff4500' filter='drop-shadow(0 0 3px %23ff4500)'/%3E%3Cpath d='M -10 110 L -10 85 L 15 110 Z' fill='%23dc2626' opacity='0.9'/%3E%3Cpath d='M 110 110 L 85 110 L 110 85 Z' fill='%23dc2626' opacity='0.9'/%3E%3Cpath d='M -5 50 L 5 45 L 5 55 Z' fill='%23ffaa00'/%3E%3Cpath d='M 105 50 L 95 45 L 95 55 Z' fill='%23ffaa00'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  opacity: 1;
+}
+
+@keyframes fire-shatter-grow {
+  0% {
+    transform: scale(0.7) rotate(-5deg);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes supernova-pulse {
+  0% {
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.3), inset 0 0 15px rgba(220, 38, 38, 0.2);
+    border-color: rgba(220, 38, 38, 0.5);
+  }
+
+  100% {
+    box-shadow: 0 0 45px rgba(255, 69, 0, 0.7), inset 0 0 35px rgba(255, 69, 0, 0.4);
+    border-color: rgba(255, 150, 50, 1);
+  }
+}
+
+/* 11. Custom Tree Line Styling */
+.theme-cool-ui[data-theme="orionfire"] .eval-tree-line {
+  background-color: rgba(255, 100, 50, 0.4) !important;
+  box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);
+  border-radius: 2px;
+}
+
+/* 12. Spell Cell & Icon Obsidian Surface */
+.theme-cool-ui[data-theme="orionfire"] .group\/cell {
+  background: linear-gradient(135deg, rgba(40, 15, 10, 0.6) 0%, rgba(10, 5, 5, 0.8) 100%) !important;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 100, 50, 0.15),
+    0 4px 6px -1px rgba(0, 0, 0, 0.6),
+    0 2px 4px -2px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid rgba(255, 69, 0, 0.05) !important;
+  border-top-color: rgba(255, 100, 50, 0.15) !important;
+  border-left-color: rgba(255, 69, 0, 0.08) !important;
+}
+
+/* Remove image-pixelated dirty drop-shadows */
+.theme-cool-ui[data-theme="orionfire"] .image-pixelated {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) !important;
+}

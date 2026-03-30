@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next';
 
 // --- Internal ---
-import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig, WandSelection } from './types';
+import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig } from './types';
 
 import { getActiveModBundle, saveModBundle } from './lib/modStorage';
 import { DEFAULT_WAND } from './constants';
@@ -11,6 +11,8 @@ import { Footer } from './components/Footer';
 import { WandWorkspace } from './components/WandWorkspace';
 import { CanvasWorkspace } from './components/CanvasWorkspace';
 import { CoolBackground } from './components/CoolBackground';
+import { ThemeFilters } from './components/ThemeFilters';
+import { OrionFireCanvas } from './components/OrionFireCanvas';
 import { OverlayManager } from './components/OverlayManager';
 import { useSettings } from './hooks/useSettings';
 import { useGlobalEvents } from './hooks/useGlobalEvents';
@@ -66,8 +68,13 @@ function App() {
     gameWands: Record<string, WandData>;
   } | null>(null);
 
-  const { isConnected, syncWand, pullData, pushAllToGame, toggleSync, resolveConflict } = useGameSync({
-    activeTab, activeTabId, settings, setTabs, performAction, setNotification: (n) => showNotification(n?.msg || '', n?.type), setConflict, t, lastLocalUpdateRef
+  const {
+    isConnected, hasRealtimeControl, realtimeOwnerExists, realtimeWarning,
+    syncWand, pullData, pushAllToGame, toggleSync, resolveConflict
+  } = useGameSync({
+    activeTab, activeTabId, settings, setTabs, performAction,
+    setNotification: (n) => showNotification(n?.msg || '', n?.type),
+    setConflict, t, lastLocalUpdateRef
   });
 
   const { spellDb, spellNameToId, syncGameSpells: syncSpells, fetchSpellDb } = useSpellDb(isConnected);
@@ -200,7 +207,7 @@ function App() {
   const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected, updateWand);
 
   const setSelection = useUIStore(s => s.setSelection);
-  const selection = useUIStore(s => s.selection) as WandSelection | null;
+  const selection = useUIStore(s => s.selection);
 
   const dragSource = useUIStore(s => s.dragSource);
   const setDragSource = useUIStore(s => s.setDragSource);
@@ -224,18 +231,39 @@ function App() {
     _insertEmptySlot(updateWand, mode, openAnchor);
 
   const moveSelection = useCallback((wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => {
-    const currentSelection = useUIStore.getState().selection as WandSelection | null;
+    const currentSelection = useUIStore.getState().selection;
     if (!currentSelection || currentSelection.wandSlot !== wandSlot || currentSelection.indices.length !== 1) return;
 
     const wand = activeTab.wands[wandSlot];
     if (!wand) return;
 
     const currentIdx = currentSelection.indices[0];
+
+    if (currentSelection.area === 'always_cast') {
+      const totalSlots = Math.max(1, (wand.always_cast || []).length);
+      let nextIdx = currentIdx;
+      if (direction === 'next' || direction === 'right') nextIdx = currentIdx + 1;
+      else if (direction === 'prev' || direction === 'left') nextIdx = currentIdx - 1;
+      else if (direction === 'down') nextIdx = Math.min(totalSlots, currentIdx + 1);
+      else if (direction === 'up') nextIdx = Math.max(1, currentIdx - 1);
+
+      nextIdx = Math.max(1, Math.min(totalSlots, nextIdx));
+      if (nextIdx === currentIdx) return;
+
+      setSelection({
+        wandSlot,
+        area: 'always_cast',
+        indices: [nextIdx],
+        startIdx: nextIdx,
+      });
+      return;
+    }
+
     const totalSlots = Math.max(wand.deck_capacity, 24);
     const cols = settings.isCanvasMode
       ? Math.min(totalSlots, wand.canvas_cells_per_row ?? settings.defaultCanvasCellsPerRow ?? 26)
       : (() => {
-          const canvasEl = document.querySelector(`[data-wand-slot-canvas="${wandSlot}"]`) as HTMLCanvasElement | null;
+          const canvasEl = document.querySelector(`[data-wand-slot-canvas="${wandSlot}-main"]`) as HTMLCanvasElement | null;
           if (canvasEl) {
             const logicalW = parseFloat(canvasEl.style.width) || canvasEl.getBoundingClientRect().width;
             const cellOuter = 48 + (settings.editorSpellGap || 0);
@@ -260,6 +288,7 @@ function App() {
 
     setSelection({
       wandSlot,
+      area: 'main',
       indices: [nextIdx],
       startIdx: nextIdx,
     });
@@ -280,6 +309,25 @@ function App() {
   const pickSpell = (spellId: string | null, isKeyboard: boolean = false) => {
     if (!pickerConfig) return;
     const { wandSlot, spellIdx } = pickerConfig;
+    const isAlwaysCastSlot = typeof spellIdx === 'string' && spellIdx.startsWith('ac-');
+
+    if (isAlwaysCastSlot) {
+      const acIdx = parseInt(spellIdx.slice(3), 10);
+      if (Number.isNaN(acIdx)) {
+        setPickerConfig(null);
+        return;
+      }
+
+      updateWand(wandSlot, (wand) => {
+        const nextAlwaysCast = [...(wand.always_cast || [])];
+        while (nextAlwaysCast.length <= acIdx) nextAlwaysCast.push('');
+        if (spellId) nextAlwaysCast[acIdx] = spellId;
+        else nextAlwaysCast[acIdx] = '';
+        return { always_cast: nextAlwaysCast };
+      }, spellId ? t('app.notification.change_spell') : t('app.notification.clear_slot', { idx: acIdx + 1 }), spellId ? [spellId] : []);
+      setPickerConfig(null);
+      return;
+    }
 
     if (spellId === '__TWWE_INSERT_EMPTY_SLOT__') {
       const behavior = settings.pickerFirstSpaceBehavior;
@@ -289,7 +337,7 @@ function App() {
 
       if (mode === 'open_anchor' && pickerConfig.insertAnchor) {
         const nextIdx = pickerConfig.insertAnchor.idx + (pickerConfig.insertAnchor.isRightHalf ? 1 : 0);
-        setSelection({ wandSlot: pickerConfig.insertAnchor.wandSlot, indices: [nextIdx], startIdx: nextIdx });
+        setSelection({ wandSlot: pickerConfig.insertAnchor.wandSlot, area: 'main', indices: [nextIdx], startIdx: nextIdx });
       } else {
         setSelection(null);
       }
@@ -325,7 +373,7 @@ function App() {
 
       if (isKeyboard && spellId) {
         const currentIdx = parseInt(spellIdx);
-        setSelection({ wandSlot, indices: [currentIdx + 1], startIdx: currentIdx + 1 });
+        setSelection({ wandSlot, area: 'main', indices: [currentIdx + 1], startIdx: currentIdx + 1 });
       } else if (!isKeyboard) {
         setSelection(null);
       }
@@ -348,7 +396,7 @@ function App() {
 
       const wand = activeTab.wands[wandSlot];
       if (wand && currentIdx < wand.deck_capacity) {
-        setSelection({ wandSlot, indices: [currentIdx + 1], startIdx: currentIdx + 1 });
+        setSelection({ wandSlot, area: 'main', indices: [currentIdx + 1], startIdx: currentIdx + 1 });
       } else {
         setSelection(null);
       }
@@ -369,7 +417,11 @@ function App() {
       } : { height: '100vh' }}
     >
       {settings.coolUIMode && (
-        <CoolBackground theme={settings.coolUITheme} type={settings.coolUIBackground} />
+        <>
+          <CoolBackground theme={settings.coolUITheme} type={settings.coolUIBackground} />
+          <ThemeFilters />
+          <OrionFireCanvas isActive={settings.coolUITheme === 'orionfire'} />
+        </>
       )}
       <Header
         tabs={tabs}
@@ -393,6 +445,9 @@ function App() {
         setIsWarehouseOpen={setIsWarehouseOpen}
         syncGameSpells={syncGameSpells}
         exportModBundle={exportModBundle}
+        hasRealtimeControl={hasRealtimeControl}
+        realtimeOwnerExists={realtimeOwnerExists}
+        realtimeWarning={realtimeWarning}
         modBundleInfo={modBundleInfo}
         onOpenModManager={() => setIsModManagerOpen(true)}
         settings={settings}

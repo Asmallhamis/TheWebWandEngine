@@ -1,4 +1,6 @@
 @import url('./themes/pureprism.css');
+@import url('./themes/pureprism-v2.css');
+@import url('./themes/orionfire.css');
 
 /* src/themes.css - 18 Themes for Cool UI Mode */
 
@@ -12,15 +14,7 @@
   transition: background-color 0.5s ease;
 }
 
-/* 1. Orion Karma Fire (猎户业火) */
-.theme-cool-ui[data-theme="orionfire"] {
-  --cool-primary: #ff4500;
-  --cool-secondary: #ff8c00;
-  --cool-bg-rgb: 20, 5, 0;
-  --cool-panel-bg: rgba(20, 5, 0, 0.65);
-  --cool-text-primary: #fff5ee;
-  --cool-glow: 0 0 15px rgba(255, 69, 0, 0.6);
-}
+
 
 
 
