@@ -1,6 +1,0 @@
-#!/bin/bash
-git show ":user_config.lua" | rg "nathan" > /dev/null
-if [[ $? -ne 1 ]] ; then
-	echo "config fail"
-	exit 1
-fi

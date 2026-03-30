@@ -62,5 +62,7 @@ ghpages/
 pic/
 docs/
 *.bat
+tools/
+frontend/public/static_data/
 
 
