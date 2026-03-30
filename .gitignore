@@ -1,84 +1,60 @@
-# ==========================================
-# 1. 极致白名单：默认忽略所有内容
-#    Whitelist : Ignore all by default
-# ==========================================
-/*
-!.gitignore
+# Git ignore rules - normal blacklist mode
+# Keep source/config files tracked by default; ignore only generated/dependency/local files.
 
-# ==========================================
-# 2. 允许的核心逻辑文件夹
-#    Core Logic Folders
-# ==========================================
-# 后端
-# Backend
-!/backend/
-/backend/__pycache__/
-/backend/*.pyc
-/backend/.venv/
-/backend/.env
-/backend/test_backend.py
-/backend/test_sync.py
-/backend/test_wak.py
+# OS / editor
+.DS_Store
+Thumbs.db
+*.lnk
+desktop.ini
 
-# 前端
-# Frontend
-!/frontend/
-/frontend/node_modules/
-/frontend/dist/
-/frontend/build/
-/frontend/.eslintcache
-/frontend/.DS_Store
-/frontend/playwright-report/
-/frontend/test-results/
+# Python / backend
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/.env
+backend/test_backend.py
+backend/test_sync.py
+backend/test_wak.py
+__pycache__/
+*.py[cod]
 
-# 核心算法引擎 (GPL-3.0)
-# Core Algorithm Engine
-!/wand_eval_tree/
+# Frontend / Node
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.eslintcache
+frontend/playwright-report/
+frontend/test-results/
 
-# Noita 插件代码
-#       mod code
-!/wand_sync/
+# Generated / local data
+*.tmp
+*.temp
+*.bak
+*.orig
+noitadata/
+bin/
+build/
+dist/
 
-# ==========================================
-# 3. 允许的根目录配置文件
-#    Root dir configuration files
-# ==========================================
-!/requirements.txt
-!/twwe.spec
-!/build_portable.py
-!/build_portable.bat
-!/prepare_static_assets.py
-!/build_gh_pages.bat
-!/verify_static_site.bat
-!/README.md
-!/README_EN.md
-!/LICENSE
-!/spell_mapping.md
-!/noita_wiki_simulator.user.js
-!/noita_wiki_embed.user.js
+# Logs / temp / reports
+*.log
+*.diff
+changes_report.md
+review.diff
+current_changes.diff
+diff.txt
+spell_meta_errors.txt
+static_prepare_errors.txt
 
-# ==========================================
-# 4. 显式排除的第三方/敏感内容 (多重保险)
-#    Explicitly excluded: 3rd party content
-# ==========================================
-/noitadata/
-/bin/
-/*.bat
-/*.lnk
-/*.py
-/*.txt
+# IDE / tool local folders
+.vscode/
+.claude/
 
-# 再次确认允许关键文件（覆盖上一条规则）
-# Override previous rules for critical files
-!/README.md
-!/README_EN.md
-!/requirements.txt
-!/build_portable.py
-!/build_portable.bat
-!/twwe.spec
-!/prepare_static_assets.py
-!/build_gh_pages.bat
-!/verify_static_site.bat
-!/spell_mapping.md
-!/noita_wiki_simulator.user.js
-!/noita_wiki_embed.user.js
+# Project-specific local scripts or transient files
+scripts/.dev_version_counter.json
+frontend/dist_backup/
+old/
+StonesFromAnother/
+biao/
+
+
