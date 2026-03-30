@@ -57,4 +57,10 @@ old/
 StonesFromAnother/
 biao/
 
+# Local-only assets or outputs (keep out of main repo)
+ghpages/
+pic/
+docs/
+*.bat
+
 
