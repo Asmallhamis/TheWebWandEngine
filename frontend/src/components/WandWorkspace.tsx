@@ -16,6 +16,7 @@ interface WandWorkspaceProps {
   toggleExpand: (slot: string) => void;
   deleteWand: (slot: string) => void;
   copyWand: (slot: string) => void;
+  copyWandShareLink: (slot: string) => void;
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
@@ -45,6 +46,7 @@ export function WandWorkspace({
   toggleExpand,
   deleteWand,
   copyWand,
+  copyWandShareLink,
   copyLegacyWand,
   pasteWand,
   updateWand,
@@ -81,6 +83,7 @@ export function WandWorkspace({
           toggleExpand={toggleExpand}
           deleteWand={deleteWand}
           copyWand={copyWand}
+          copyWandShareLink={copyWandShareLink}
           copyLegacyWand={copyLegacyWand}
           pasteWand={pasteWand}
           updateWand={updateWand}

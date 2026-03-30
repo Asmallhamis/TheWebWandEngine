@@ -223,7 +223,7 @@ function App() {
 
   const [clipboard, setClipboard] = useState<{ type: 'wand', data: WandData } | null>(null);
 
-  const { addWand, deleteWand, toggleExpand, copyWand, copyLegacyWand, cutWand, pasteWand, openPicker } = useWandActions({
+  const { addWand, deleteWand, toggleExpand, copyWand, copyWandShareLink, copyLegacyWand, cutWand, pasteWand, openPicker } = useWandActions({
     tabs, activeTab, activeTabId, settings, spellDb, clipboard, setClipboard, performAction, syncWand, setTabs, setNotification: (n) => showNotification(n?.msg || '', n?.type), lastLocalUpdateRef, setSelection, setPickerConfig, setPickerSearch, setPickerExpandedGroups, updateWand
   });
 
@@ -468,6 +468,7 @@ function App() {
             toggleExpand={toggleExpand}
             deleteWand={deleteWand}
             copyWand={copyWand}
+            copyWandShareLink={copyWandShareLink}
             copyLegacyWand={copyLegacyWand}
             pasteWand={pasteWand}
             updateWand={updateWand}
@@ -497,6 +498,7 @@ function App() {
             toggleExpand={toggleExpand}
             deleteWand={deleteWand}
             copyWand={copyWand}
+            copyWandShareLink={copyWandShareLink}
             copyLegacyWand={copyLegacyWand}
             pasteWand={pasteWand}
             updateWand={updateWand}

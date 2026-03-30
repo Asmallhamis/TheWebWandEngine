@@ -6,7 +6,7 @@ import { getWandColor } from './CanvasWorkspace';
 import { useTranslation } from 'react-i18next';
 
 export function SpellDock(props: any) {
-  const { activeTab, wands, isConnected, deleteWand, copyWand, copyLegacyWand, pasteWand, clipboard, saveToWarehouse } = props;
+  const { activeTab, wands, isConnected, deleteWand, copyWand, copyWandShareLink, copyLegacyWand, pasteWand, clipboard, saveToWarehouse } = props;
   const { t } = useTranslation();
   const [isDockMinimized, setIsDockMinimized] = useState(false);
   const [collapsedAttributes, setCollapsedAttributes] = useState<Record<string, boolean>>({});
@@ -66,7 +66,17 @@ export function SpellDock(props: any) {
                {isAttrsCollapsed ? t('dock.show_attributes') : t('dock.hide_attributes')}
             </button>
             <div className="w-px h-3 bg-white/10 mx-2"></div>
-            <button onClick={() => copyWand(activeDockWand)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors" title={t('wand_card.copy')}><Scissors size={14} /></button>
+            <button
+              onClick={() => copyWand(activeDockWand)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                copyWandShareLink(activeDockWand);
+              }}
+              className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors"
+              title={t('wand_card.copy_with_link')}
+            >
+              <Scissors size={14} />
+            </button>
             <button onClick={() => pasteWand(activeDockWand)} disabled={!clipboard} className={`p-1.5 rounded transition-colors ${clipboard ? 'hover:bg-white/10 text-zinc-500 hover:text-emerald-400' : 'text-zinc-800 cursor-not-allowed'}`} title={t('wand_card.paste_overwrite')}><Clipboard size={14} /></button>
             <button onClick={() => saveToWarehouse(data)} className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-purple-400 rounded transition-colors" title={t('wand_card.save_to_warehouse')}><Library size={14} /></button>
             <button onClick={() => deleteWand(activeDockWand)} className="p-1.5 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded transition-colors ml-1"><Trash2 size={14} /></button>

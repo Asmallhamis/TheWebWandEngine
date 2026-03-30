@@ -6,6 +6,7 @@
       "pasted_new_wand": "已从剪贴板粘贴为新法杖 (槽位 {{slot}})",
       "copied_to_clipboard": "已复制到剪贴板",
       "cut_to_clipboard": "已剪切到剪贴板",
+      "copied_share_link": "已复制分享链接到剪贴板",
       "exported_workflow": "已导出工作流",
       "pushed_to_game": "已将当前工作流的 {{count}} 根法杖推送到游戏",
       "renamed_workflow": "重命名工作流:",
@@ -447,6 +448,7 @@
   },
   "wand_card": {
     "copy": "复制 (Ctrl+C)",
+    "copy_with_link": "左键复制 / 右键复制分享链接",
     "copy_legacy": "复制为老版Wand模板",
     "paste_overwrite": "粘贴 (覆盖)",
     "save_to_warehouse": "保存到魔杖仓库"

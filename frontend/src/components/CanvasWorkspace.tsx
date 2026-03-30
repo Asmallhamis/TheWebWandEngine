@@ -45,6 +45,7 @@ interface CanvasWorkspaceProps {
   toggleExpand: (slot: string) => void;
   deleteWand: (slot: string) => void;
   copyWand: (slot: string) => void;
+  copyWandShareLink: (slot: string) => void;
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
 }

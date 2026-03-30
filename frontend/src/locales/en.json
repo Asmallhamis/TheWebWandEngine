@@ -6,6 +6,7 @@
       "pasted_new_wand": "Pasted as new wand from clipboard (Slot {{slot}})",
       "copied_to_clipboard": "Copied to clipboard",
       "cut_to_clipboard": "Cut to clipboard",
+      "copied_share_link": "Share link copied to clipboard",
       "exported_workflow": "Workflow exported",
       "pushed_to_game": "Pushed {{count}} wands from current workflow to game",
       "renamed_workflow": "Rename workflow:",
@@ -447,6 +448,7 @@
   },
   "wand_card": {
     "copy": "Copy (Ctrl+C)",
+    "copy_with_link": "Copy (Left click) / Copy share link (Right click)",
     "copy_legacy": "Copy as legacy Wand template",
     "paste_overwrite": "Paste (Overwrite)",
     "save_to_warehouse": "Save to Warehouse"

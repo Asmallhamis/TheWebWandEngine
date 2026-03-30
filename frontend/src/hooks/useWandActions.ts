@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Tab, WandData, AppSettings, SpellInfo, AppNotification, WandSelection, SpellPickerTrigger, PickerInsertAnchor, SpellPickerOpenOptions } from '../types';
 
 import { DEFAULT_WAND } from '../constants';
+import { serializeWandToWand2Text, buildWandShareUrl } from '../lib/wand/share';
 
 const compactAlwaysCast = (spells?: (string | null | undefined)[]) =>
   (spells || []).map(s => s || '').filter(Boolean);
@@ -86,21 +87,7 @@ export const useWandActions = (params: {
       setClipboard({ type: 'wand', data });
 
       // Generate Wand2 wiki text for system clipboard
-      const wikiText = `{{Wand2
-| wandCard     = Yes
-| wandPic      = 
-| spellsCast   = ${wand.actions_per_round}
-| shuffle      = ${wand.shuffle_deck_when_empty ? 'Yes' : 'No'}
-| castDelay    = ${(wand.fire_rate_wait / 60).toFixed(2)}
-| reload_time = ${((wand.reload_time || 0) / 60).toFixed(2)}
-| manaMax      = ${(wand.mana_max || 0).toFixed(2)}
-| manaCharge   = ${(wand.mana_charge_speed || 0).toFixed(2)}
-| capacity     = ${wand.deck_capacity || 0}
-| spread       = ${wand.spread_degrees || 0}
-| speed        = ${(wand.speed_multiplier || 1).toFixed(2)}
-| alwaysCasts  = ${compactAlwaysCast(wand.always_cast).join(',')}
-| spells       = ${Array.from({ length: wand.deck_capacity }).map((_, i) => wand.spells[(i + 1).toString()] || "").join(',')}
-}}`;
+      const wikiText = serializeWandToWand2Text(wand);
       try {
         await navigator.clipboard.writeText(wikiText);
         setNotification({ msg: t('app.notification.copied_to_clipboard'), type: 'success' });
@@ -109,6 +96,18 @@ export const useWandActions = (params: {
       }
     }
   }, [activeTab.wands, setClipboard, t, setNotification]);
+
+  const copyWandShareLink = useCallback(async (slot: string) => {
+    const wand = activeTab.wands[slot];
+    if (!wand) return;
+    const shareUrl = buildWandShareUrl(wand, window.location.href);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setNotification({ msg: t('app.notification.copied_share_link'), type: 'success' });
+    } catch (err) {
+      console.error('Clipboard error:', err);
+    }
+  }, [activeTab.wands, t, setNotification]);
 
   const copyLegacyWand = useCallback(async (slot: string) => {
     const wand = activeTab.wands[slot];
@@ -214,6 +213,7 @@ export const useWandActions = (params: {
     deleteWand,
     toggleExpand,
     copyWand,
+    copyWandShareLink,
     copyLegacyWand,
     cutWand,
     pasteWand,

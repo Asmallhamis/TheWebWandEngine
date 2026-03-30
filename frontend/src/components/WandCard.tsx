@@ -23,6 +23,7 @@ interface WandCardProps {
   toggleExpand: (slot: string) => void;
   deleteWand: (slot: string) => void;
   copyWand: (slot: string) => void;
+  copyWandShareLink: (slot: string) => void;
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
@@ -54,6 +55,7 @@ export function WandCard({
   toggleExpand,
   deleteWand,
   copyWand,
+  copyWandShareLink,
   copyLegacyWand,
   pasteWand,
   updateWand,
@@ -195,8 +197,13 @@ export function WandCard({
           <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">
             <button
               onClick={(e) => { e.stopPropagation(); copyWand(slot); }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                copyWandShareLink(slot);
+              }}
               className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-indigo-400 rounded transition-colors"
-              title={t('wand_card.copy')}
+              title={t('wand_card.copy_with_link')}
             >
               <Scissors size={14} />
             </button>
