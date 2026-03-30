@@ -44,6 +44,14 @@ mod_state = {
     "active_mods": [], # _ACTIVE_MODS_CACHE
 }
 
+# 自动实时同步 owner：只限制自动同步，不限制手动 push/pull
+realtime_sync_state = {
+    "owner_client_id": None,
+    "owner_tab_id": None,
+    "last_seen": 0.0,
+}
+SYNC_LEASE_TIMEOUT_SECONDS = 5.0
+
 # 进程管理：防止多个 luajit 同时运行撑爆内存
 active_processes = {}
 process_lock = Lock()

@@ -18,6 +18,7 @@ local response_channel = effil.channel()
 
 local function table_to_json(t)
     if t == nil then return "null" end
+    if type(t) == "nil" then return "null" end
     if type(t) == "number" or type(t) == "boolean" then return tostring(t) end
     if type(t) == "string" then 
         return '"' .. t:gsub('\\', '\\\\'):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r"):gsub("\t", "\\t") .. '"' 
@@ -105,6 +106,28 @@ local function server_thread_func(chan, resp_chan, pkg_path, pkg_cpath, root_pat
     end
 end
 effil.thread(server_thread_func)(sync_channel, response_channel, package.path, package.cpath, game_root)
+
+local stability_state = {
+    warmup_until = 0,
+    last_apply_frame = -100000,
+}
+
+local function get_frame_num_safe()
+    if GameGetFrameNum then
+        local ok, frame = pcall(GameGetFrameNum)
+        if ok and type(frame) == "number" then return frame end
+    end
+    return 0
+end
+
+local function extend_sync_warmup(frames)
+    local frame = get_frame_num_safe()
+    local frames_to_wait = math.max(1, tonumber(frames) or 1)
+    if frame + frames_to_wait > stability_state.warmup_until then
+        stability_state.warmup_until = frame + frames_to_wait
+        ws_log("Warmup extended to frame " .. tostring(stability_state.warmup_until) .. " (current=" .. tostring(frame) .. ", add=" .. tostring(frames_to_wait) .. ")")
+    end
+end
 
 local function GetWandAtSlot(slot)
     local p = EntityGetWithTag("player_unit")[1]
@@ -233,14 +256,37 @@ local function ApplyFullWand(w, data)
     end
     local p = EntityGetWithTag("player_unit")[1]
     if p then local i2 = EntityGetFirstComponent(p, "Inventory2Component"); if i2 then ComponentSetValue2(i2, "mForceRefresh", true) end end
+    stability_state.last_apply_frame = get_frame_num_safe()
+    ws_log("ApplyFullWand completed at frame " .. tostring(stability_state.last_apply_frame) .. ", slot data spells=" .. tostring(data.spells and #data.spells or 0))
+    extend_sync_warmup(45)
 end
 
 function OnWorldPostUpdate()
+    local frame_num = get_frame_num_safe()
+    local is_paused = false
+    if GameIsPaused then
+        local ok, paused = pcall(GameIsPaused)
+        if ok and paused then is_paused = true end
+    end
+    if is_paused then
+        extend_sync_warmup(90)
+    end
+
     local msg = sync_channel:pop(0)
     if msg == "REQUEST_FETCH" then
         local all = {}
         for i=1, 4 do local w = GetWandAtSlot(i); if w then all[tostring(i)] = serialize_wand(w) end end
-        response_channel:push(table_to_json(all))
+        local is_stable = (not is_paused) and frame_num >= stability_state.warmup_until
+        local wand_count = 0
+        for _, _ in pairs(all) do wand_count = wand_count + 1 end
+        ws_log("REQUEST_FETCH frame=" .. tostring(frame_num) .. " paused=" .. tostring(is_paused) .. " stable=" .. tostring(is_stable) .. " wands=" .. tostring(wand_count) .. " warmup_until=" .. tostring(stability_state.warmup_until))
+        response_channel:push(table_to_json({
+            wands = all,
+            stable = is_stable,
+            paused = is_paused,
+            frame = frame_num,
+            warmup_until = stability_state.warmup_until,
+        }))
     elseif msg == "REQUEST_WAND_EDITOR" then
         local pages = {}
         local idx = 1
@@ -529,6 +575,7 @@ function OnWorldPostUpdate()
                                 EntityRemoveComponent(w, c)
                             end
                         end
+                        ws_log("Spawned replacement wand for slot " .. tostring(slot))
 
                         local ic = EntityGetFirstComponentIncludingDisabled(w, "ItemComponent")
                         if ic then
@@ -556,6 +603,7 @@ function OnWorldPostUpdate()
                     end
                 end
                 
+                ws_log("Applying DATA payload to slot " .. tostring(slot) .. ", delete=" .. tostring(data.delete == true))
                 if w then ApplyFullWand(w, data) end
             end
         end
