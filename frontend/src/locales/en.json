@@ -38,7 +38,10 @@
       "auto_sync_web_over_game": "Auto-sync: Web edits overwrote game data",
       "auto_sync_game_to_new": "Auto-sync: Game state was saved as a new workflow",
       "sync_from_game": "Sync data from game",
+      "multi_realtime_sync_detected": "Detected at least two pages with auto-sync enabled. Auto-sync is paused on this page. Please disable auto-sync on the other page or wait for it to release control.",
+      "realtime_control_held_elsewhere": "Another page is currently running realtime sync, so this page does not have sync control.",
       "initial_sync": "Initial Sync",
+      "realtime_waiting_short": "No sync control",
       "not_connected_to_game": "Not connected to game, cannot push",
       "push_failed": "Push failed",
       "new_workflow_default": "New Workflow {{id}}",
@@ -92,7 +95,9 @@
     "clear_history_confirm": "Are you sure you want to clear all history? (Cannot be undone)",
     "off_sync": "Turn off auto-sync",
     "on_sync": "Turn on auto-sync",
-    "manual": "Manual"
+    "manual": "Manual",
+    "realtime_waiting": "Sync Waiting",
+    "realtime_waiting_subtitle": "Waiting for control"
   },
   "evaluator": {
     "overall_counts": "Overall Spell Counts",
@@ -330,6 +335,7 @@
     "cool_ui_themes": {
       "orionfire": "Orion Karma Fire",
       "pureprism": "World-Cleansing Mystic Prism",
+      "pureprism-v2": "Pure Prism · Iteration",
       "horizondawn": "Firmament Daybreak",
       "goldenglow": "Gilded Divine Radiance",
       "mirrorlight": "Mirage Flowing Light",
@@ -526,7 +532,7 @@
       "select_toggle": "Select or deselect a spell",
       "box_select": "Box-select multiple spells",
       "move_spells": "Move selected spells (grab and drop)",
-      "to_always_cast": "Convert spell to 'Always Cast'",
+      "to_always_cast": "Drag spell to the wand info panel to convert to Always Cast",
       "modify_uses": "Modify spell charges (set to 0 to simulate drained)",
       "ctrl_click_delete": "Delete spell (enable in settings)",
       "show_indices": "Temporarily show all slot indices",

@@ -66,7 +66,10 @@ const DEFAULT_EMBED_SETTINGS: AppSettings = {
   maxCanvasCellsPerRow: 100,
   enableCanvasEditorLock: false,
   pickerFirstSpaceBehavior: 'ignore',
-  moveExistingWandToTopOnDuplicatePaste: false
+  moveExistingWandToTopOnDuplicatePaste: false,
+  coolUIMode: false,
+  coolUITheme: 'gentleisland',
+  coolUIBackground: 'aurora'
 };
 
 function parseWandFromText(text: string, spellNameToId: Record<string, string>): WandData | null {

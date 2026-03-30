@@ -38,7 +38,10 @@
       "auto_sync_web_over_game": "已自动同步：网页修改已覆盖游戏数据",
       "auto_sync_game_to_new": "已自动同步：游戏状态已保存为新工作流",
       "sync_from_game": "从游戏同步数据",
+      "multi_realtime_sync_detected": "检测到至少两个网页都开启了自动同步。当前页面已暂停自动同步，请关闭其他网页的自动同步或等待其释放控制权。",
+      "realtime_control_held_elsewhere": "另一网页正在实时同步，本页当前没有同步控制权。",
       "initial_sync": "初始同步",
+      "realtime_waiting_short": "未持有控制权",
       "not_connected_to_game": "未连接到游戏，无法推送",
       "push_failed": "推送失败",
       "new_workflow_default": "新工作流 {{id}}",
@@ -92,7 +95,9 @@
     "clear_history_confirm": "确定要清除所有历史记录吗？(无法撤销)",
     "off_sync": "关闭自动同步",
     "on_sync": "开启自动同步",
-    "manual": "手动"
+    "manual": "手动",
+    "realtime_waiting": "同步等待",
+    "realtime_waiting_subtitle": "等待控制权"
   },
   "evaluator": {
     "overall_counts": "法术放出总量统计",
@@ -330,6 +335,7 @@
     "cool_ui_themes": {
       "orionfire": "猎户业火",
       "pureprism": "净世玄棱",
+      "pureprism-v2": "净世玄棱 · 迭代",
       "horizondawn": "苍穹破晓",
       "goldenglow": "鎏金神曜",
       "mirrorlight": "幻镜流光",
@@ -526,7 +532,7 @@
       "select_toggle": "选中法术或取消选中",
       "box_select": "框选多个法术",
       "move_spells": "移动选中的法术 (抓取并放下)",
-      "to_always_cast": "将法术转为“始终施法”",
+      "to_always_cast": "拖动法术到法杖信息区，将其转为“始终施法”",
       "modify_uses": "修改法术次数 (设为 0 模拟耗尽)",
       "ctrl_click_delete": "删除法术 (需在设置中开启)",
       "show_indices": "临时显示所有法术位的序号",
