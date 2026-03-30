@@ -25,6 +25,9 @@ interface HeaderProps {
   setIsWarehouseOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   syncGameSpells: () => Promise<void>;
   exportModBundle?: () => Promise<void>;
+  hasRealtimeControl?: boolean;
+  realtimeOwnerExists?: boolean;
+  realtimeWarning?: string | null;
   modBundleInfo: { active: number; total: number };
   onOpenModManager: () => void;
   settings: AppSettings;
@@ -53,14 +56,18 @@ export function Header({
   setIsWarehouseOpen,
   syncGameSpells,
   exportModBundle,
+  hasRealtimeControl,
+  realtimeOwnerExists,
+  realtimeWarning,
   modBundleInfo,
   onOpenModManager,
   settings,
   setSettings
 }: HeaderProps) {
   const { t } = useTranslation();
+  const isStaticMode = (import.meta as any).env?.VITE_STATIC_MODE === 'true';
   return (
-    <header className="flex items-center px-4 pt-2 bg-zinc-900/50 border-b border-white/5 space-x-0.5">
+    <header className="flex items-center px-4 pt-2 bg-zinc-900/50 border-b border-white/5 space-x-0.5 flex-wrap">
       <div className="flex items-center gap-2.5 px-3 py-2 mr-4">
         <button
           onClick={() => setIsWarehouseOpen(prev => !prev)}
@@ -122,8 +129,15 @@ export function Header({
 
       <div className="flex-1" />
 
+      {activeTab.isRealtime && realtimeOwnerExists && !hasRealtimeControl && realtimeWarning && (
+        <div className="mr-3 mb-1 px-3 py-1.5 rounded border border-amber-500/30 bg-amber-500/10 text-amber-200 text-[10px] font-bold tracking-wide">
+          <div>{t('app.notification.realtime_waiting_short')}</div>
+          <div className="opacity-80 font-medium normal-case tracking-normal mt-0.5">{realtimeWarning || t('app.notification.realtime_control_held_elsewhere')}</div>
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 pr-4 pb-1">
-        {!settings.hideSyncButton && (<>
+        {!settings.hideSyncButton && !isStaticMode && (<>
         <button
           onClick={() => pullData(true)}
           onContextMenu={(e) => { e.preventDefault(); pushData(); }}
@@ -131,7 +145,9 @@ export function Header({
           className={`
             neo-button text-[10px] w-32 justify-between px-3
             ${activeTab.isRealtime
-              ? 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20'
+              ? hasRealtimeControl
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20'
+                : 'bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20'
               : 'bg-zinc-800 text-zinc-400 border border-white/5 hover:bg-zinc-700'
             }
           `}
@@ -143,11 +159,11 @@ export function Header({
               <RefreshCw size={14} />
             )}
             <div className="flex flex-col items-start leading-none">
-              <span className="text-[8px] opacity-70 mb-0.5">{activeTab.isRealtime ? t('tabs.realtime') : t('tabs.manual')}</span>
-              <span className="font-black">{activeTab.isRealtime ? 'ON' : 'OFF'}</span>
+              <span className="text-[8px] opacity-70 mb-0.5">{activeTab.isRealtime ? (hasRealtimeControl ? t('tabs.realtime') : t('tabs.realtime_waiting_subtitle')) : t('tabs.manual')}</span>
+              <span className="font-black">{activeTab.isRealtime ? (hasRealtimeControl ? 'ON' : 'WAIT') : 'OFF'}</span>
             </div>
           </div>
-          {activeTab.isRealtime ? <Unlock size={10} className="opacity-50" /> : <Lock size={10} className="opacity-50" />}
+          {activeTab.isRealtime && hasRealtimeControl ? <Unlock size={10} className="opacity-50" /> : <Lock size={10} className="opacity-50" />}
         </button>
 
         <div className="h-4 w-[1px] bg-white/10 mx-2" />
