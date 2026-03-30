@@ -43,8 +43,9 @@ export const useSpellSearch = (
 
   const searchResults = useMemo(() => {
     if (!pickerSearch) return null;
-    const query = pickerSearch.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+    const query = pickerSearch.toLowerCase().trim();
     if (!query) return null;
+    const hasWordChars = /[a-z0-9\u4e00-\u9fa5]/.test(query);
 
     const allSpells = Object.values(spellDb);
     const isEnglish = i18n.language.startsWith('en');
@@ -62,6 +63,8 @@ export const useSpellSearch = (
       const py = (s.pinyin || "").toLowerCase();
       const init = (s.pinyin_initials || "").toLowerCase();
       const aliases = (s.aliases || "").toLowerCase();
+      const aliasParts = aliases.split(/\s+/).filter(Boolean);
+      const hasAliasExact = aliasParts.includes(query);
       const apy = (s.alias_pinyin || "").toLowerCase();
       const ainit = (s.alias_initials || "").toLowerCase();
 
@@ -69,38 +72,39 @@ export const useSpellSearch = (
       if (id === query) score += 100;
       else if (name === query) score += 90;
       else if (en === query) score += 85;
-      else if (aliases.includes(query)) score += 80;
+      else if (hasAliasExact) score += 80;
 
       // Starts with
       else if (id.startsWith(query)) score += 70;
       else if (name.startsWith(query)) score += 65;
       else if (en.startsWith(query)) score += 60;
-      else if (!isEnglish && init.startsWith(query)) score += 55;
-      else if (!isEnglish && py.startsWith(query)) score += 50;
-      else if (!isEnglish && checkPinyinFuzzy(query, py, init)) score += 48;
-      else if (!isEnglish && pyInitVariants.some(v => v.startsWith(query))) score += 47;
-      else if (!isEnglish && pyVariants.some(v => v.startsWith(query))) score += 46;
-      else if (!isEnglish && pyVariants.some(v => pyInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 44;
-      else if (!isEnglish && ainit.startsWith(query)) score += 45;
-      else if (!isEnglish && apy.startsWith(query)) score += 40;
-      else if (!isEnglish && checkPinyinFuzzy(query, apy, ainit)) score += 38;
-      else if (!isEnglish && aliasInitVariants.some(v => v.startsWith(query))) score += 37;
-      else if (!isEnglish && aliasPyVariants.some(v => v.startsWith(query))) score += 36;
-      else if (!isEnglish && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 34;
+      else if (!isEnglish && hasWordChars && init.startsWith(query)) score += 55;
+      else if (!isEnglish && hasWordChars && py.startsWith(query)) score += 50;
+      else if (!isEnglish && hasWordChars && checkPinyinFuzzy(query, py, init)) score += 48;
+      else if (!isEnglish && hasWordChars && pyInitVariants.some(v => v.startsWith(query))) score += 47;
+      else if (!isEnglish && hasWordChars && pyVariants.some(v => v.startsWith(query))) score += 46;
+      else if (!isEnglish && hasWordChars && pyVariants.some(v => pyInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 44;
+      else if (!isEnglish && hasWordChars && ainit.startsWith(query)) score += 45;
+      else if (!isEnglish && hasWordChars && apy.startsWith(query)) score += 40;
+      else if (!isEnglish && hasWordChars && checkPinyinFuzzy(query, apy, ainit)) score += 38;
+      else if (!isEnglish && hasWordChars && aliasInitVariants.some(v => v.startsWith(query))) score += 37;
+      else if (!isEnglish && hasWordChars && aliasPyVariants.some(v => v.startsWith(query))) score += 36;
+      else if (!isEnglish && hasWordChars && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 34;
 
       // Includes
+      else if (aliases.includes(query)) score += 32;
       else if (id.includes(query)) score += 30;
       else if (name.includes(query)) score += 25;
       else if (en.includes(query)) score += 20;
-      else if (!isEnglish && init.includes(query)) score += 15;
-      else if (!isEnglish && py.includes(query)) score += 10;
-      else if (!isEnglish && pyInitVariants.some(v => v.includes(query))) score += 9;
-      else if (!isEnglish && pyVariants.some(v => v.includes(query))) score += 8;
-      else if (!isEnglish && ainit.includes(query)) score += 8;
-      else if (!isEnglish && aliasInitVariants.some(v => v.includes(query))) score += 7;
-      else if (!isEnglish && apy.includes(query)) score += 5;
-      else if (!isEnglish && aliasPyVariants.some(v => v.includes(query))) score += 4;
-      else if (!isEnglish && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 3;
+      else if (!isEnglish && hasWordChars && init.includes(query)) score += 15;
+      else if (!isEnglish && hasWordChars && py.includes(query)) score += 10;
+      else if (!isEnglish && hasWordChars && pyInitVariants.some(v => v.includes(query))) score += 9;
+      else if (!isEnglish && hasWordChars && pyVariants.some(v => v.includes(query))) score += 8;
+      else if (!isEnglish && hasWordChars && ainit.includes(query)) score += 8;
+      else if (!isEnglish && hasWordChars && aliasInitVariants.some(v => v.includes(query))) score += 7;
+      else if (!isEnglish && hasWordChars && apy.includes(query)) score += 5;
+      else if (!isEnglish && hasWordChars && aliasPyVariants.some(v => v.includes(query))) score += 4;
+      else if (!isEnglish && hasWordChars && aliasPyVariants.some(v => aliasInitVariants.some(initVariant => checkPinyinFuzzy(query, v, initVariant)))) score += 3;
 
       return { spell: s, score };
     }).filter(x => x.score > 0);

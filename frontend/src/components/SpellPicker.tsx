@@ -6,6 +6,23 @@ import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../store/useUIStore';
 
+const splitAliases = (aliases?: string) => (aliases || '').split(/\s+/).filter(Boolean);
+
+const getTooltipAliases = (spell: SpellInfo, isEnglish: boolean) => {
+  const parts = splitAliases(spell.aliases);
+  if (!parts.length) return '';
+  if (!isEnglish) return parts.join(' ');
+
+  const visible = parts.filter(alias => !/[\u4e00-\u9fff]/.test(alias));
+  return visible.join(' ');
+};
+
+const buildSpellTooltip = (spell: SpellInfo, isEnglish: boolean) => {
+  const displayName = isEnglish && spell.en_name ? spell.en_name : spell.name;
+  const aliasesText = getTooltipAliases(spell, isEnglish);
+  return `${displayName}${aliasesText ? ` (${aliasesText})` : ''}\nID: ${spell.id}`;
+};
+
 interface SpellPickerProps {
   pickerConfig: { x: number; y: number; rowTop?: number; wandSlot: string; spellIdx: string; isAlwaysCast?: boolean; insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null } | null;
   onClose: () => void;
@@ -301,8 +318,8 @@ export function SpellPicker({
                 <div className={`flex flex-wrap gap-1 px-1 ${settings.hideLabels ? 'mb-4' : ''}`}>
                   {searchResults[0].map((s: SpellInfo, idx: number) => {
                     const typeConfig = settings.spellTypes.find(t => t.id === s.type);
-                    const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
-                    const tooltip = `${displayName}${s.aliases ? ` (${s.aliases})` : ''}\nID: ${s.id}`;
+                    const isEnglish = i18n.language.startsWith('en');
+                    const tooltip = buildSpellTooltip(s, isEnglish);
                     const isSelected = selectedIndex === idx;
                     return (
                       <button
@@ -364,8 +381,8 @@ export function SpellPicker({
                     <div className="flex flex-wrap gap-1 px-0.5">
                       {spellStats.overall.map((s: SpellInfo, idx: number) => {
                         const typeConfig = settings.spellTypes.find(t => t.id === s.type);
-                        const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
-                        const tooltip = `${displayName}${s.aliases ? ` (${s.aliases})` : ''}\nID: ${s.id}`;
+                        const isEnglish = i18n.language.startsWith('en');
+                        const tooltip = buildSpellTooltip(s, isEnglish);
                         const isSelected = !pickerSearch && selectedIndex === idx;
                         return (
                           <button
@@ -427,8 +444,8 @@ export function SpellPicker({
                     <div className="flex flex-wrap gap-1 px-0.5">
                       {spellStats.categories[gIdx].map((s: SpellInfo, idx: number) => {
                         const typeConfig = settings.spellTypes.find(t => t.id === s.type);
-                        const displayName = i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name;
-                        const tooltip = `${displayName}${s.aliases ? ` (${s.aliases})` : ''}\nID: ${s.id}`;
+                        const isEnglish = i18n.language.startsWith('en');
+                        const tooltip = buildSpellTooltip(s, isEnglish);
 
                         // Calculate global index for this spell in non-search mode
                         let globalIdx = spellStats.overall.length;

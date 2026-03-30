@@ -190,7 +190,7 @@ const EmbedApp: React.FC = () => {
     const normalize = (s: string) => s.toLowerCase()
       .replace(/\[\[|\]\]/g, '')
       .split('|')[0]
-      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
+      .replace(/[^a-z0-9\u4e00-\u9fa5]|_/g, '')
       .trim();
 
     Object.entries(spellDb).forEach(([id, info]) => {
@@ -208,7 +208,7 @@ const EmbedApp: React.FC = () => {
         const enNorm = normalize(info.en_name);
         if (enNorm) map[enNorm] = id;
       }
-      info.aliases?.split(',').forEach(alias => {
+      info.aliases?.split(/\s+/).forEach(alias => {
         const aNorm = normalize(alias);
         if (aNorm) map[aNorm] = id;
       });
