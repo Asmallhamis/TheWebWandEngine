@@ -24,7 +24,17 @@ export function Footer({ isConnected, activeTab, tabsCount, notification }: Foot
         </div>
         <div className="flex gap-4">
           <span>Tabs: {tabsCount}</span>
-          <span>{APP_VERSION_INFO.label}</span>
+          <span>
+            <a
+              className="text-blue-400 underline underline-offset-2 hover:text-blue-300"
+              href="https://github.com/Asmallhamis/TheWebWandEngine"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {APP_VERSION_INFO.name}
+            </a>{' '}
+            • {APP_VERSION_INFO.version}
+          </span>
         </div>
       </footer>
 

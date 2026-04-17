@@ -59,9 +59,26 @@ export const useWarehouse = (setNotification: (n: AppNotification | null) => voi
     localStorage.setItem('twwe_smart_tags', JSON.stringify(smartTags));
   }, [smartTags]);
 
+  const generateDefaultWandName = useCallback(() => {
+    const prefix = t('app.notification.unnamed_wand');
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    return `${prefix}_${timestamp}`;
+  }, [t]);
+
+  const syncWandName = useCallback((wand: WandData, finalName: string): WandData => ({
+    ...wand,
+    appearance: {
+      ...(wand.appearance || {}),
+      name: finalName,
+    }
+  }), []);
+
   const saveToWarehouse = useCallback(async (data: WandData) => {
-    const name = prompt(t('app.notification.enter_wand_name'), t('app.notification.my_wand'));
-    if (!name) return;
+    const existingName = data.appearance?.name?.trim();
+    const name = existingName || generateDefaultWandName();
+    const normalizedData = syncWandName(data, name);
 
     let py = "", init = "";
     try {
@@ -80,7 +97,7 @@ export const useWarehouse = (setNotification: (n: AppNotification | null) => voi
     }
 
     const newWand: WarehouseWand = {
-      ...data,
+      ...normalizedData,
       id: Math.random().toString(36).substring(2, 11),
       name: name,
       pinyin: py,
@@ -93,7 +110,7 @@ export const useWarehouse = (setNotification: (n: AppNotification | null) => voi
     setWarehouseWands(prev => [newWand, ...prev]);
     setNotification({ msg: t('app.notification.saved_to_warehouse', { name }), type: 'success' });
     setIsWarehouseOpen(true);
-  }, [t, setNotification]);
+  }, [t, setNotification, generateDefaultWandName, syncWandName]);
 
   const pullBones = useCallback(async () => {
     try {

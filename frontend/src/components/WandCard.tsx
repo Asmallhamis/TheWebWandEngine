@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor } from 'lucide-react';
+import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor, Image as ImageIcon } from 'lucide-react';
 import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
@@ -73,6 +73,8 @@ export function WandCard({
   onSaveToWarehouse,
 }: WandCardProps) {
   const { t, i18n } = useTranslation();
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
   const renderTimeStat = (label: string, frames: number, colorClass: string) => {
     const primary = settings.showStatsInFrames ? frames : (frames / 60).toFixed(2) + 's';
     const secondary = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames;
@@ -94,8 +96,48 @@ export function WandCard({
     </div>
   );
 
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isEditingName, setIsEditingName] = React.useState(false);
+  const [nameValue, setNameValue] = React.useState(data.appearance?.name || '');
+
+  React.useEffect(() => {
+    setNameValue(data.appearance?.name || '');
+  }, [data.appearance?.name]);
+
+  React.useEffect(() => {
+    if (!isEditingName) return;
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
+  }, [isEditingName]);
+
+  const commitName = React.useCallback(() => {
+    const trimmed = nameValue.trim();
+    updateWand(slot, {
+      appearance: {
+        ...(data.appearance || {}),
+        name: trimmed,
+      }
+    });
+    setIsEditingName(false);
+  }, [data.appearance, nameValue, slot, updateWand]);
+
+  React.useEffect(() => {
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2' || !isHovered) return;
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
+      e.preventDefault();
+      setNameValue(data.appearance?.name || '');
+      setIsEditingName(true);
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [data.appearance?.name, isHovered]);
+
+  const displayWandName = data.appearance?.name?.trim() || t('app.notification.unnamed_wand');
+
   return (
-    <div className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`}>
+    <div ref={rootRef} className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div
         className="flex items-center px-4 py-2 cursor-pointer gap-4"
         onClick={() => toggleExpand(slot)}
@@ -111,9 +153,38 @@ export function WandCard({
               );
             })()}
           </div>
+          <div className="min-w-0 max-w-[220px]">
+            {isEditingName ? (
+              <input
+                ref={nameInputRef}
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitName();
+                  if (e.key === 'Escape') {
+                    setNameValue(data.appearance?.name || '');
+                    setIsEditingName(false);
+                  }
+                }}
+                onBlur={commitName}
+                className="w-full bg-transparent border border-white/10 rounded px-2 py-1 text-[12px] font-bold text-zinc-100 outline-none focus:border-indigo-400"
+              />
+            ) : (
+              <button
+                type="button"
+                className="text-left text-[12px] font-bold text-zinc-200 truncate hover:text-indigo-300 transition-colors"
+                title={displayWandName}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => { e.stopPropagation(); setIsEditingName(true); }}
+              >
+                {displayWandName}
+              </button>
+            )}
+          </div>
           <div className="text-[10px] font-black w-6 text-center">{slot}</div>
         </div>
-
         <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
           {Object.entries(data.spells || {})
             .sort(([a], [b]) => parseInt(a) - parseInt(b))
@@ -195,6 +266,28 @@ export function WandCard({
           </div>
 
           <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const editorRoot = document.querySelector(`[data-wand-editor-root][data-wand-slot="${slot}"]`) as HTMLDivElement | null;
+                if (!editorRoot) return;
+                const exportButton = editorRoot.querySelector('[data-wand-export-button]') as HTMLButtonElement | null;
+                exportButton?.click();
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const editorRoot = document.querySelector(`[data-wand-editor-root][data-wand-slot="${slot}"]`) as HTMLDivElement | null;
+                if (!editorRoot) return;
+                const exportButton = editorRoot.querySelector('[data-wand-export-button]') as HTMLButtonElement | null;
+                exportButton?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+              }}
+              className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-sky-400 rounded transition-colors"
+              title={`${t('settings.export_only_spells')} / ${t('settings.export_wand_and_spells')}`}
+              type="button"
+            >
+              <ImageIcon size={14} />
+            </button>
             <button
               onClick={(e) => { e.stopPropagation(); copyWand(slot); }}
               onContextMenu={(e) => {

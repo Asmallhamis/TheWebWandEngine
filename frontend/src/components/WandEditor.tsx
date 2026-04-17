@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Image as ImageIcon, Camera } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { WandData, SpellInfo, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource } from '../types';
 import { PropInput } from './Common';
@@ -384,9 +384,32 @@ export function WandEditor({
     return new Blob([newBuffer], { type: 'image/png' });
   };
 
+  const getDisplayWandName = React.useCallback((wand: WandData) => {
+    const name = wand.appearance?.name?.trim();
+    return name || t('app.notification.unnamed_wand');
+  }, [t]);
+
+  const sanitizeFilename = React.useCallback((value: string) => {
+    return value
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 50) || 'wand';
+  }, []);
+
+  const getExportFilename = React.useCallback(() => {
+    const wandName = sanitizeFilename(getDisplayWandName(data));
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    return `${wandName}_${timestamp}.png`;
+  }, [data, getDisplayWandName, sanitizeFilename]);
+
   const handleExportImage = async (mode: 'only_spells' | 'full') => {
     const ref = mode === 'only_spells' ? spellsRef : wandRef;
     if (!ref.current) return;
+
+    await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
 
     const isPure = mode === 'only_spells' && settings.pureSpellsExport;
     const container = ref.current;
@@ -586,7 +609,7 @@ export function WandEditor({
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.download = `wand_${new Date().getTime()}.png`;
+      link.download = getExportFilename();
       link.href = url;
       link.click();
       URL.revokeObjectURL(url);
@@ -644,8 +667,20 @@ export function WandEditor({
   };
 
   return (
-    <div ref={wandRef} data-wand-editor-root className={`px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
+    <div ref={wandRef} data-wand-editor-root data-wand-slot={slot} className={`px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
       {!hideAttributes && <div className="flex items-start gap-8 attributes-container">
+        <button
+          type="button"
+          data-wand-export-button
+          onClick={() => handleExportImage('only_spells')}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleExportImage('full');
+          }}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+        />
         <div
           data-wand-attributes-box
           className={`flex flex-wrap items-center glass rounded-xl p-1 pr-6 shadow-2xl wand-attributes-box ${settings.compactAttributes ? 'min-w-0' : 'min-w-[600px]'}`}
@@ -718,24 +753,6 @@ export function WandEditor({
         </div>
 
         <div className="flex flex-col items-center gap-3 shrink-0 h-fit export-ignore">
-          <div className="flex items-center bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden">
-            <button
-              onClick={() => handleExportImage('only_spells')}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 text-zinc-400 border-r border-white/5 text-[10px] font-black uppercase tracking-widest transition-all"
-              title={t('settings.export_only_spells')}
-            >
-              <ImageIcon size={14} className="opacity-70" />
-              <span className="hidden sm:inline">{t('settings.export_only_spells')}</span>
-            </button>
-            <button
-              onClick={() => handleExportImage('full')}
-              className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 text-zinc-400 text-[10px] font-black uppercase tracking-widest transition-all"
-              title={t('settings.export_wand_and_spells')}
-            >
-              <Camera size={14} className="opacity-70" />
-              <span className="hidden sm:inline">{t('settings.export_wand_and_spells')}</span>
-            </button>
-          </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-2 px-2 py-1 bg-white/[0.02] border border-white/5 rounded-lg overflow-hidden focus-within:border-indigo-500/50 transition-colors" title={t('evaluator.evaluation_seed_desc')}>
               <button 

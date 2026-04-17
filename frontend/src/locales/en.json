@@ -4,14 +4,13 @@
     "notification": {
       "saved_to_warehouse": "Saved to warehouse: {{name}}",
       "pasted_new_wand": "Pasted as new wand from clipboard (Slot {{slot}})",
+      "unnamed_wand": "Wand",
       "copied_to_clipboard": "Copied to clipboard",
       "cut_to_clipboard": "Cut to clipboard",
       "copied_share_link": "Share link copied to clipboard",
       "exported_workflow": "Workflow exported",
       "pushed_to_game": "Pushed {{count}} wands from current workflow to game",
       "renamed_workflow": "Rename workflow:",
-      "enter_wand_name": "Enter wand name",
-      "my_wand": "My Wand",
       "set_charges_0": "Modify charges: Set to 0",
       "restore_charges": "Modify charges: Restore default",
       "drop_to_import": "Drop image or file to import a wand",
@@ -336,7 +335,6 @@
     "cool_ui_themes": {
       "orionfire": "Orion Karma Fire",
       "pureprism": "World-Cleansing Mystic Prism",
-      "pureprism-v2": "Pure Prism · Iteration",
       "horizondawn": "Firmament Daybreak",
       "goldenglow": "Gilded Divine Radiance",
       "mirrorlight": "Mirage Flowing Light",

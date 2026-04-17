@@ -68,15 +68,31 @@ interface DraggableNodeProps {
 const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, subtitle, slotIndex, colorDef, onRename, onPosChange, headerActions, children }) => {
   const controls = useControls() as any;
   const scale = controls.instance?.transformState?.scale || 1;
+  const nodeRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: defaultX, y: defaultY });
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
   const [zIndex, setZIndex] = useState(() => ++globalZIndexCounter);
   const dragRef = useRef({ isDragging: false, lastX: 0, lastY: 0 });
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     setEditValue(title);
   }, [title]);
+
+  useEffect(() => {
+    if (!onRename) return;
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2' || !isHovered) return;
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
+      e.preventDefault();
+      setEditValue(title);
+      setIsEditing(true);
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [isHovered, onRename, title]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
@@ -133,11 +149,14 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
 
   return (
     <div 
+      ref={nodeRef}
       id={id}
       data-wand-target={slotIndex}
       className={`absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
       style={{ left: pos.x, top: pos.y, width: 'max-content', zIndex }}
       onPointerDownCapture={bringToFront}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <div 
         className="cancel-pan flex items-center gap-3 mb-2 cursor-grab active:cursor-grabbing p-2 -m-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors select-none"

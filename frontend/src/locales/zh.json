@@ -4,14 +4,13 @@
     "notification": {
       "saved_to_warehouse": "已存入仓库: {{name}}",
       "pasted_new_wand": "已从剪贴板粘贴为新法杖 (槽位 {{slot}})",
+      "unnamed_wand": "法杖",
       "copied_to_clipboard": "已复制到剪贴板",
       "cut_to_clipboard": "已剪切到剪贴板",
       "copied_share_link": "已复制分享链接到剪贴板",
       "exported_workflow": "已导出工作流",
       "pushed_to_game": "已将当前工作流的 {{count}} 根法杖推送到游戏",
       "renamed_workflow": "重命名工作流:",
-      "enter_wand_name": "输入魔杖名称",
-      "my_wand": "我的魔杖",
       "set_charges_0": "修改法术次数: 设为 0",
       "restore_charges": "修改法术次数: 还原默认",
       "drop_to_import": "拖入图片或文件以导入法杖",
@@ -336,7 +335,6 @@
     "cool_ui_themes": {
       "orionfire": "猎户业火",
       "pureprism": "净世玄棱",
-      "pureprism-v2": "净世玄棱 · 迭代",
       "horizondawn": "苍穹破晓",
       "goldenglow": "鎏金神曜",
       "mirrorlight": "幻镜流光",

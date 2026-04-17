@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GripVertical,
   ArrowUpRight,
@@ -40,7 +40,10 @@ interface WarehouseWandCardProps {
   onDrop: (e: React.DragEvent, id: string) => void;
   isSelected?: boolean;
   onClick?: (e: React.MouseEvent) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   isConnected: boolean;
+  isHovered?: boolean;
 }
 
 export const WarehouseWandCard = React.memo(({
@@ -63,9 +66,26 @@ export const WarehouseWandCard = React.memo(({
   onDrop,
   isSelected,
   onClick,
-  isConnected
+  onMouseEnter,
+  onMouseLeave,
+  isConnected,
+  isHovered = false,
 }: WarehouseWandCardProps) => {
   const { t, i18n } = useTranslation();
+  const nameButtonRef = useRef<HTMLButtonElement>(null);
+  const [isRenameFocused, setIsRenameFocused] = useState(false);
+
+  useEffect(() => {
+    const handleWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'F2' || !(isHovered || isRenameFocused)) return;
+      const active = document.activeElement;
+      if (active && ['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
+      e.preventDefault();
+      onRename(wand);
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [isHovered, isRenameFocused, onRename, wand]);
 
   const spellsList = useMemo(() => {
     const list: { spell: SpellInfo | null; sid: string | null }[] = [];
@@ -95,6 +115,8 @@ export const WarehouseWandCard = React.memo(({
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, wand.id)}
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {/* Visual Indicators for Drag Drop */}
       {dragOverWandId === wand.id && dragOverPos === 'top' && (
@@ -152,9 +174,18 @@ export const WarehouseWandCard = React.memo(({
       <div className="flex-none flex flex-col justify-between gap-1 w-full">
         <div className="flex items-start justify-between gap-2 relative">
           <div className="min-w-0 w-full">
-            <h3 className="text-xs font-bold text-zinc-300 truncate leading-tight group-hover:text-purple-300">
-              {wand.name || t('app.notification.my_wand')}
-            </h3>
+            <button
+              ref={nameButtonRef}
+              type="button"
+              className="text-left w-full text-xs font-bold text-zinc-300 truncate leading-tight group-hover:text-purple-300 focus:outline-none focus:text-purple-300"
+              title={wand.appearance?.name || wand.name || t('app.notification.unnamed_wand')}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => { e.stopPropagation(); onRename(wand); }}
+              onFocus={() => setIsRenameFocused(true)}
+              onBlur={() => setIsRenameFocused(false)}
+            >
+              {wand.appearance?.name || wand.name || t('app.notification.unnamed_wand')}
+            </button>
 
             {/* Stats Compact - Only show on hover via CSS tooltip style overlay */}
             <div className="hidden group-hover:flex absolute top-full left-0 right-0 mt-1 bg-zinc-900/95 border border-white/10 rounded-lg p-2 flex-col gap-1 z-50 shadow-xl backdrop-blur-md pointer-events-none animate-in fade-in slide-in-from-top-1 duration-200">

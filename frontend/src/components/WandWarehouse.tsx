@@ -122,6 +122,7 @@ export function WandWarehouse({
   const [spellSearchQuery, setSpellSearchQuery] = useState('');
 
   const [selectedWandIds, setSelectedWandIds] = useState<Set<string>>(new Set());
+  const [hoveredWandId, setHoveredWandId] = useState<string | null>(null);
 
   // Paste Support for Smart Tag Editor
   useEffect(() => {
@@ -231,11 +232,21 @@ export function WandWarehouse({
   }, [setWands, t, selectedWandIds]);
 
   const updateWand = useCallback((id: string, updates: Partial<WarehouseWand>) => {
-    setWands(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w));
+    setWands(prev => prev.map(w => {
+      if (w.id !== id) return w;
+      const next = { ...w, ...updates };
+      if (typeof next.name === 'string') {
+        next.appearance = {
+          ...(next.appearance || {}),
+          name: next.name,
+        };
+      }
+      return next;
+    }));
   }, [setWands]);
 
   const handleRenameWand = useCallback(async (wand: WarehouseWand) => {
-    const newName = prompt(t('warehouse.rename_wand'), wand.name);
+    const newName = prompt(t('warehouse.rename_wand'), wand.appearance?.name || wand.name);
     if (newName) {
       let py = "", init = "";
       if (!i18n.language.startsWith('en')) {
@@ -933,7 +944,10 @@ export function WandWarehouse({
                     onDrop={(e, id) => handleDrop(e, 'wand', id)}
                     isConnected={isConnected}
                     isSelected={selectedWandIds.has(wand.id)}
-                    onClick={(e) => handleWandClick(e, wand.id)} />
+                    isHovered={hoveredWandId === wand.id}
+                    onClick={(e) => handleWandClick(e, wand.id)}
+                    onMouseEnter={() => setHoveredWandId(wand.id)}
+                    onMouseLeave={() => setHoveredWandId(prev => prev === wand.id ? null : prev)} />
                 ))}
               </div>
             )}
