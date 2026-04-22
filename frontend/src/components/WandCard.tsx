@@ -139,7 +139,7 @@ export function WandCard({
   return (
     <div ref={rootRef} className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div
-        className="flex items-center px-4 py-2 cursor-pointer gap-4"
+        className="flex flex-wrap items-start px-4 py-2 cursor-pointer gap-3 md:gap-4 overflow-x-hidden"
         onClick={() => toggleExpand(slot)}
       >
         <div className="flex items-center gap-2 shrink-0">
@@ -234,9 +234,9 @@ export function WandCard({
           )}
         </div>
 
-        <div className="flex items-center gap-0 border-l border-white/5 shrink-0 h-10">
+        <div className="flex flex-wrap items-center gap-y-2 border-t border-white/5 md:border-t-0 md:border-l md:border-white/5 w-full md:w-auto md:shrink-0 pt-2 md:pt-0 md:pl-0 min-w-0">
           {/* Group 1: Shuffle */}
-          <div className="px-3 h-full flex items-center border-r border-white/5">
+          <div className="px-3 h-full flex items-center border-r border-white/5 min-w-0">
             <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${data.shuffle_deck_when_empty ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
               <div className={`w-1 h-1 rounded-full ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
               <span className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
@@ -246,26 +246,26 @@ export function WandCard({
           </div>
 
           {/* Group 2: Mana */}
-          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5 min-w-0">
             <StatItem label={t('editor.mana_max')} value={data.mana_max || 0} colorClass="text-cyan-400" />
             <StatItem label={t('editor.recharge')} value={data.mana_charge_speed || 0} colorClass="text-cyan-400" />
           </div>
 
           {/* Group 3: Timing */}
-          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5 min-w-0">
             {renderTimeStat(t('editor.cast_delay'), data.fire_rate_wait, data.fire_rate_wait <= 0 ? "text-emerald-400" : "text-amber-300")}
             {renderTimeStat(t('editor.recharge_time'), data.reload_time, data.reload_time <= 0 ? "text-emerald-400" : "text-amber-300")}
           </div>
 
           {/* Group 4: Capacity & Other */}
-          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5">
+          <div className="px-3 h-full flex items-center gap-4 border-r border-white/5 min-w-0">
             <StatItem label={t('editor.capacity')} value={data.deck_capacity} />
             <StatItem label={t('editor.spread')} value={(data.spread_degrees > 0 ? '+' : '') + data.spread_degrees + '°'} colorClass={data.spread_degrees <= 0 ? 'text-emerald-400' : 'text-red-400'} />
             <StatItem label={t('editor.spells_per_cast')} value={data.actions_per_round} colorClass={data.actions_per_round > 1 ? 'text-purple-400' : ''} />
             <StatItem label={t('editor.speed')} value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
-          <div className="flex items-center bg-black/40 rounded-md p-0.5 ml-2 opacity-0 group-hover/wand:opacity-100 transition-opacity">
+          <div className="flex items-center flex-wrap bg-black/40 rounded-md p-0.5 md:ml-2 w-full md:w-auto justify-end md:justify-start opacity-100 md:opacity-0 md:group-hover/wand:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
