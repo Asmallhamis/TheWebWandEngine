@@ -66,3 +66,10 @@ tools/
 frontend/public/static_data/
 
 
+
+# Submodule transient files
+wand_eval_tree/checkpoint.json
+wand_eval_tree/single_test.lua
+
+# Backup / temporary script versions
+202*-*-* *.txt
