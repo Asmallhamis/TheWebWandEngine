@@ -313,20 +313,33 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
 
   return (
     <div className="flex-1 relative overflow-hidden bg-[#050505] inset-0 absolute">
-      {/* Infinite Canvas */}
-      <TransformWrapper
-        initialScale={1}
-        minScale={0.1}
-        maxScale={2}
-        limitToBounds={false}
-        centerOnInit={true}
-        doubleClick={{ disabled: true }}
-        wheel={{ step: 0.1 }}
-        panning={{ excluded: ['cancel-pan', 'panning-disabled'] }}
-      >
-        <Navigator wands={wands} activeTab={activeTab} />
-        <InitCamera wands={wands} activeTabId={activeTab.id} />
-        
+      {(() => {
+        const uiScale = (settings.uiScale || 100) / 100;
+        const canvasScale = uiScale === 0 ? 1 : 1 / uiScale;
+        return (
+          <div
+            className="absolute inset-0 overflow-hidden"
+            style={{
+              transform: `scale(${canvasScale})`,
+              transformOrigin: 'top left',
+              width: `${100 / canvasScale}%`,
+              height: `${100 / canvasScale}%`,
+            }}
+          >
+            {/* Infinite Canvas */}
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.1}
+              maxScale={2}
+              limitToBounds={false}
+              centerOnInit={true}
+              doubleClick={{ disabled: true }}
+              wheel={{ step: 0.1 }}
+              panning={{ excluded: ['cancel-pan', 'panning-disabled'] }}
+            >
+              <Navigator wands={wands} activeTab={activeTab} />
+              <InitCamera wands={wands} activeTabId={activeTab.id} />
+              
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
           <div className="relative w-[10000px] h-[10000px] pointer-events-none cyber-grid">
             {/* Render Nodes */}
@@ -482,8 +495,11 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
               )}
             </div>
           </div>
-        </TransformComponent>
-      </TransformWrapper>
+            </TransformComponent>
+            </TransformWrapper>
+          </div>
+        );
+      })()}
 
       {/* Bottom HUD Dock */}
       <SpellDock {...props} wands={wands} />

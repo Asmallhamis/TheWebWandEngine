@@ -71,6 +71,16 @@
       "wand_already_exists_moving_to_top": "This wand already exists and was moved to the top"
     }
   },
+
+  "mobile": {
+    "toolbar": {
+      "show": "Show mobile toolbar",
+      "hide": "Hide mobile toolbar",
+      "mark": "Mark",
+      "wiki": "Wiki",
+      "delete": "Delete"
+    }
+  },
   "nav": {
     "new_wand": "New Wand",
     "import": "Import",

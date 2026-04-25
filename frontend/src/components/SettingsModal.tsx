@@ -1105,6 +1105,25 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.mobile_edit_toolbar_enabled')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-sky-500/10 rounded-lg text-sky-400">
+                        <Smartphone size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.mobile_edit_toolbar_enabled')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.mobile_edit_toolbar_enabled_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, mobileEditToolbarEnabled: !s.mobileEditToolbarEnabled }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.mobileEditToolbarEnabled ? 'bg-sky-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.mobileEditToolbarEnabled ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
                 {isMatch(t('settings.mobile_picker_mode')) && (
                   <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
                     <div className="flex items-center gap-2">

@@ -48,6 +48,12 @@ const SpellCellComponent = ({
   const hoveredSlot = useUIStore(s => s.hoveredSlot);
   const isHovered = hoveredSlot?.wandSlot === slot && hoveredSlot?.idx === (i + 1);
   const dragSource = useUIStore(s => s.dragSource);
+  const mobileModifiers = useUIStore(s => s.mobileModifiers);
+  const consumeMobileModifiers = useUIStore(s => s.consumeMobileModifiers);
+  const markModeActive = useUIStore(s => s.markModeActive);
+  const wikiModeActive = useUIStore(s => s.wikiModeActive);
+  const consumeWikiMode = useUIStore(s => s.consumeWikiMode);
+  const consumeMarkMode = useUIStore(s => s.consumeMarkMode);
   const selection = useUIStore(s => s.selection);
 
   return (
@@ -97,8 +103,11 @@ const SpellCellComponent = ({
         }}
         onMouseEnter={() => !isLocked && handleSlotMouseEnter(slot, i + 1)}
         onClick={(e) => {
-          if (e.ctrlKey && settings.ctrlClickDelete && !e.altKey) {
-            if (e.shiftKey) {
+          const ctrlActive = e.ctrlKey || mobileModifiers.ctrl;
+          const altActive = e.altKey || mobileModifiers.alt;
+          const shiftActive = e.shiftKey || mobileModifiers.shift;
+          if (ctrlActive && settings.ctrlClickDelete && !altActive) {
+            if (shiftActive) {
               e.preventDefault();
               e.stopPropagation();
               const slotIdx = i + 1;
@@ -121,6 +130,7 @@ const SpellCellComponent = ({
                 spell_uses: newSpellUses,
                 deck_capacity: newCap
               }, t('app.notification.delete_wand_slot'));
+              consumeMobileModifiers();
               return;
             } else if (sid) {
               e.preventDefault();
@@ -132,12 +142,35 @@ const SpellCellComponent = ({
                 delete newSpellUses[idx];
                 return { spells: newSpells, spell_uses: newSpellUses };
               }, t('app.notification.delete_spell'));
+              consumeMobileModifiers();
               return;
             }
           }
-          if (e.altKey && spell && sid) {
+          if (markModeActive && spell && sid) {
             e.preventDefault();
             e.stopPropagation();
+            consumeMarkMode();
+            const slotIdx = i + 1;
+            updateWand(slot, (curr) => {
+              const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];
+              const newMarked = marked.includes(slotIdx)
+                ? marked.filter(m => m !== slotIdx)
+                : [...marked, slotIdx];
+              return { marked_slots: newMarked };
+            });
+            return;
+          }
+          if (wikiModeActive && spell && sid) {
+            e.preventDefault();
+            e.stopPropagation();
+            consumeWikiMode();
+            openWiki(sid);
+            return;
+          }
+          if (altActive && spell && sid) {
+            e.preventDefault();
+            e.stopPropagation();
+            consumeMobileModifiers();
 
             if (sid === 'IF_HP' || sid === 'IF_PROJECTILE' || sid === 'IF_ENEMY') {
               setSettings(prev => {

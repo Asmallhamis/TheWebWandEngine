@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MousePointer2, Hand, GripVertical } from 'lucide-react';
 import { AppSettings } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -14,55 +14,93 @@ export function FloatingDragModeToggle({ settings, setSettings }: FloatingDragMo
   const dragStartPos = useRef({ x: 0, y: 0 });
   const windowPos = useRef(settings.dragModeTogglePos || { x: window.innerWidth - 180, y: window.innerHeight - 100 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const uiScale = (settings.uiScale || 100) / 100;
+
+  const toUnscaledPoint = useCallback((clientX: number, clientY: number) => ({
+    x: clientX / uiScale,
+    y: clientY / uiScale,
+  }), [uiScale]);
+
+  const updatePosition = useCallback((clientX: number, clientY: number) => {
+    const point = toUnscaledPoint(clientX, clientY);
+    const newX = point.x - dragStartPos.current.x;
+    const newY = point.y - dragStartPos.current.y;
+
+    const boundedX = Math.max(10, Math.min(window.innerWidth / uiScale - 150, newX));
+    const boundedY = Math.max(10, Math.min(window.innerHeight / uiScale - 60, newY));
+
+    windowPos.current = { x: boundedX, y: boundedY };
+    if (containerRef.current) {
+      containerRef.current.style.left = `${boundedX}px`;
+      containerRef.current.style.top = `${boundedY}px`;
+      containerRef.current.style.bottom = 'auto';
+      containerRef.current.style.right = 'auto';
+    }
+  }, [toUnscaledPoint, uiScale]);
 
   useEffect(() => {
     if (!settings.showDragModeToggle) return;
     
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      
-      const newX = e.clientX - dragStartPos.current.x;
-      const newY = e.clientY - dragStartPos.current.y;
-      
-      // Keep within bounds
-      const boundedX = Math.max(10, Math.min(window.innerWidth - 150, newX));
-      const boundedY = Math.max(10, Math.min(window.innerHeight - 60, newY));
-      
-      windowPos.current = { x: boundedX, y: boundedY };
-      if (containerRef.current) {
-        containerRef.current.style.left = `${boundedX}px`;
-        containerRef.current.style.top = `${boundedY}px`;
-        containerRef.current.style.bottom = 'auto';
-        containerRef.current.style.right = 'auto';
-      }
+      updatePosition(e.clientX, e.clientY);
     };
 
-    const handleMouseUp = () => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      e.preventDefault();
+      updatePosition(touch.clientX, touch.clientY);
+    };
+
+    const stopDragging = () => {
       if (isDragging) {
         setIsDragging(false);
         setSettings(prev => ({ ...prev, dragModeTogglePos: windowPos.current }));
       }
     };
 
+    const handleMouseUp = () => stopDragging();
+    const handleTouchEnd = () => stopDragging();
+
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isDragging, settings.showDragModeToggle, setSettings]);
+  }, [isDragging, settings.showDragModeToggle, setSettings, updatePosition]);
 
   if (!settings.showDragModeToggle) return null;
 
-  const handleDragStart = (e: React.MouseEvent) => {
+  const startDragging = (clientX: number, clientY: number) => {
     setIsDragging(true);
     const rect = containerRef.current?.getBoundingClientRect();
     if (rect) {
+      const point = toUnscaledPoint(clientX, clientY);
       dragStartPos.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: point.x - rect.left / uiScale,
+        y: point.y - rect.top / uiScale
       };
     }
+  };
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    startDragging(e.clientX, e.clientY);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    e.preventDefault();
+    startDragging(touch.clientX, touch.clientY);
   };
 
   const initialStyle: React.CSSProperties = settings.dragModeTogglePos 
@@ -76,8 +114,9 @@ export function FloatingDragModeToggle({ settings, setSettings }: FloatingDragMo
       style={initialStyle}
     >
       <div 
-        className="px-1.5 py-3 cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="px-1.5 py-3 cursor-grab active:cursor-grabbing touch-none text-zinc-500 hover:text-zinc-300 transition-colors"
         onMouseDown={handleDragStart}
+        onTouchStart={handleTouchStart}
       >
         <GripVertical size={16} />
       </div>

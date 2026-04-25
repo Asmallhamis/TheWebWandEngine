@@ -71,6 +71,16 @@
       "wand_already_exists_moving_to_top": "该法杖已存在，已移到最前"
     }
   },
+
+  "mobile": {
+    "toolbar": {
+      "show": "显示移动工具条",
+      "hide": "隐藏移动工具条",
+      "mark": "标记",
+      "wiki": "维基",
+      "delete": "删除"
+    }
+  },
   "nav": {
     "new_wand": "新法杖",
     "import": "导入",
@@ -199,6 +209,8 @@
     "show_drag_mode_toggle": "显示拖动模式切换悬浮窗",
     "show_drag_mode_toggle_desc": "在界面右下角显示一个悬浮窗，用于切换左键的功能（选择法术 vs 直接拖动）。",
     "move_existing_wand_to_top_on_duplicate_paste": "重复粘贴法杖时移到最前",
+    "mobile_edit_toolbar_enabled": "启用移动端编辑辅助工具条",
+    "mobile_edit_toolbar_enabled_desc": "为触屏设备显示底部编辑辅助工具条。移动端首次默认开启，桌面端首次默认关闭，也可以手动切换。",
     "move_existing_wand_to_top_on_duplicate_paste_desc": "开启后，如果粘贴的整根法杖与当前工作流中的某根法杖完全一致，则不新增，而是将已有法杖移动到最前。默认关闭。",
     "drag_spell_mode": "法术拖放模式",
     "drag_spell_mode_legacy": "插入模式",
@@ -328,7 +340,7 @@
     "spell_marking_picker_close": "关闭",
     "spell_marking_add_custom": "添加: {{value}}",
     "divide_chain": "一分链",
-    "cool_ui_mode": "酷炫美学模式 (Cool UI Mode)",
+    "cool_ui_mode": "酷炫美学模式",
     "cool_ui_mode_desc": "开启极致的视觉享受：3D 倾斜、玻璃拟态与流光溢彩。",
     "cool_ui_theme": "主题皮肤",
     "cool_ui_background": "动态背景",

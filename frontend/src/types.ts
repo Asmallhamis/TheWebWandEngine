@@ -140,6 +140,7 @@ export interface AppSettings {
   perks: Record<string, number>;
   recursionIterationDisplay: 'none' | 'simple' | 'labeled';
   mobilePickerMode: boolean;
+  mobileEditToolbarEnabled: boolean;
   disablePickerAutoFocus: boolean;
   uiScale: number;
   wandAttributesScale: number;

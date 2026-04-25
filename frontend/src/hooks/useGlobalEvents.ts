@@ -29,6 +29,8 @@ interface UseGlobalEventsProps {
   copyToClipboard: (isCut?: boolean) => Promise<void>;
   pasteFromClipboard: (forceTarget?: { slot: string, idx: number }) => Promise<boolean>;
   readMetadataFromPng: (file: File) => Promise<string | null>;
+  undo: () => void;
+  redo: () => void;
   insertEmptySlot: (mode?: 'current_hover' | 'selection' | 'open_anchor') => void;
   updateWand: (slot: string, updates: Partial<WandData>, actionName?: string, icons?: string[]) => void;
 }
@@ -57,6 +59,8 @@ export const useGlobalEvents = ({
   copyToClipboard,
   pasteFromClipboard,
   readMetadataFromPng,
+  undo,
+  redo,
   insertEmptySlot,
   updateWand
 }: UseGlobalEventsProps) => {
@@ -103,12 +107,38 @@ export const useGlobalEvents = ({
       }
 
       if (dragSource) {
-        setMousePos({ x: e.clientX, y: e.clientY });
+        const scale = (settings.uiScale || 100) / 100;
+        setMousePos({ x: e.clientX / scale, y: e.clientY / scale });
       }
     };
     window.addEventListener('mousemove', handleGlobalMouseMove);
     return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
-  }, [dragSource, setMousePos]);
+  }, [dragSource, setMousePos, settings.uiScale]);
+
+  useEffect(() => {
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+      const wandEl = targetEl?.closest?.('[data-wand-target]');
+      if (wandEl) {
+        const target = wandEl.getAttribute('data-wand-target');
+        if (target) lastHoveredTargetRef.current = target;
+      }
+
+      if (dragSource) {
+        const scale = (settings.uiScale || 100) / 100;
+        setMousePos({
+          x: touch.clientX / scale,
+          y: touch.clientY / scale,
+        });
+      }
+    };
+
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: true });
+    return () => window.removeEventListener('touchmove', handleGlobalTouchMove);
+  }, [dragSource, setMousePos, settings.uiScale]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -128,7 +158,19 @@ export const useGlobalEvents = ({
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.ctrlKey || e.metaKey) {
+      const mobileModifiers = useUIStore.getState().mobileModifiers;
+      const ctrlActive = e.ctrlKey || e.metaKey || mobileModifiers.ctrl;
+      const altActive = e.altKey || mobileModifiers.alt;
+      const shiftActive = e.shiftKey || mobileModifiers.shift;
+
+      if (ctrlActive && e.key === 'z') {
+        e.preventDefault();
+        if (shiftActive) redo();
+        else undo();
+      } else if (ctrlActive && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      } else if (ctrlActive) {
         if (e.key === 'h') {
           e.preventDefault();
           setIsHistoryOpen(prev => !prev);
@@ -391,7 +433,7 @@ export const useGlobalEvents = ({
     setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, 
     setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification,
     importFromText, copyToClipboard, 
-    pasteFromClipboard, readMetadataFromPng, insertEmptySlot, updateWand, t
+    pasteFromClipboard, readMetadataFromPng, undo, redo, insertEmptySlot, updateWand, t
   ]);
 
   const initialImportDone = useRef(false);

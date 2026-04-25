@@ -56,6 +56,7 @@ export const useSettings = () => {
       perks: {},
       recursionIterationDisplay: 'labeled',
       mobilePickerMode: isMobileDevice,
+      mobileEditToolbarEnabled: isMobileDevice,
       disablePickerAutoFocus: isMobileDevice,
       uiScale: isMobileDevice ? 60 : 100,
       wandAttributesScale: 100,

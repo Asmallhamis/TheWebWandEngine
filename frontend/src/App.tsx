@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { RotateCcw, RotateCw, Delete, Package, History, Option, Bookmark, BookOpen } from 'lucide-react';
 
 // --- Internal ---
 import { SpellInfo, WandData, Tab, EvalResponse, PickerConfig } from './types';
@@ -55,6 +56,16 @@ function App() {
   } = useTabs(settings, setSettings);
 
   const { performAction, undo, redo, jumpToPast, jumpToFuture } = useHistory(tabs, setTabs, activeTabId);
+
+  const mobileModifiers = useUIStore(s => s.mobileModifiers);
+  const toggleMobileModifier = useUIStore(s => s.toggleMobileModifier);
+  const clearMobileModifiers = useUIStore(s => s.clearMobileModifiers);
+  const markModeActive = useUIStore(s => s.markModeActive);
+  const wikiModeActive = useUIStore(s => s.wikiModeActive);
+  const isMobileToolbarVisible = useUIStore(s => s.isMobileToolbarVisible);
+  const setIsMobileToolbarVisible = useUIStore(s => s.setIsMobileToolbarVisible);
+  const toggleMarkMode = useUIStore(s => s.toggleMarkMode);
+  const toggleWikiMode = useUIStore(s => s.toggleWikiMode);
 
   const {
     warehouseWands, setWarehouseWands,
@@ -302,7 +313,7 @@ function App() {
   useGlobalEvents({
     activeTab, activeTabId, tabs, settings, spellDb, dragSource, pickerConfig, notification,
     setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification: (n) => showNotification(n?.msg || '', n?.type), setTabMenu,
-    importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng,
+    importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng, undo, redo,
     insertEmptySlot, updateWand
   });
 
@@ -406,6 +417,49 @@ function App() {
   };
 
   const uiScale = settings.uiScale || 100;
+
+
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const showMobileToolbar = settings.mobileEditToolbarEnabled && isMobileToolbarVisible;
+
+  const mobileToolbarButtons = [
+    { key: 'undo', label: t('history.undo'), icon: RotateCcw, onClick: undo },
+    { key: 'redo', label: t('history.redo'), icon: RotateCw, onClick: redo },
+    { key: 'alt', label: 'Alt', icon: Option, active: mobileModifiers.alt, onClick: () => toggleMobileModifier('alt') },
+    {
+      key: 'mark',
+      label: t('mobile.toolbar.mark'),
+      icon: Bookmark,
+      active: markModeActive, onClick: toggleMarkMode
+    },
+    {
+      key: 'wiki',
+      label: t('mobile.toolbar.wiki'),
+      icon: BookOpen,
+      active: wikiModeActive, onClick: toggleWikiMode
+    },
+    {
+      key: 'delete',
+      label: t('mobile.toolbar.delete'),
+      icon: Delete,
+      onClick: () => {
+        const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true });
+        window.dispatchEvent(event);
+      }
+    },
+    {
+      key: 'history',
+      label: t('nav.history'),
+      icon: History,
+      onClick: () => setIsHistoryOpen(prev => !prev)
+    },
+    {
+      key: 'warehouse',
+      label: t('nav.warehouse'),
+      icon: Package,
+      onClick: () => setIsWarehouseOpen(prev => !prev)
+    }
+  ];
 
   return (
     <div
@@ -574,6 +628,42 @@ function App() {
           openPicker={openPicker}
         />
       </main>
+
+
+        {settings.mobileEditToolbarEnabled && (
+          <>
+            <button
+              type="button"
+              className="fixed right-4 bottom-4 z-[110] rounded-full border border-white/15 bg-zinc-900/85 px-4 py-3 text-sm font-semibold text-white shadow-xl backdrop-blur"
+              onClick={() => setIsMobileToolbarVisible(prev => !prev)}
+            >
+              {showMobileToolbar ? t('mobile.toolbar.hide') : t('mobile.toolbar.show')}
+            </button>
+
+            {showMobileToolbar && (
+              <div className="fixed inset-x-0 bottom-16 z-[109] flex justify-center px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+                <div className="grid w-full max-w-md grid-cols-4 gap-2 rounded-2xl border border-white/10 bg-zinc-950/90 p-2 shadow-2xl backdrop-blur-xl">
+                  {mobileToolbarButtons.map(({ key, label, icon: Icon, onClick, active }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={onClick}
+                      className={[
+                        'flex min-h-[64px] w-full flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-semibold transition-colors text-center',
+                        active
+                          ? 'border-cyan-400/60 bg-cyan-500/20 text-cyan-100'
+                          : 'border-white/10 bg-white/5 text-zinc-100 active:bg-white/10'
+                      ].join(' ')}
+                    >
+                      <Icon size={16} />
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
       <Footer
         isConnected={isConnected}

@@ -189,6 +189,12 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   const [containerWidth, setContainerWidth] = useState(0);
   const registerHoverResolver = useUIStore(s => s.registerHoverResolver);
   const unregisterHoverResolver = useUIStore(s => s.unregisterHoverResolver);
+  const mobileModifiers = useUIStore(s => s.mobileModifiers);
+  const consumeMobileModifiers = useUIStore(s => s.consumeMobileModifiers);
+  const markModeActive = useUIStore(s => s.markModeActive);
+  const wikiModeActive = useUIStore(s => s.wikiModeActive);
+  const consumeWikiMode = useUIStore(s => s.consumeWikiMode);
+  const consumeMarkMode = useUIStore(s => s.consumeMarkMode);
 
   // ─── Derived values ─────────────────────────────────────────
   const gap = settings.editorSpellGap || 0;
@@ -844,12 +850,15 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const col = Math.floor(mx / cellOuter);
     const row = Math.floor(my / cellOuter);
     if (col < 0 || col >= cols) return null;
+    if (row < 0) return null;
 
     const i = row * cols + col;
     if (i < 0 || i >= totalSlots) return null;
     const slotIdx = i + 1;
 
     if (area === 'main' && i >= data.deck_capacity) return null;
+
+    if (my < row * cellOuter || my > row * cellOuter + cellInner + _gap) return null;
 
     const cellLocalX = mx - col * cellOuter;
     const isRightHalf = cellLocalX > cellOuter / 2;
@@ -899,6 +908,14 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
   }, [area, hitTest, slot, setHoveredSlot, handleSlotMouseEnter, handleSlotMouseLeave]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const isTouchPointer = e.pointerType === 'touch';
+    const shouldUseTouchSelection = isTouchPointer && settings.editorDragMode === 'cursor';
+
+    if (shouldUseTouchSelection) {
+      updateHoverFromClientPoint(e.clientX, e.clientY);
+      return;
+    }
+
     const resolved = useUIStore.getState().resolveHoveredSlotAtPoint(e.clientX, e.clientY);
     if (resolved && resolved.wandSlot === slot && resolved.area !== area) {
       setHoveredSlot(resolved);
@@ -906,12 +923,23 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       return;
     }
     updateHoverFromClientPoint(e.clientX, e.clientY);
-  }, [area, handleSlotMouseEnter, setHoveredSlot, slot, updateHoverFromClientPoint]);
+  }, [
+    area,
+    handleSlotMouseEnter,
+    setHoveredSlot,
+    settings.editorDragMode,
+    slot,
+    updateHoverFromClientPoint,
+  ]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     // 允许通过 capture 进行拖拽，防止原生冲突
     const target = e.target as HTMLElement;
     target.setPointerCapture(e.pointerId);
+
+    const isTouchPointer = e.pointerType === 'touch';
+    const shouldUseTouchSelection = isTouchPointer && settings.editorDragMode === 'cursor';
+
     const hit = hitTest(e.clientX, e.clientY);
     if (!hit) {
       setHoveredSlot(null);
@@ -920,6 +948,12 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
 
     setHoveredSlot({ wandSlot: slot, area, idx: hit.slotIdx, isRightHalf: hit.isRightHalf });
     lastHoveredIdxRef.current = hit.slotIdx;
+
+    if (shouldUseTouchSelection) {
+      mouseDownIdxRef.current = hit.slotIdx;
+      handleSlotMouseDown(slot, hit.slotIdx, false, { x: e.clientX, y: e.clientY }, area);
+      return;
+    }
 
     if (area === 'always_cast') {
       if (e.button === 0 || e.button === 2) {
@@ -952,7 +986,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       mouseDownIdxRef.current = hit.slotIdx;
       handleSlotMouseDown(slot, hit.slotIdx, e.button === 2, { x: e.clientX, y: e.clientY }, area);
     }
-  }, [area, hitTest, slot, data.spells, spellDb, handleSlotMouseDown, updateWand, openWiki]);
+  }, [area, hitTest, slot, data.spells, spellDb, handleSlotMouseDown, settings.editorDragMode, updateWand, openWiki]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const target = e.target as HTMLElement;
@@ -1034,8 +1068,11 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     }
 
     // Ctrl+click delete
-    if (e.ctrlKey && settings.ctrlClickDelete && !e.altKey) {
-      if (e.shiftKey) {
+    const ctrlActive = e.ctrlKey || mobileModifiers.ctrl;
+    const altActive = e.altKey || mobileModifiers.alt;
+    const shiftActive = e.shiftKey || mobileModifiers.shift;
+    if (ctrlActive && settings.ctrlClickDelete && !altActive) {
+      if (shiftActive) {
         e.preventDefault();
         e.stopPropagation();
         const newSpells: Record<string, string> = {};
@@ -1057,6 +1094,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
           spell_uses: newSpellUses,
           deck_capacity: newCap
         }, t('app.notification.delete_wand_slot'));
+        consumeMobileModifiers();
         return;
       } else if (sid) {
         e.preventDefault();
@@ -1068,14 +1106,38 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
           delete newSpellUses[idx];
           return { spells: newSpells, spell_uses: newSpellUses };
         }, t('app.notification.delete_spell'));
+        consumeMobileModifiers();
         return;
       }
     }
 
-    // Alt+click: toggle uses/condition
-    if (e.altKey && spell && sid) {
+    if (markModeActive && spell && sid && area === 'main') {
       e.preventDefault();
       e.stopPropagation();
+      consumeMarkMode();
+      updateWand(slot, (curr) => {
+        const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];
+        const newMarked = marked.includes(hit.slotIdx)
+          ? marked.filter(m => m !== hit.slotIdx)
+          : [...marked, hit.slotIdx];
+        return { marked_slots: newMarked };
+      });
+      return;
+    }
+
+    if (wikiModeActive && spell && sid && area === 'main') {
+      e.preventDefault();
+      e.stopPropagation();
+      consumeWikiMode();
+      openWiki(sid);
+      return;
+    }
+
+    // Alt+click: toggle uses/condition
+    if (altActive && spell && sid) {
+      e.preventDefault();
+      e.stopPropagation();
+      consumeMobileModifiers();
       if (sid === 'IF_HP' || sid === 'IF_PROJECTILE' || sid === 'IF_ENEMY') {
         setSettings(prev => {
           const next = { ...prev };
@@ -1153,7 +1215,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
         });
       }
     }
-  }, [area, areaSlots, hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t]);
+  }, [area, areaSlots, hitTest, slot, data, spellDb, settings.ctrlClickDelete, updateWand, openPicker, setSelection, setSettings, t, mobileModifiers, consumeMobileModifiers, markModeActive, consumeMarkMode, wikiModeActive, consumeWikiMode, openWiki]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     const hit = hitTest(e.clientX, e.clientY);
@@ -1184,7 +1246,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       <canvas
         ref={canvasRef}
         data-spell-grid-area={area}
-        style={{ cursor, imageRendering: 'pixelated', touchAction: 'manipulation' }} data-wand-slot-canvas={`${slot}-${area}`}
+        style={{ cursor, imageRendering: 'pixelated', touchAction: 'none' }} data-wand-slot-canvas={`${slot}-${area}`}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
