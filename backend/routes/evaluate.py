@@ -3,7 +3,11 @@ TWWE Backend — 魔杖评估路由
 POST /api/evaluate — 构建命令行参数、管理进程、返回结果
 """
 import json
+import os
+import re
+import shutil
 import subprocess
+import time
 
 from flask import Blueprint, Flask, request, jsonify
 
@@ -32,12 +36,17 @@ def format_lua_arg(val):
 
 @evaluate_bp.route("/api/evaluate", methods=["POST"])
 def evaluate_wand():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Invalid JSON body"}), 400
 
     # 获取标识符，用于管理该插槽的进程
     tab_id = data.get("tab_id", "default")
     slot_id = data.get("slot_id", "1")
     proc_key = f"{tab_id}-{slot_id}"
+    safe_proc_key = re.sub(r"[^A-Za-z0-9_-]+", "_", proc_key)[:64] or "default"
+    mock_mod_id = f"twwe_mock_{safe_proc_key}_{int(time.time() * 1000)}"
+    mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", mock_mod_id)
 
     # 提取参数
     spells_data = data.get("spells", [])
@@ -117,15 +126,14 @@ def evaluate_wand():
 
     appends_to_use = req_mod_appends if req_mod_appends is not None else mod_state["appends"]
 
-    generated_vfs = process_mod_appends(data, mock_lua, appends_to_use, active_mods)
+    generated_vfs = process_mod_appends(data, mock_lua, appends_to_use, active_mods, mock_mod_id)
 
     # --- 写入 init.lua + VFS 代码 ---
     req_vfs = data.get("vfs")
     if mock_lua:
-        write_init_lua(mock_lua, data, active_mods, req_vfs, generated_vfs)
+        write_init_lua(mock_lua, data, active_mods, req_vfs, generated_vfs, mock_mod_id)
 
-        if "twwe_mock" not in cmd:
-            cmd.extend(["-md", "twwe_mock"])
+        cmd.extend(["-md", mock_mod_id])
 
         # 补全其他 mod 以支持 VFS 搜索
         if isinstance(active_mods, list):
@@ -188,6 +196,8 @@ def evaluate_wand():
             with process_lock:
                 if proc_key in active_processes and active_processes[proc_key] == proc:
                     del active_processes[proc_key]
+            if os.path.isdir(mock_mod_dir):
+                shutil.rmtree(mock_mod_dir, ignore_errors=True)
 
         if proc.returncode != 0:
             if proc.returncode < 0:
@@ -238,4 +248,6 @@ def evaluate_wand():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        if os.path.isdir(mock_mod_dir):
+            shutil.rmtree(mock_mod_dir, ignore_errors=True)
         return jsonify({"success": False, "error": str(e)}), 500

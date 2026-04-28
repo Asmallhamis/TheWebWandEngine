@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import './index.css'
 import './i18n'
 import './themes.css'
+import './lib/apiAuth'
 
 const isEmbedMode = new URLSearchParams(window.location.search).has('embed');
 

@@ -466,8 +466,8 @@
     "no_records": "No records found",
     "current_state": "Current State",
     "latest_version": "Latest Working Version",
-    "undo": "Undo (Ctrl+Z)",
-    "redo": "Redo (Ctrl+Y)",
+    "undo": "Undo",
+    "redo": "Redo",
     "scope_info": "History is per-workflow only",
     "close": "Close Panel"
   },

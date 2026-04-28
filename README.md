@@ -121,6 +121,13 @@ python backend/server.py
 cd frontend && npm install && npm run dev
 ```
 
+默认情况下，后端只监听 `127.0.0.1` 以避免局域网或网页跨站误调用本地 API。若开发时需要用手机访问电脑 IP 进行验证，可显式开启局域网调试：
+
+```bash
+set TWWE_ALLOW_LAN=1
+python backend/server.py
+```
+
 ### 3. 打包脚本
 - **`build_portable.bat`**: 生成单文件便携 EXE。
 - **`build_gh_pages.bat`**: 构建 GitHub Pages 静态网页版。

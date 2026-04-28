@@ -224,7 +224,7 @@ end
     return lines
 
 
-def process_mod_appends(data, mock_lua, appends_to_use, active_mods):
+def process_mod_appends(data, mock_lua, appends_to_use, active_mods, mock_mod_id="twwe_mock"):
     """
     处理 Mod appends: 生成 gen_x.lua 文件，添加 ModLuaFileAppend 调用。
 
@@ -234,7 +234,7 @@ def process_mod_appends(data, mock_lua, appends_to_use, active_mods):
     if not appends_to_use:
         return generated_vfs
 
-    mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", "twwe_mock")
+    mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", mock_mod_id)
     os.makedirs(mock_mod_dir, exist_ok=True)
 
     for i, (path, content) in enumerate(appends_to_use.items()):
@@ -261,8 +261,8 @@ def process_mod_appends(data, mock_lua, appends_to_use, active_mods):
                 content = content.replace("__MOD_ACTION_UTILS__", f"{mp}files/action_utils/")
 
         file_path = os.path.join(mock_mod_dir, file_name)
-        mock_lua.append(f'ModLuaFileAppend("data/scripts/gun/gun_actions.lua", "mods/twwe_mock/{file_name}")')
-        generated_vfs[f"mods/twwe_mock/{file_name}"] = content
+        mock_lua.append(f'ModLuaFileAppend("data/scripts/gun/gun_actions.lua", "mods/{mock_mod_id}/{file_name}")')
+        generated_vfs[f"mods/{mock_mod_id}/{file_name}"] = content
 
         with open(file_path, "w", encoding="utf-8", errors="replace") as f:
             f.write(content)
@@ -270,7 +270,7 @@ def process_mod_appends(data, mock_lua, appends_to_use, active_mods):
     return generated_vfs
 
 
-def write_init_lua(mock_lua, data, active_mods, req_vfs, generated_vfs):
+def write_init_lua(mock_lua, data, active_mods, req_vfs, generated_vfs, mock_mod_id="twwe_mock"):
     """
     将完整的 mock Lua 代码写入 mods/twwe_mock/init.lua
 
@@ -279,7 +279,7 @@ def write_init_lua(mock_lua, data, active_mods, req_vfs, generated_vfs):
     if not mock_lua:
         return
 
-    mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", "twwe_mock")
+    mock_mod_dir = os.path.join(WAND_EVAL_DIR, "mods", mock_mod_id)
     os.makedirs(mock_mod_dir, exist_ok=True)
 
     init_path = os.path.join(mock_mod_dir, "init.lua")

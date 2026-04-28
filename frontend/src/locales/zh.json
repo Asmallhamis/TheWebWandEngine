@@ -468,8 +468,8 @@
     "no_records": "暂无操作记录",
     "current_state": "当前状态",
     "latest_version": "最近的操作版本",
-    "undo": "后退 (Ctrl+Z)",
-    "redo": "前进 (Ctrl+Y)",
+    "undo": "后退",
+    "redo": "前进",
     "scope_info": "操作记录仅针对当前工作流",
     "close": "关闭面板"
   },

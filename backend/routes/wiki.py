@@ -34,6 +34,9 @@ def sync_wiki():
 def get_icon(icon_path):
     # 移除首尾空格和首部的斜杠，并统一斜杠方向
     icon_path = icon_path.strip().lstrip("/").replace("\\", "/")
+    allowed_exts = (".png", ".webp", ".jpg", ".jpeg", ".gif", ".xml")
+    if not icon_path.lower().endswith(allowed_exts):
+        return "Not Found", 404
 
     def resolve_sprite_xml(xml_file_path):
         """从 Noita sprite XML 文件中提取 PNG 路径"""

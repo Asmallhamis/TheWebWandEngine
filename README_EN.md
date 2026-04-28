@@ -83,6 +83,13 @@ python backend/server.py
 cd frontend && npm install && npm run dev
 ```
 
+By default, the backend listens on `127.0.0.1` only, which prevents LAN or cross-site web pages from calling local APIs unexpectedly. For phone-on-LAN development checks, explicitly enable LAN debug mode:
+
+```bash
+set TWWE_ALLOW_LAN=1
+python backend/server.py
+```
+
 ### 3. Packaging Scripts
 - **`build_portable.bat`**: Generates a single-file portable EXE.
 - **`build_gh_pages.bat`**: Builds the GitHub Pages static web version.

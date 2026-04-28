@@ -19,6 +19,24 @@ def set_active_mods(mods):
 def get_game_root():
     return _GAME_ROOT
 
+def _safe_join(root, rel_path):
+    if not root or not rel_path:
+        return None
+
+    normalized_rel = os.path.normpath(rel_path.replace("\\", "/"))
+    if normalized_rel.startswith("..") or os.path.isabs(normalized_rel):
+        return None
+
+    root_abs = os.path.abspath(root)
+    candidate = os.path.abspath(os.path.join(root_abs, normalized_rel))
+    try:
+        if os.path.commonpath([root_abs, candidate]) != root_abs:
+            return None
+    except ValueError:
+        return None
+
+    return candidate
+
 def find_noita_file(rel_path, active_mods=None):
     """
     在 Noita 的多个可能目录中查找文件。
@@ -29,25 +47,25 @@ def find_noita_file(rel_path, active_mods=None):
     
     # 1. 检查解压后的 data 目录
     if EXTRACTED_DATA_ROOT:
-        p = os.path.join(EXTRACTED_DATA_ROOT, rel_path).replace("\\", "/")
-        if os.path.exists(p): return p
+        p = _safe_join(EXTRACTED_DATA_ROOT, rel_path)
+        if p and os.path.exists(p): return p
 
     # 2. 检查游戏根目录
     root = get_game_root()
     if root:
-        p = os.path.join(root, rel_path).replace("\\", "/")
-        if os.path.exists(p): return p
+        p = _safe_join(root, rel_path)
+        if p and os.path.exists(p): return p
         
         # 3. 检查活动 Mod 目录
         mods_to_check = active_mods or ACTIVE_MODS_CACHE
         for mod_id in mods_to_check:
             # 如果路径已经是 mods/mod_id/... 开头，则直接拼接
             if rel_path.startswith(f"mods/{mod_id}/"):
-                p = os.path.join(root, rel_path).replace("\\", "/")
+                p = _safe_join(root, rel_path)
             else:
-                p = os.path.join(root, "mods", mod_id, rel_path).replace("\\", "/")
-            
-            if os.path.exists(p): return p
+                p = _safe_join(os.path.join(root, "mods", mod_id), rel_path)
+
+            if p and os.path.exists(p): return p
             
     return None
 

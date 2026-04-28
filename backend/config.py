@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 import mimetypes
+import secrets
 from threading import Lock
 
 # 强制注册 JS 为正确类型，防止 Windows 注册表错误导致浏览器拒绝执行脚本 (黑屏问题)
@@ -35,6 +36,34 @@ else:
 
 GAME_HOST = "127.0.0.1"
 GAME_PORT = 12345
+
+# --- 本地服务安全配置 ---
+
+SERVER_PORT = int(os.environ.get("TWWE_PORT", "17471"))
+ALLOW_LAN = os.environ.get("TWWE_ALLOW_LAN", "").lower() in ("1", "true", "yes", "on")
+SERVER_HOST = os.environ.get("TWWE_HOST") or ("0.0.0.0" if ALLOW_LAN else "127.0.0.1")
+API_TOKEN = os.environ.get("TWWE_API_TOKEN") or secrets.token_urlsafe(32)
+
+
+def get_cors_origins():
+    """返回允许跨域访问本地 API 的前端来源。"""
+    origins = [
+        f"http://127.0.0.1:{SERVER_PORT}",
+        f"http://localhost:{SERVER_PORT}",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+    ]
+    extra_origins = os.environ.get("TWWE_CORS_ORIGINS", "")
+    origins.extend([o.strip() for o in extra_origins.split(",") if o.strip()])
+
+    if ALLOW_LAN or SERVER_HOST == "0.0.0.0":
+        origins.extend([
+            r"^http://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$",
+            r"^http://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$",
+            r"^http://172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(:\d+)?$",
+        ])
+
+    return origins
 
 # --- 共享可变状态 ---
 

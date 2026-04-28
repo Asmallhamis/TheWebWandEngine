@@ -459,9 +459,12 @@ export const useGameSync = ({
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (!clientIdRef.current) return;
-      navigator.sendBeacon('/api/sync/release', new Blob([
-        JSON.stringify({ client_id: clientIdRef.current })
-      ], { type: 'application/json' }));
+      fetch('/api/sync/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: clientIdRef.current }),
+        keepalive: true,
+      }).catch(() => {});
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
