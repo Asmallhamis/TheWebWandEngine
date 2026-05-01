@@ -1,4 +1,6 @@
 import React from 'react';
+import { toPng } from 'html-to-image';
+import { createPortal } from 'react-dom';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor, Image as ImageIcon } from 'lucide-react';
 import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger } from '../types';
 import { CompactStat } from './Common';
@@ -75,6 +77,11 @@ export function WandCard({
   const { t, i18n } = useTranslation();
   const rootRef = React.useRef<HTMLDivElement>(null);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
+  const exportMenuRef = React.useRef<HTMLDivElement>(null);
+  const exportButtonRef = React.useRef<HTMLButtonElement>(null);
+  const exportMenuContentRef = React.useRef<HTMLDivElement>(null);
+  const [isExportMenuOpen, setIsExportMenuOpen] = React.useState(false);
+  const [exportMenuPos, setExportMenuPos] = React.useState<{ top: number; left: number } | null>(null);
   const renderTimeStat = (label: string, frames: number, colorClass: string) => {
     const primary = settings.showStatsInFrames ? frames : (frames / 60).toFixed(2) + 's';
     const secondary = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames;
@@ -135,6 +142,135 @@ export function WandCard({
   }, [data.appearance?.name, isHovered]);
 
   const displayWandName = data.appearance?.name?.trim() || t('app.notification.unnamed_wand');
+
+  React.useEffect(() => {
+    if (!isExportMenuOpen) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (exportMenuRef.current?.contains(e.target as Node)) return;
+      if (exportMenuContentRef.current?.contains(e.target as Node)) return;
+      setIsExportMenuOpen(false);
+    };
+
+    const closeMenu = () => setIsExportMenuOpen(false);
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('scroll', closeMenu, true);
+    window.addEventListener('resize', closeMenu);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener('resize', closeMenu);
+    };
+  }, [isExportMenuOpen]);
+
+  const toggleExportMenu = React.useCallback(() => {
+    const rect = exportButtonRef.current?.getBoundingClientRect();
+    if (!rect) {
+      setIsExportMenuOpen(prev => !prev);
+      return;
+    }
+
+    const estimatedMenuHeight = 126;
+    const menuWidth = 208;
+    const gap = 6;
+    const opensUp = rect.bottom + estimatedMenuHeight + gap > window.innerHeight;
+    setExportMenuPos({
+      top: opensUp ? Math.max(8, rect.top - estimatedMenuHeight - gap) : rect.bottom + gap,
+      left: Math.min(Math.max(8, rect.right - menuWidth), Math.max(8, window.innerWidth - menuWidth - 8)),
+    });
+    setIsExportMenuOpen(prev => !prev);
+  }, []);
+
+  const sanitizeFilename = React.useCallback((value: string) => {
+    return value
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 50) || 'wand';
+  }, []);
+
+  const getWholeWandExportFilename = React.useCallback(() => {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    return `${sanitizeFilename(displayWandName)}_full_${timestamp}.png`;
+  }, [displayWandName, sanitizeFilename]);
+
+  const ensureExpandedForExport = React.useCallback(async () => {
+    if (!activeTab.expandedWands.has(slot)) {
+      toggleExpand(slot);
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+  }, [activeTab.expandedWands, slot, toggleExpand]);
+
+  const triggerEditorImageExport = React.useCallback(async (mode: 'only_spells' | 'full') => {
+    await ensureExpandedForExport();
+
+    const editorRoot = document.querySelector(`[data-wand-editor-root][data-wand-slot="${slot}"]`) as HTMLDivElement | null;
+    if (!editorRoot) return;
+    const exportButton = editorRoot.querySelector('[data-wand-export-button]') as HTMLButtonElement | null;
+    if (!exportButton) return;
+
+    if (mode === 'only_spells') {
+      exportButton.click();
+    } else {
+      exportButton.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
+    }
+  }, [ensureExpandedForExport, slot]);
+
+  const exportWholeWandCard = React.useCallback(async () => {
+    await ensureExpandedForExport();
+
+    const container = rootRef.current;
+    if (!container) return;
+
+    const scrollables = Array.from(container.querySelectorAll('.overflow-y-auto, .custom-scrollbar')) as HTMLElement[];
+    const originalScrollStyles = scrollables.map(el => ({
+      el,
+      maxHeight: el.style.maxHeight,
+      overflow: el.style.overflow,
+      height: el.style.height,
+      width: el.style.width,
+    }));
+
+    try {
+      originalScrollStyles.forEach(({ el }) => {
+        el.style.maxHeight = 'none';
+        el.style.overflow = 'visible';
+        el.style.height = 'auto';
+        el.style.width = 'fit-content';
+      });
+
+      await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
+      const rect = container.getBoundingClientRect();
+      const finalWidth = Math.ceil(rect.width);
+      const finalHeight = Math.ceil(container.scrollHeight || rect.height);
+      const dataUrl = await toPng(container, {
+        pixelRatio: 2,
+        width: finalWidth,
+        height: finalHeight,
+        backgroundColor: '#0c0c0e',
+        cacheBust: true,
+        style: { width: `${finalWidth}px`, height: `${finalHeight}px` },
+        filter: (node: Node) => !(node instanceof HTMLElement && node.classList.contains('export-ignore')),
+      });
+
+      const link = document.createElement('a');
+      link.download = getWholeWandExportFilename();
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export whole wand image:', err);
+    } finally {
+      originalScrollStyles.forEach(({ el, maxHeight, overflow, height, width }) => {
+        el.style.maxHeight = maxHeight;
+        el.style.overflow = overflow;
+        el.style.height = height;
+        el.style.width = width;
+      });
+    }
+  }, [ensureExpandedForExport, getWholeWandExportFilename]);
 
   return (
     <div ref={rootRef} className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
@@ -265,29 +401,54 @@ export function WandCard({
             <StatItem label={t('editor.speed')} value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
-          <div className="flex items-center flex-wrap bg-black/40 rounded-md p-0.5 md:ml-2 w-full md:w-auto justify-end md:justify-start opacity-100 md:opacity-0 md:group-hover/wand:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const editorRoot = document.querySelector(`[data-wand-editor-root][data-wand-slot="${slot}"]`) as HTMLDivElement | null;
-                if (!editorRoot) return;
-                const exportButton = editorRoot.querySelector('[data-wand-export-button]') as HTMLButtonElement | null;
-                exportButton?.click();
-              }}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const editorRoot = document.querySelector(`[data-wand-editor-root][data-wand-slot="${slot}"]`) as HTMLDivElement | null;
-                if (!editorRoot) return;
-                const exportButton = editorRoot.querySelector('[data-wand-export-button]') as HTMLButtonElement | null;
-                exportButton?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2 }));
-              }}
-              className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-sky-400 rounded transition-colors"
-              title={`${t('settings.export_only_spells')} / ${t('settings.export_wand_and_spells')}`}
-              type="button"
-            >
-              <ImageIcon size={14} />
-            </button>
+          <div className="export-ignore flex items-center flex-wrap bg-black/40 rounded-md p-0.5 md:ml-2 w-full md:w-auto justify-end md:justify-start opacity-100 md:opacity-0 md:group-hover/wand:opacity-100 transition-opacity">
+            <div ref={exportMenuRef} className="relative">
+              <button
+                ref={exportButtonRef}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExportMenu();
+                }}
+                className="p-1.5 hover:bg-white/10 text-zinc-500 hover:text-sky-400 rounded transition-colors"
+                title={t('settings.export_image_menu')}
+                type="button"
+              >
+                <ImageIcon size={14} />
+              </button>
+              {isExportMenuOpen && (
+                createPortal(
+                  <div
+                    ref={exportMenuContentRef}
+                    className="fixed w-52 bg-zinc-950/95 border border-white/10 rounded-lg shadow-2xl z-[3000] p-1 backdrop-blur-md"
+                    style={exportMenuPos ? { top: exportMenuPos.top, left: exportMenuPos.left } : undefined}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => { setIsExportMenuOpen(false); void triggerEditorImageExport('only_spells'); }}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10px] font-bold text-zinc-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                    >
+                      {t('settings.export_only_spells')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsExportMenuOpen(false); void triggerEditorImageExport('full'); }}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10px] font-bold text-zinc-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                    >
+                      {t('settings.export_wand_and_spells')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsExportMenuOpen(false); void exportWholeWandCard(); }}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10px] font-bold text-zinc-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                    >
+                      {t('settings.export_whole_wand')}
+                    </button>
+                  </div>,
+                  document.body
+                )
+              )}
+            </div>
             <button
               onClick={(e) => { e.stopPropagation(); copyWand(slot); }}
               onContextMenu={(e) => {
