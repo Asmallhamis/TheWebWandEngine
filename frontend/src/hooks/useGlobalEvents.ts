@@ -341,11 +341,38 @@ export const useGlobalEvents = ({
       }
     };
 
+    const getDragTypes = (dataTransfer: DataTransfer | null): string[] => {
+      return Array.from(dataTransfer?.types || []).map(type => type.toLowerCase());
+    };
+
+    const isInternalAppDrag = (dataTransfer: DataTransfer | null): boolean => {
+      const types = getDragTypes(dataTransfer);
+      return types.includes('wandids') || (types.includes('type') && types.includes('id'));
+    };
+
+    const hasExternalFileDragData = (dataTransfer: DataTransfer | null): boolean => {
+      if (!dataTransfer || isInternalAppDrag(dataTransfer)) return false;
+      const types = getDragTypes(dataTransfer);
+      if (types.includes('files')) return true;
+      return Array.from(dataTransfer.items || []).some(item => item.kind === 'file');
+    };
+
     const handleGlobalDropEvent = async (e: DragEvent) => {
+      if (isInternalAppDrag(e.dataTransfer)) {
+        setIsDraggingFile(false);
+        return;
+      }
+
+      const files = Array.from(e.dataTransfer?.files || []);
+      const hasPlainText = getDragTypes(e.dataTransfer).includes('text/plain');
+      if (files.length === 0 && !hasPlainText) {
+        setIsDraggingFile(false);
+        return;
+      }
+
       e.preventDefault();
       setIsDraggingFile(false);
 
-      const files = Array.from(e.dataTransfer?.files || []);
       if (files.length > 0) {
         for (const file of files) {
           if (file.type.startsWith('image/')) {
@@ -401,6 +428,10 @@ export const useGlobalEvents = ({
     };
 
     const handleDragOver = (e: DragEvent) => {
+      if (!hasExternalFileDragData(e.dataTransfer)) {
+        setIsDraggingFile(false);
+        return;
+      }
       e.preventDefault();
       setIsDraggingFile(true);
     };
@@ -412,6 +443,10 @@ export const useGlobalEvents = ({
       }
     };
 
+    const handleDragEnd = () => {
+      setIsDraggingFile(false);
+    };
+
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('keydown', handleKeyDown);
@@ -419,6 +454,7 @@ export const useGlobalEvents = ({
     window.addEventListener('drop', handleGlobalDropEvent);
     window.addEventListener('dragover', handleDragOver);
     window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragend', handleDragEnd);
     return () => {
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('blur', handleWindowBlur);
@@ -427,6 +463,7 @@ export const useGlobalEvents = ({
       window.removeEventListener('drop', handleGlobalDropEvent);
       window.removeEventListener('dragover', handleDragOver);
       window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragend', handleDragEnd);
     };
   }, [
     activeTab, activeTabId, settings, spellDb, dragSource, 

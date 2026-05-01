@@ -404,6 +404,44 @@ export function WandWarehouse({
     }
   }, [wands]);
 
+  const updateWandInsertionPreview = useCallback((e: React.DragEvent<HTMLElement>) => {
+    if (!draggedWandId) return false;
+
+    const movingIds = selectedWandIds.has(draggedWandId) ? selectedWandIds : new Set([draggedWandId]);
+    const cards = Array.from(
+      (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('[data-warehouse-wand-id]')
+    ).filter(el => {
+      const id = el.dataset.warehouseWandId;
+      return id && !movingIds.has(id);
+    });
+
+    if (cards.length === 0) return false;
+
+    let best: { id: string; pos: 'top' | 'bottom'; score: number } | null = null;
+    for (const card of cards) {
+      const id = card.dataset.warehouseWandId;
+      if (!id) continue;
+
+      const rect = card.getBoundingClientRect();
+      const topDist = Math.abs(e.clientY - rect.top);
+      const bottomDist = Math.abs(e.clientY - rect.bottom);
+      const pos: 'top' | 'bottom' = topDist <= bottomDist ? 'top' : 'bottom';
+      const edgeDist = Math.min(topDist, bottomDist);
+      const horizontalPenalty = viewMode === 'grid'
+        ? Math.abs(e.clientX - (rect.left + rect.width / 2)) * 0.25
+        : 0;
+      const score = edgeDist + horizontalPenalty;
+
+      if (!best || score < best.score) best = { id, pos, score };
+    }
+
+    if (!best) return false;
+    setDragOverWandId(best.id);
+    setDragOverPos(best.pos);
+    setDragOverFolderId(null);
+    return true;
+  }, [draggedWandId, selectedWandIds, viewMode]);
+
   const handleDrop = useCallback((e: React.DragEvent, targetType: 'wand' | 'folder' | 'root', targetId: string | null | 'root') => {
     e.preventDefault();
     e.stopPropagation();
@@ -418,7 +456,7 @@ export function WandWarehouse({
 
     if (type === 'wand') {
       if (targetType === 'folder' || targetType === 'root') {
-        const targetFolderId = targetType === 'root' ? null : targetId;
+        const targetFolderId = targetType === 'root' || targetId === 'root' ? null : targetId;
         setWands(prev => {
           const idSet = new Set(wandIds);
           const others = prev.filter(w => !idSet.has(w.id));
@@ -914,11 +952,29 @@ export function WandWarehouse({
             onScroll={handleScroll}
             onDragOver={(e) => {
               if (selectedFolderId === ALL_WANDS_FOLDER_ID) return;
+              if (updateWandInsertionPreview(e)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
               handleDragOver(e, 'folder', selectedFolderId || 'root');
             }}
             onDrop={(e) => {
               if (selectedFolderId === ALL_WANDS_FOLDER_ID) return;
-              handleDrop(e, 'folder', selectedFolderId || 'root');
+              if (draggedWandId && dragOverWandId) {
+                handleDrop(e, 'wand', dragOverWandId);
+                return;
+              }
+              const targetType = selectedFolderId === 'root' ? 'root' : 'folder';
+              handleDrop(e, targetType, selectedFolderId || 'root');
+            }}
+            onDragLeave={(e) => {
+              const nextTarget = e.relatedTarget as Node | null;
+              if (!nextTarget || !(e.currentTarget as HTMLElement).contains(nextTarget)) {
+                setDragOverWandId(null);
+                setDragOverPos(null);
+                setDragOverFolderId(null);
+              }
             }}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -955,10 +1011,7 @@ export function WandWarehouse({
                     onUpdateTags={(id, tags) => updateWand(id, { tags })}
                     onDragStart={(e, id) => handleDragStart(e, 'wand', id)}
                     onDragOver={(e, id) => handleDragOver(e, 'wand', id)}
-                    onDragLeave={() => {
-                      setDragOverWandId(null);
-                      setDragOverPos(null);
-                    }}
+                    onDragLeave={() => {}}
                     onDrop={(e, id) => handleDrop(e, 'wand', id)}
                     isConnected={isConnected}
                     isSelected={selectedWandIds.has(wand.id)}

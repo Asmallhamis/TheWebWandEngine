@@ -109,6 +109,7 @@ export const WarehouseWandCard = React.memo(({
         dragOverWandId === wand.id && "ring-2 ring-purple-500 z-10 scale-[1.02]",
         isSelected && "ring-2 ring-purple-500 bg-purple-500/10 border-purple-500/50"
       )}
+      data-warehouse-wand-id={wand.id}
       draggable
       onDragStart={(e) => onDragStart(e, wand.id)}
       onDragOver={(e) => onDragOver(e, wand.id)}
