@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
   Search, Wand2, Activity, Layers, Database, Star, Package,
@@ -11,6 +11,94 @@ import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { getMergedRules, normalizeSpellId, parsePatternText, serializePattern } from '../lib/spellPatterns';
+
+const SPELL_MARKING_EXPORT_TYPE = 'twwe_spell_marking_rules';
+
+const isPlainObject = (value: unknown): value is Record<string, any> => (
+  !!value && typeof value === 'object' && !Array.isArray(value)
+);
+
+const safeFileName = (name: string) => (
+  (name || 'spell-marking-rules')
+    .replace(/[\\/:*?"<>|]+/g, '_')
+    .replace(/\s+/g, '_')
+    .slice(0, 80) || 'spell-marking-rules'
+);
+
+const downloadJson = (filename: string, data: unknown) => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const extractImportedMarkingRules = (json: unknown): unknown[] => {
+  if (Array.isArray(json)) return json;
+  if (!isPlainObject(json)) return [];
+  if (Array.isArray(json.rules)) return json.rules;
+  if (Array.isArray(json.userMarkingRules)) return json.userMarkingRules;
+  if (Array.isArray(json.spellMarkingRules)) return json.spellMarkingRules;
+  return [json];
+};
+
+const normalizeImportedMarkingRule = (value: unknown, fallbackIndex: number): SpellMarkingRule | null => {
+  if (!isPlainObject(value)) return null;
+
+  const rawPattern = Array.isArray(value.pattern) ? value.pattern : [];
+  const pattern = rawPattern
+    .map(slot => {
+      if (!isPlainObject(slot) || !Array.isArray(slot.alternatives)) return null;
+      const alternatives = slot.alternatives
+        .map((alt: unknown) => normalizeSpellId(String(alt || '')))
+        .filter(Boolean);
+      return alternatives.length > 0 ? { alternatives } : null;
+    })
+    .filter((slot): slot is { alternatives: string[] } => !!slot);
+
+  if (pattern.length === 0) return null;
+
+  const matchMode = ['exact', 'repeat', 'contains'].includes(value.matchMode)
+    ? value.matchMode as SpellMarkingRule['matchMode']
+    : 'contains';
+
+  const color = typeof value.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.color)
+    ? value.color
+    : '#22c55e';
+
+  return {
+    id: typeof value.id === 'string' && value.id.trim()
+      ? value.id.trim()
+      : `imported_rule_${Date.now()}_${fallbackIndex}`,
+    name: typeof value.name === 'string' && value.name.trim()
+      ? value.name.trim()
+      : `Imported Rule ${fallbackIndex + 1}`,
+    pattern,
+    matchMode,
+    minRepeat: Math.max(2, Number.isFinite(Number(value.minRepeat)) ? Math.floor(Number(value.minRepeat)) : 2),
+    ignoreEmpty: !!value.ignoreEmpty,
+    color,
+    label: typeof value.label === 'string' ? value.label : '',
+    enabled: value.enabled !== false,
+    // 导入永远按“新增自定义规则”处理；即使文件里带了内置标记，也不会覆盖内置规则。
+    isBuiltIn: false,
+  };
+};
+
+const makeUniqueRuleId = (baseId: string, usedIds: Set<string>) => {
+  const cleanBase = (baseId || 'imported_rule').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'imported_rule';
+  let candidate = cleanBase;
+  let suffix = 1;
+  while (usedIds.has(candidate)) {
+    candidate = `${cleanBase}_${suffix++}`;
+  }
+  usedIds.add(candidate);
+  return candidate;
+};
 
 // 天赋图标路径映射 (全部使用 public/perk_icons/ 下的静态资源)
 const PERK_ICON_MAP: Record<string, string> = {
@@ -79,6 +167,7 @@ export function SettingsModal({
   const [patternErrors, setPatternErrors] = useState<Record<string, string>>({});
   const [pickerState, setPickerState] = useState<{ ruleId: string; slotIndex: number } | null>(null);
   const [pickerSearch, setPickerSearch] = useState('');
+  const markingRuleImportInputRef = useRef<HTMLInputElement | null>(null);
   const { t, i18n } = useTranslation();
 
   const loadModBundles = async () => {
@@ -223,6 +312,65 @@ export function SettingsModal({
     upsertUserRule(rule);
     setExpandedMarkingRuleId(id);
     setPatternDrafts(prev => ({ ...prev, [id]: serializePattern(rule.pattern) }));
+  };
+
+  const exportMarkingRules = (rules: SpellMarkingRule[], filenameBase = 'spell-marking-rules') => {
+    const exportedRules = rules.map(rule => ({ ...rule, isBuiltIn: false }));
+    downloadJson(`${safeFileName(filenameBase)}.json`, {
+      type: SPELL_MARKING_EXPORT_TYPE,
+      version: 1,
+      exportedAt: Date.now(),
+      rules: exportedRules
+    });
+  };
+
+  const handleImportMarkingRules = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    const importedRules: SpellMarkingRule[] = [];
+    let invalidFileCount = 0;
+    let invalidRuleCount = 0;
+
+    await Promise.all(files.map(async (file) => {
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const rawRules = extractImportedMarkingRules(json);
+        const before = importedRules.length;
+        rawRules.forEach((raw, idx) => {
+          const normalized = normalizeImportedMarkingRule(raw, before + idx);
+          if (normalized) importedRules.push(normalized);
+          else invalidRuleCount += 1;
+        });
+        if (importedRules.length === before && rawRules.length === 0) invalidFileCount += 1;
+      } catch (err) {
+        invalidFileCount += 1;
+      }
+    }));
+
+    if (importedRules.length === 0) {
+      alert(t('settings.spell_marking_import_none'));
+      return;
+    }
+
+    setSettings(prev => {
+      const currentRules = Array.isArray(prev.userMarkingRules) ? [...prev.userMarkingRules] : [];
+      const usedIds = new Set(getMergedRules(currentRules).map(rule => rule.id));
+      const appended = importedRules.map(rule => ({
+        ...rule,
+        id: makeUniqueRuleId(rule.id, usedIds),
+        isBuiltIn: false,
+      }));
+      return { ...prev, userMarkingRules: [...currentRules, ...appended] };
+    });
+
+    alert(t('settings.spell_marking_import_success', {
+      count: importedRules.length,
+      files: files.length,
+      invalid: invalidFileCount + invalidRuleCount
+    }));
   };
 
   const handleImportModBundle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -718,13 +866,47 @@ export function SettingsModal({
                 )}
                 {isMatch(t('settings.spell_marking_title')) && (
                   <div className="space-y-4 bg-white/5 p-4 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
-                        <Star size={16} />
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
+                          <Star size={16} />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-zinc-200">{t('settings.spell_marking_title')}</div>
+                          <div className="text-[10px] text-zinc-500">{t('settings.spell_marking_desc')}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-zinc-200">{t('settings.spell_marking_title')}</div>
-                        <div className="text-[10px] text-zinc-500">{t('settings.spell_marking_desc')}</div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={markingRuleImportInputRef}
+                          type="file"
+                          accept="application/json,.json"
+                          multiple
+                          className="hidden"
+                          onChange={handleImportMarkingRules}
+                        />
+                        <button
+                          onClick={() => markingRuleImportInputRef.current?.click()}
+                          className="px-2 py-1 text-[10px] rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"
+                          title={t('settings.spell_marking_import_tip')}
+                        >
+                          <Upload size={12} />
+                          {t('settings.spell_marking_import')}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const rules = Array.isArray(settings.userMarkingRules) ? settings.userMarkingRules : [];
+                            if (rules.length === 0) {
+                              alert(t('settings.spell_marking_export_none'));
+                              return;
+                            }
+                            exportMarkingRules(rules, 'twwe-spell-marking-rules');
+                          }}
+                          className="px-2 py-1 text-[10px] rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"
+                        >
+                          <Download size={12} />
+                          {t('settings.spell_marking_export_all')}
+                        </button>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -753,6 +935,12 @@ export function SettingsModal({
                                   className="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 border border-white/10"
                                 >
                                   {expandedMarkingRuleId === rule.id ? t('settings.spell_marking_collapse') : t('settings.spell_marking_edit')}
+                                </button>
+                                <button
+                                  onClick={() => exportMarkingRules([rule], `twwe-spell-marking-${rule.name || rule.id}`)}
+                                  className="px-2 py-1 text-[10px] rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                >
+                                  {t('settings.spell_marking_export')}
                                 </button>
                                 {!rule.isBuiltIn && (
                                   <button

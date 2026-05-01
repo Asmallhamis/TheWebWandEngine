@@ -48,6 +48,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const BONES_FOLDER_ID = 'bones_folder';
+const ALL_WANDS_FOLDER_ID = '__all_wands__';
 
 interface WandWarehouseProps {
   isOpen: boolean;
@@ -562,40 +563,41 @@ export function WandWarehouse({
 
   // Filter wands based on search OR selected folder
   const displayWands = useMemo(() => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     const isEnglish = i18n.language.startsWith('en');
 
-    // If searching, ignore folders and show all matching
-    if (q) {
-      return wands.filter(w => {
-        const wSmartTags = getWandSmartTags(w.id);
-        const wSmartTagNames = wSmartTags.map(st => st.name);
-        const matchesSpellSearch = Object.values(w.spells).some(sid => {
-          const s = spellDb[sid];
-          if (!s) return false;
-          const sName = isEnglish && s.en_name ? s.en_name : s.name;
-          const matchesName = sName.toLowerCase().includes(q);
-          if (matchesName) return true;
-          if (!isEnglish) {
-            if ((s.pinyin || "").toLowerCase().includes(q)) return true;
-            if (checkPinyinFuzzy(q, (s.pinyin || "").toLowerCase(), (s.pinyin_initials || "").toLowerCase())) return true;
-            if ((s.aliases || "").toLowerCase().includes(q)) return true;
-            if (checkPinyinFuzzy(q, (s.alias_pinyin || "").toLowerCase(), (s.alias_initials || "").toLowerCase())) return true;
-          }
-          return false;
-        });
-        return w.name.toLowerCase().includes(q) ||
-          (!isEnglish && (w.pinyin || "").toLowerCase().includes(q)) ||
-          (!isEnglish && checkPinyinFuzzy(q, (w.pinyin || "").toLowerCase(), (w.pinyin_initials || "").toLowerCase())) ||
-          w.tags.some(t => t.toLowerCase().includes(q)) ||
-          wSmartTagNames.some(t => t.toLowerCase().includes(q)) ||
-          matchesSpellSearch;
-      }).sort((a, b) => b.createdAt - a.createdAt);
-    }
+    let filtered = wands;
 
-    // Otherwise filter by selected folder
-    const targetFolderId = selectedFolderId === 'root' ? null : selectedFolderId;
-    let filtered = wands.filter(w => w.folderId === targetFolderId);
+    if (q) {
+      // Search is global, then smart/manual tag filters can further narrow the result.
+      filtered = filtered.filter(w => {
+          const wSmartTags = getWandSmartTags(w.id);
+          const wSmartTagNames = wSmartTags.map(st => st.name);
+          const matchesSpellSearch = Object.values(w.spells).some(sid => {
+            const s = spellDb[sid];
+            if (!s) return false;
+            const sName = isEnglish && s.en_name ? s.en_name : s.name;
+            const matchesName = sName.toLowerCase().includes(q);
+            if (matchesName) return true;
+            if (!isEnglish) {
+              if ((s.pinyin || "").toLowerCase().includes(q)) return true;
+              if (checkPinyinFuzzy(q, (s.pinyin || "").toLowerCase(), (s.pinyin_initials || "").toLowerCase())) return true;
+              if ((s.aliases || "").toLowerCase().includes(q)) return true;
+              if (checkPinyinFuzzy(q, (s.alias_pinyin || "").toLowerCase(), (s.alias_initials || "").toLowerCase())) return true;
+            }
+            return false;
+          });
+          return w.name.toLowerCase().includes(q) ||
+            (!isEnglish && (w.pinyin || "").toLowerCase().includes(q)) ||
+            (!isEnglish && checkPinyinFuzzy(q, (w.pinyin || "").toLowerCase(), (w.pinyin_initials || "").toLowerCase())) ||
+            w.tags.some(t => t.toLowerCase().includes(q)) ||
+            wSmartTagNames.some(t => t.toLowerCase().includes(q)) ||
+            matchesSpellSearch;
+        });
+    } else if (selectedFolderId !== ALL_WANDS_FOLDER_ID) {
+      const targetFolderId = selectedFolderId === 'root' ? null : selectedFolderId;
+      filtered = filtered.filter(w => w.folderId === targetFolderId);
+    }
 
     if (selectedTags.length > 0) {
       filtered = filtered.filter(w => {
@@ -605,7 +607,6 @@ export function WandWarehouse({
       });
     }
 
-    // Sort
     return filtered.sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       // Default to manual order if available, else date
@@ -715,7 +716,7 @@ export function WandWarehouse({
 
           <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-white/5">
             <button
-              onClick={() => createFolder(selectedFolderId === 'root' ? null : selectedFolderId)}
+              onClick={() => createFolder(selectedFolderId === 'root' || selectedFolderId === ALL_WANDS_FOLDER_ID ? null : selectedFolderId)}
               className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 hover:text-white text-zinc-400 rounded-md text-[10px] font-bold transition-all"
               data-testid="warehouse-new-folder-top-btn"
             >
@@ -792,6 +793,17 @@ export function WandWarehouse({
             <div
               className={cn(
                 "flex items-center gap-2 py-1.5 px-3 rounded-lg cursor-pointer transition-all mb-1",
+                selectedFolderId === ALL_WANDS_FOLDER_ID ? "bg-amber-600/20 text-amber-300 border border-amber-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200 border border-transparent"
+              )}
+              onClick={() => setSelectedFolderId(ALL_WANDS_FOLDER_ID)}
+            >
+              <Sparkles size={14} />
+              <span className="text-xs font-bold">{t('warehouse.all_wands_folder')}</span>
+            </div>
+
+            <div
+              className={cn(
+                "flex items-center gap-2 py-1.5 px-3 rounded-lg cursor-pointer transition-all mb-1",
                 selectedFolderId === 'root' ? "bg-purple-600/20 text-purple-300 border border-purple-500/20" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200 border border-transparent",
                 dragOverFolderId === 'root' && "bg-indigo-500/20 border-indigo-500/50 outline-dashed outline-1 outline-indigo-500/50"
               )}
@@ -834,7 +846,7 @@ export function WandWarehouse({
           <div className="px-4 py-2 flex items-center gap-2 text-xs text-zinc-500 border-b border-white/5">
             <FolderOpen size={14} />
             <span className="font-bold">
-              {selectedFolderId === 'root' ? t('warehouse.root_folder') : folders.find(f => f.id === selectedFolderId)?.name || '???'}
+              {selectedFolderId === ALL_WANDS_FOLDER_ID ? t('warehouse.all_wands_folder') : selectedFolderId === 'root' ? t('warehouse.root_folder') : folders.find(f => f.id === selectedFolderId)?.name || '???'}
             </span>
             <span className="bg-zinc-800 px-1.5 rounded-full text-[10px]">{t('warehouse.all_wands', { count: displayWands.length })}</span>
             {selectedWandIds.size > 0 && (
@@ -900,8 +912,14 @@ export function WandWarehouse({
           <div
             className="flex-1 overflow-y-auto p-4 custom-scrollbar"
             onScroll={handleScroll}
-            onDragOver={(e) => handleDragOver(e, 'folder', selectedFolderId || 'root')}
-            onDrop={(e) => handleDrop(e, 'folder', selectedFolderId || 'root')}
+            onDragOver={(e) => {
+              if (selectedFolderId === ALL_WANDS_FOLDER_ID) return;
+              handleDragOver(e, 'folder', selectedFolderId || 'root');
+            }}
+            onDrop={(e) => {
+              if (selectedFolderId === ALL_WANDS_FOLDER_ID) return;
+              handleDrop(e, 'folder', selectedFolderId || 'root');
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               setContextMenu({ x: e.clientX, y: e.clientY, folderId: selectedFolderId || 'root' });
