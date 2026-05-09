@@ -102,6 +102,15 @@ export interface AppSettings {
   categoryLimit: number;
   allowCompactEdit: boolean;
   pickerRowHeight: number;
+  pickerAutoFillRows: number;
+  pinnedSpellPaletteOpen: boolean;
+  pinnedSpellPaletteIconSize: number;
+  pinnedSpellPaletteRows: number;
+  pinnedSpellPaletteWrapLimit: number;
+  pinnedSpellPaletteAutoFillRows: number;
+  pinnedSpellPaletteWandSlot?: string;
+  pinnedSpellPaletteHideLabels: boolean;
+  pinnedSpellPaletteExpandedGroups: number[];
   themeColors: string[];
   wrapLimit: number;
   hideLabels: boolean;
@@ -141,6 +150,7 @@ export interface AppSettings {
   recursionIterationDisplay: 'none' | 'simple' | 'labeled';
   mobilePickerMode: boolean;
   mobileEditToolbarEnabled: boolean;
+  mobileToolbarVisible: boolean;
   disablePickerAutoFocus: boolean;
   uiScale: number;
   wandAttributesScale: number;
@@ -240,6 +250,7 @@ export interface HoveredSpellSlot {
 }
 
 export interface SpellDragSource {
+  source?: 'wand_slot' | 'palette';
   wandSlot: string;
   area: SpellArea;
   idx: number;

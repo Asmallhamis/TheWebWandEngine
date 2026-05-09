@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tab, WandData, AppSettings, AppNotification, SpellDragSource, MousePos } from '../types';
+import { Tab, WandData, AppSettings, AppNotification, SpellDragSource } from '../types';
 import { useUIStore } from '../store/useUIStore';
+import { moveDragPreview } from '../lib/dragPreviewMotion';
 
 interface UseGlobalEventsProps {
   activeTab: Tab;
@@ -20,7 +21,6 @@ interface UseGlobalEventsProps {
   setSelection: (s: any) => void;
   setIsSelecting: (s: boolean) => void;
   setDragSource: (s: SpellDragSource | null) => void;
-  setMousePos: (p: MousePos) => void;
   setIsDraggingFile: (s: boolean) => void;
   setNotification: (n: AppNotification | null) => void;
   setTabMenu: (m: any) => void;
@@ -51,7 +51,6 @@ export const useGlobalEvents = ({
   setSelection,
   setIsSelecting,
   setDragSource,
-  setMousePos,
   setIsDraggingFile,
   setNotification,
   setTabMenu,
@@ -99,6 +98,17 @@ export const useGlobalEvents = ({
   }, [setSelection, setTabMenu]);
 
   useEffect(() => {
+    const updateDragPreviewFromClientPoint = (clientX: number, clientY: number) => {
+      const scale = (settings.uiScale || 100) / 100;
+      moveDragPreview({ x: clientX / scale, y: clientY / scale });
+    };
+
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      if (dragSource) {
+        updateDragPreviewFromClientPoint(e.clientX, e.clientY);
+      }
+    };
+
     const handleGlobalMouseMove = (e: MouseEvent) => {
       const wandEl = (e.target as HTMLElement)?.closest?.('[data-wand-target]');
       if (wandEl) {
@@ -107,13 +117,16 @@ export const useGlobalEvents = ({
       }
 
       if (dragSource) {
-        const scale = (settings.uiScale || 100) / 100;
-        setMousePos({ x: e.clientX / scale, y: e.clientY / scale });
+        updateDragPreviewFromClientPoint(e.clientX, e.clientY);
       }
     };
+    window.addEventListener('pointermove', handleGlobalPointerMove);
     window.addEventListener('mousemove', handleGlobalMouseMove);
-    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
-  }, [dragSource, setMousePos, settings.uiScale]);
+    return () => {
+      window.removeEventListener('pointermove', handleGlobalPointerMove);
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [dragSource, settings.uiScale]);
 
   useEffect(() => {
     const handleGlobalTouchMove = (e: TouchEvent) => {
@@ -129,7 +142,7 @@ export const useGlobalEvents = ({
 
       if (dragSource) {
         const scale = (settings.uiScale || 100) / 100;
-        setMousePos({
+        moveDragPreview({
           x: touch.clientX / scale,
           y: touch.clientY / scale,
         });
@@ -138,7 +151,7 @@ export const useGlobalEvents = ({
 
     window.addEventListener('touchmove', handleGlobalTouchMove, { passive: true });
     return () => window.removeEventListener('touchmove', handleGlobalTouchMove);
-  }, [dragSource, setMousePos, settings.uiScale]);
+  }, [dragSource, settings.uiScale]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -468,7 +481,7 @@ export const useGlobalEvents = ({
   }, [
     activeTab, activeTabId, settings, spellDb, dragSource, 
     setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, 
-    setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification,
+    setIsSelecting, setDragSource, setIsDraggingFile, setNotification,
     importFromText, copyToClipboard, 
     pasteFromClipboard, readMetadataFromPng, undo, redo, insertEmptySlot, updateWand, t
   ]);

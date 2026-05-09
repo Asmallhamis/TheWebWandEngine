@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Star, Minimize2, Plus } from 'lucide-react';
+import { Search, Star, Minimize2, Plus, Pin } from 'lucide-react';
 import { SpellInfo, AppSettings, SpellTypeConfig } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { getIconUrl } from '../lib/evaluatorAdapter';
@@ -32,6 +32,7 @@ interface SpellPickerProps {
   searchResults: SpellInfo[][] | null;
   spellStats: { overall: SpellInfo[]; categories: SpellInfo[][] };
   settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   pickerExpandedGroups: Set<number>;
   setPickerExpandedGroups: React.Dispatch<React.SetStateAction<Set<number>>>;
   isConnected: boolean;
@@ -46,6 +47,7 @@ export function SpellPicker({
   searchResults,
   spellStats,
   settings,
+  setSettings,
   pickerExpandedGroups,
   setPickerExpandedGroups,
   isConnected
@@ -55,6 +57,8 @@ export function SpellPicker({
   const [hasNavigatedSelection, setHasNavigatedSelection] = useState(false);
   const setHoveredSlot = useUIStore(s => s.setHoveredSlot);
   const resolveHoveredSlotAtPoint = useUIStore(s => s.resolveHoveredSlotAtPoint);
+  const pickerAutoFillRows = settings.pickerAutoFillRows || 0;
+  const pickerIconInnerSize = Math.max(18, (settings.pickerRowHeight || 32) - 8);
   
   // Track mount time to prevent ghost clicks from closing/triggering the picker instantly on mobile
   const mountTimeRef = React.useRef(Date.now());
@@ -149,6 +153,32 @@ export function SpellPicker({
     };
     return mapping[name] || name;
   };
+
+  const getFloatingFillCols = React.useCallback((iconSize = settings.pickerRowHeight) => {
+    const scale = (settings.uiScale || 100) / 100;
+    const vpW = window.innerWidth / scale;
+    const availableWidth = Math.max(400, vpW - 40);
+    const iconGap = 6;
+    return Math.max(5, Math.min(500, Math.floor((availableWidth - 24 + iconGap) / (iconSize + iconGap))));
+  }, [settings.pickerRowHeight, settings.uiScale]);
+
+  const applyFloatingFill = React.useCallback((rows: number, iconSize = settings.pickerRowHeight) => {
+    const cols = getFloatingFillCols(iconSize);
+    const previewLimit = Math.max(1, cols * Math.max(1, rows));
+    setSettings(prev => ({
+      ...prev,
+      pickerAutoFillRows: rows,
+      pickerRowHeight: iconSize,
+      wrapLimit: cols,
+      commonLimit: previewLimit,
+      categoryLimit: previewLimit,
+    }));
+  }, [getFloatingFillCols, setSettings, settings.pickerRowHeight]);
+
+  useEffect(() => {
+    if (!pickerConfig || pickerAutoFillRows <= 0) return;
+    applyFloatingFill(pickerAutoFillRows);
+  }, [applyFloatingFill, pickerAutoFillRows, pickerConfig]);
 
   if (!pickerConfig) return null;
 
@@ -303,6 +333,99 @@ export function SpellPicker({
           <button onClick={() => handlePickSpell(null, false)} className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20">
             {t('settings.title') === 'Settings' ? 'CLEAR' : '清除槽位'}
           </button>
+          <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-zinc-500">
+            <span>{t('spell_picker.fixed_palette.size')}</span>
+            <input
+              type="number"
+              min={24}
+              max={64}
+              step={4}
+              value={settings.pickerRowHeight}
+              onChange={e => {
+                const nextSize = Math.max(24, Math.min(64, parseInt(e.target.value, 10) || 32));
+                if (pickerAutoFillRows > 0) {
+                  applyFloatingFill(pickerAutoFillRows, nextSize);
+                } else {
+                  setSettings(prev => ({ ...prev, pickerRowHeight: nextSize }));
+                }
+              }}
+              className="h-7 w-12 rounded border border-white/10 bg-black/20 px-1 text-center text-xs text-zinc-200 outline-none"
+            />
+            <span>{t('spell_picker.fixed_palette.cols')}</span>
+            <input
+              type="number"
+              min={5}
+              max={500}
+              value={settings.wrapLimit}
+              onChange={e => setSettings(prev => ({
+                ...prev,
+                pickerAutoFillRows: 0,
+                wrapLimit: Math.max(5, Math.min(500, parseInt(e.target.value, 10) || 20)),
+              }))}
+              className="h-7 w-12 rounded border border-white/10 bg-black/20 px-1 text-center text-xs text-zinc-200 outline-none"
+            />
+            <span>{t('settings.common_limit')}</span>
+            <input
+              type="number"
+              min={0}
+              max={5000}
+              value={settings.commonLimit}
+              onChange={e => setSettings(prev => ({
+                ...prev,
+                pickerAutoFillRows: 0,
+                commonLimit: Math.max(0, Math.min(5000, parseInt(e.target.value, 10) || 0)),
+              }))}
+              className="h-7 w-14 rounded border border-white/10 bg-black/20 px-1 text-center text-xs text-zinc-200 outline-none"
+            />
+            <span>{t('settings.category_limit')}</span>
+            <input
+              type="number"
+              min={1}
+              max={5000}
+              value={settings.categoryLimit}
+              onChange={e => setSettings(prev => ({
+                ...prev,
+                pickerAutoFillRows: 0,
+                categoryLimit: Math.max(1, Math.min(5000, parseInt(e.target.value, 10) || 1)),
+              }))}
+              className="h-7 w-14 rounded border border-white/10 bg-black/20 px-1 text-center text-xs text-zinc-200 outline-none"
+            />
+            <button
+              type="button"
+              className={`h-7 rounded border px-2 transition-colors ${pickerAutoFillRows > 0 ? 'border-sky-500/50 bg-sky-500/20 text-sky-200' : 'border-white/10 bg-black/20 text-zinc-500 hover:bg-white/5 hover:text-zinc-200'}`}
+              onClick={() => {
+                if (pickerAutoFillRows > 0) {
+                  setSettings(prev => ({ ...prev, pickerAutoFillRows: 0 }));
+                } else {
+                  applyFloatingFill(1);
+                }
+              }}
+              title={t('spell_picker.fixed_palette.auto_fill_title')}
+            >
+              {t('spell_picker.fixed_palette.auto_fill')}
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={pickerAutoFillRows || 1}
+              onChange={e => applyFloatingFill(Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)))}
+              className={`h-7 w-10 rounded border px-1 text-center text-xs outline-none ${pickerAutoFillRows > 0 ? 'border-sky-500/30 bg-sky-500/10 text-sky-100' : 'border-white/10 bg-black/20 text-zinc-500'}`}
+              title={t('spell_picker.fixed_palette.auto_fill_rows')}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettings(prev => ({
+              ...prev,
+              pinnedSpellPaletteOpen: !prev.pinnedSpellPaletteOpen || prev.pinnedSpellPaletteWandSlot !== pickerConfig.wandSlot,
+              pinnedSpellPaletteWandSlot: pickerConfig.wandSlot,
+            }))}
+            className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${settings.pinnedSpellPaletteOpen ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'}`}
+            title={settings.pinnedSpellPaletteOpen ? '关闭固定法术面板' : '固定法术面板'}
+          >
+            <Pin size={13} />
+          </button>
         </div>
 
         <div className={`flex-1 overflow-y-auto custom-scrollbar p-2 ${settings.hideLabels ? 'space-y-2' : 'space-y-4'}`}>
@@ -337,7 +460,7 @@ export function SpellPicker({
                         title={tooltip}
                       >
                         <div className="relative w-full h-full flex items-center justify-center">
-                          <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
+                          <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                           {idx < 9 && (
                             <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                               {idx + 1}
@@ -355,7 +478,7 @@ export function SpellPicker({
               {spellStats.overall.length > 0 && (
                 <div className={`rounded-lg overflow-hidden ${settings.hideLabels ? 'bg-white/5 border border-white/5 shadow-inner' : ''}`}>
                   <div className={`p-2 relative group/header ${settings.hideLabels ? 'pt-1.5 pb-1.5' : `bg-gradient-to-r from-indigo-500/10 to-zinc-800/20 ${settings.hideLabels ? '' : 'mb-2'}`}`}>
-                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute top-1 right-1 z-10' : 'mb-2'}`}>
+                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute -top-1 -right-1 z-10' : 'mb-2'}`}>
                       {!settings.hideLabels && (
                         <div className="flex items-center gap-2">
                           <Star size={12} className="text-amber-500" />
@@ -400,7 +523,7 @@ export function SpellPicker({
                             data-spell-id={s.id}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
-                              <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
+                              <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                               {!pickerSearch && idx < 9 && (
                                 <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                                   {idx + 1}
@@ -418,7 +541,7 @@ export function SpellPicker({
               {settings.spellGroups.map((group, gIdx) => (
                 <div key={group.name} className={`rounded-lg overflow-hidden ${spellStats.categories[gIdx].length === 0 ? 'hidden' : ''} ${settings.hideLabels ? 'bg-white/5 border border-white/5 shadow-inner' : ''}`}>
                   <div className={`p-2 relative group/header ${settings.hideLabels ? 'pt-1.5 pb-1.5' : `bg-gradient-to-r ${group.color || 'from-zinc-800/20 to-zinc-800/20'} ${settings.hideLabels ? '' : 'mb-2'}`}`}>
-                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute top-1 right-1 z-10' : 'mb-2'}`}>
+                    <div className={`flex items-center justify-between ${settings.hideLabels ? 'absolute -top-1 -right-1 z-10' : 'mb-2'}`}>
                       {!settings.hideLabels && (
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-3 rounded-full bg-white/20" />
@@ -470,7 +593,7 @@ export function SpellPicker({
                             data-testid="spell-picker-item"
                             data-spell-id={s.id}
                           >
-                            <img src={getIconUrl(s.icon, isConnected)} className="w-6 h-6 image-pixelated transition-transform group-hover:scale-110" alt="" />
+                            <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                           </button>
                         );
                       })}

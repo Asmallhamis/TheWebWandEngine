@@ -2,7 +2,7 @@ import React from 'react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor, Image as ImageIcon } from 'lucide-react';
-import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger } from '../types';
+import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger, SpellStats } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
@@ -17,6 +17,7 @@ interface WandCardProps {
   activeTab: Tab;
   isConnected: boolean;
   spellDb: Record<string, SpellInfo>;
+  spellStats: SpellStats;
   selection: SpellAreaSelection | null;
   onMoveSelection: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: HoveredSpellSlot | null;
@@ -37,6 +38,7 @@ interface WandCardProps {
   openPicker: (slot: string, idx: string, e: SpellPickerTrigger) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setMousePos: (pos: { x: number; y: number }) => void;
   evalData?: { data: EvalResponse; id: number; loading?: boolean };
   requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
   settings: any;
@@ -49,6 +51,7 @@ export function WandCard({
   activeTab,
   isConnected,
   spellDb,
+  spellStats,
   selection,
   onMoveSelection,
   hoveredSlot,
@@ -69,6 +72,7 @@ export function WandCard({
   openPicker,
   setSelection,
   setSettings,
+  setMousePos,
   evalData,
   requestEvaluation,
   settings,
@@ -505,6 +509,7 @@ export function WandCard({
             slot={slot}
             data={data}
             spellDb={spellDb}
+            spellStats={spellStats}
             selection={selection}
             onMoveSelection={onMoveSelection}
             hoveredSlot={hoveredSlot}
@@ -518,6 +523,7 @@ export function WandCard({
             openPicker={openPicker}
             setSelection={setSelection}
             setSettings={setSettings}
+            setMousePos={setMousePos}
             settings={settings}
             isConnected={isConnected}
             requestEvaluation={(wand, force) => requestEvaluation(activeTab.id, slot, wand, force)}

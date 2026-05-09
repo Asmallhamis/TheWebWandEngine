@@ -570,7 +570,28 @@
   },
   "spell_picker": {
     "common_spells_global": "常用法术 (Global)",
-    "search_placeholder": "搜索法术..."
+    "search_placeholder": "搜索法术...",
+    "no_results": "无匹配结果",
+    "floating_settings_title": "悬浮法术选择器",
+    "floating_settings_desc": "单击格子后弹出的快速选择器",
+    "fixed_palette": {
+      "size": "大小",
+      "cols": "列数",
+      "auto_fill": "占满",
+      "auto_fill_title": "按当前面板宽度和图标大小自动占满指定行数",
+      "auto_fill_rows": "占满几行",
+      "close": "关闭",
+      "settings_title": "固定法术面板",
+      "settings_desc": "固定在展开法杖下方的拖拽式法术库",
+      "enabled": "已开启",
+      "disabled": "已关闭",
+      "icon_size": "图标大小",
+      "cols_setting": "每行图标数",
+      "auto_fill_rows_setting": "占满行数",
+      "auto_fill_rows_desc": "按固定面板宽度和图标大小自动占满指定行数。",
+      "hide_labels": "隐藏分组标签",
+      "hide_labels_desc": "隐藏固定法术面板中的“常用法术”及各分类名称。"
+    }
   },
   "header": {
     "sync_button_title": "左键：拉取一次数据；右键：将当前数据推送到游戏",

@@ -8,6 +8,7 @@ import { HistoryPanel } from './HistoryPanel';
 import { ModManagerPanel } from './ModManagerPanel';
 import { WandWarehouse } from './WandWarehouse';
 import { FloatingDragModeToggle } from './FloatingDragModeToggle';
+import { DragPreview } from './DragPreview';
 import { useUIStore } from '../store/useUIStore';
 import {
   SpellInfo,
@@ -24,10 +25,8 @@ import {
   SmartTag,
   SpellDragSource,
   SpellAreaSelection,
-  HoveredSpellSlot,
-  MousePos
+  HoveredSpellSlot
 } from '../types';
-import { getIconUrl } from '../lib/evaluatorAdapter';
 
 interface OverlayManagerProps {
   // Spell Picker
@@ -88,7 +87,6 @@ interface OverlayManagerProps {
 
   // Interaction
   dragSource: SpellDragSource | null;
-  mousePos: MousePos;
   isDraggingFile: boolean;
   setSelection: (selection: SpellAreaSelection | null) => void;
   // WandEditor 交互 props (用于智能标签编辑器)
@@ -146,7 +144,6 @@ export const OverlayManager = ({
   activeTabId,
   syncWand,
   dragSource,
-  mousePos,
   isDraggingFile,
   setSelection,
   selection,
@@ -179,6 +176,7 @@ export const OverlayManager = ({
         searchResults={searchResults}
         spellStats={spellStats}
         settings={settings}
+        setSettings={setSettings}
         pickerExpandedGroups={pickerExpandedGroups}
         setPickerExpandedGroups={setPickerExpandedGroups}
         isConnected={isConnected}
@@ -360,16 +358,7 @@ export const OverlayManager = ({
       <FloatingDragModeToggle settings={settings} setSettings={setSettings} />
 
       {dragSource && spellDb[dragSource.sid] && (
-        <div
-          className="fixed pointer-events-none z-[1000] w-12 h-12"
-          style={{ left: mousePos.x + 5, top: mousePos.y + 5 }}
-        >
-          <img
-            src={getIconUrl(spellDb[dragSource.sid].icon, isConnected)}
-            className="w-full h-full image-pixelated border-2 border-indigo-500 rounded bg-zinc-900/80 shadow-2xl animate-pulse"
-            alt=""
-          />
-        </div>
+        <DragPreview spell={spellDb[dragSource.sid]} isConnected={isConnected} />
       )}
 
       {isDraggingFile && (

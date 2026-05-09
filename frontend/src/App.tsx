@@ -62,8 +62,6 @@ function App() {
   const clearMobileModifiers = useUIStore(s => s.clearMobileModifiers);
   const markModeActive = useUIStore(s => s.markModeActive);
   const wikiModeActive = useUIStore(s => s.wikiModeActive);
-  const isMobileToolbarVisible = useUIStore(s => s.isMobileToolbarVisible);
-  const setIsMobileToolbarVisible = useUIStore(s => s.setIsMobileToolbarVisible);
   const toggleMarkMode = useUIStore(s => s.toggleMarkMode);
   const toggleWikiMode = useUIStore(s => s.toggleWikiMode);
 
@@ -227,7 +225,7 @@ function App() {
   const {
     isSelecting, setIsSelecting,
     isDraggingFile, setIsDraggingFile,
-    mousePos, setMousePos,
+    setMousePos,
     handleSlotMouseDown, handleSlotMouseUp, handleSlotMouseEnter, handleSlotMouseMove, handleSlotMouseLeave,
     insertEmptySlot: _insertEmptySlot
   } = useInteraction({ activeTab, settings, performAction, syncWand });
@@ -312,7 +310,7 @@ function App() {
 
   useGlobalEvents({
     activeTab, activeTabId, tabs, settings, spellDb, dragSource, pickerConfig, notification,
-    setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setMousePos, setIsDraggingFile, setNotification: (n) => showNotification(n?.msg || '', n?.type), setTabMenu,
+    setTabs, setActiveTabId, setIsHistoryOpen, setIsWarehouseOpen, setSelection, setIsSelecting, setDragSource, setIsDraggingFile, setNotification: (n) => showNotification(n?.msg || '', n?.type), setTabMenu,
     importFromText, copyToClipboard, pasteFromClipboard, readMetadataFromPng, undo, redo,
     insertEmptySlot, updateWand
   });
@@ -420,6 +418,16 @@ function App() {
 
 
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const isMobileToolbarVisible = settings.mobileToolbarVisible ?? true;
+  const setIsMobileToolbarVisible = useCallback((open: boolean | ((prev: boolean) => boolean)) => {
+    setSettings(prev => {
+      const current = prev.mobileToolbarVisible ?? true;
+      return {
+        ...prev,
+        mobileToolbarVisible: typeof open === 'function' ? open(current) : open,
+      };
+    });
+  }, [setSettings]);
   const showMobileToolbar = settings.mobileEditToolbarEnabled && isMobileToolbarVisible;
 
   const mobileToolbarButtons = [
@@ -514,6 +522,7 @@ function App() {
             activeTab={activeTab}
             isConnected={isConnected}
             spellDb={spellDb}
+            spellStats={spellStats}
             selection={selection}
             onMoveSelection={moveSelection}
             hoveredSlot={hoveredSlot}
@@ -535,6 +544,7 @@ function App() {
             openPicker={openPicker}
             setSelection={setSelection}
             setSettings={setSettings}
+            setMousePos={setMousePos}
             evalResults={evalResults}
             settings={settings}
             saveToWarehouse={saveToWarehouse}
@@ -544,6 +554,7 @@ function App() {
             activeTab={activeTab}
             isConnected={isConnected}
             spellDb={spellDb}
+            spellStats={spellStats}
             onMoveSelection={moveSelection}
             selection={selection}
             hoveredSlot={hoveredSlot}
@@ -565,6 +576,7 @@ function App() {
             openPicker={openPicker}
             setSelection={setSelection}
             setSettings={setSettings}
+            setMousePos={setMousePos}
             evalResults={evalResults}
             settings={settings}
             saveToWarehouse={saveToWarehouse}
@@ -615,7 +627,6 @@ function App() {
           activeTabId={activeTabId}
           syncWand={syncWand}
           dragSource={dragSource}
-          mousePos={mousePos}
           isDraggingFile={isDraggingFile}
           setSelection={setSelection}
           selection={selection}

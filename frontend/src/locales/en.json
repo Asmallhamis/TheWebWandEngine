@@ -568,7 +568,28 @@
   },
   "spell_picker": {
     "common_spells_global": "Common Spells",
-    "search_placeholder": "Search spells..."
+    "search_placeholder": "Search spells...",
+    "no_results": "No matching results",
+    "floating_settings_title": "Floating Spell Picker",
+    "floating_settings_desc": "The quick picker shown after clicking a spell slot",
+    "fixed_palette": {
+      "size": "Size",
+      "cols": "Cols",
+      "auto_fill": "Fill",
+      "auto_fill_title": "Automatically fill the requested number of rows using the current panel width and icon size",
+      "auto_fill_rows": "Rows to fill",
+      "close": "Close",
+      "settings_title": "Fixed Spell Palette",
+      "settings_desc": "A draggable spell library fixed below the expanded wand",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "icon_size": "Icon Size",
+      "cols_setting": "Icons Per Row",
+      "auto_fill_rows_setting": "Fill Rows",
+      "auto_fill_rows_desc": "Automatically fills the requested number of rows based on the fixed panel width and icon size.",
+      "hide_labels": "Hide Group Labels",
+      "hide_labels_desc": "Hide Common Spells and category names in the fixed spell palette."
+    }
   },
   "header": {
     "sync_button_title": "Left click: pull data once; right click: push current data to the game",

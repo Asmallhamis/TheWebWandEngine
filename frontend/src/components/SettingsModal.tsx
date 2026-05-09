@@ -690,34 +690,185 @@ export function SettingsModal({
                   </div>
                 )}
                 
-                {isMatch(t('settings.common_limit')) && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.common_limit')}</label>
-                    <div className="flex items-center gap-4">
-                      <input type="range" min="0" max="50" value={settings.commonLimit} onChange={e => setSettings(s => ({ ...s, commonLimit: parseInt(e.target.value) || 0 }))} className="flex-1 accent-indigo-500" />
-                      <span className="text-xs font-mono font-bold text-indigo-400 w-8">{settings.commonLimit}</span>
+                {[
+                  t('settings.common_limit'),
+                  t('settings.category_limit'),
+                  t('settings.wrap_limit'),
+                  t('settings.picker_row_height'),
+                  t('settings.hide_labels'),
+                  t('spell_picker.fixed_palette.auto_fill_rows_setting'),
+                  '悬浮法术选择器 Floating Spell Picker'
+                ].some(isMatch) && (
+                  <div className="space-y-4 bg-sky-500/5 p-4 rounded-lg border border-sky-500/10">
+                    <div>
+                      <div className="text-xs font-bold text-zinc-200">{t('spell_picker.floating_settings_title')}</div>
+                      <div className="text-[10px] text-zinc-500">{t('spell_picker.floating_settings_desc')}</div>
                     </div>
+                    {isMatch(t('settings.common_limit')) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.common_limit')}</label>
+                        <div className="flex items-center gap-4">
+                          <input type="range" min="0" max="50" value={settings.commonLimit} onChange={e => setSettings(s => ({ ...s, commonLimit: parseInt(e.target.value) || 0 }))} className="flex-1 accent-sky-500" />
+                          <span className="text-xs font-mono font-bold text-sky-400 w-8">{settings.commonLimit}</span>
+                        </div>
+                      </div>
+                    )}
+                    {isMatch(t('settings.category_limit')) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.category_limit')}</label>
+                        <div className="flex items-center gap-4">
+                          <input type="range" min="1" max="50" value={settings.categoryLimit} onChange={e => setSettings(s => ({ ...s, categoryLimit: parseInt(e.target.value) || 1 }))} className="flex-1 accent-sky-500" />
+                          <span className="text-xs font-mono font-bold text-sky-400 w-8">{settings.categoryLimit}</span>
+                        </div>
+                      </div>
+                    )}
+                    {isMatch(t('settings.wrap_limit')) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.wrap_limit')} ({settings.wrapLimit})</label>
+                        <input type="range" min="5" max="500" value={settings.wrapLimit} onChange={e => setSettings(s => ({ ...s, pickerAutoFillRows: 0, wrapLimit: parseInt(e.target.value) || 20 }))} className="w-full accent-sky-500" />
+                      </div>
+                    )}
+                    {isMatch(t('settings.picker_row_height')) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.picker_row_height')} ({settings.pickerRowHeight}px)</label>
+                        <input type="range" min="24" max="64" step="4" value={settings.pickerRowHeight} onChange={e => setSettings(s => {
+                          const pickerRowHeight = parseInt(e.target.value) || 32;
+                          if (!s.pickerAutoFillRows) return { ...s, pickerRowHeight };
+                          const scale = (s.uiScale || 100) / 100;
+                          const availableWidth = Math.max(400, window.innerWidth / scale - 40);
+                          const cols = Math.max(5, Math.min(500, Math.floor((availableWidth - 24 + 6) / (pickerRowHeight + 6))));
+                          return { ...s, pickerRowHeight, wrapLimit: cols, commonLimit: cols * s.pickerAutoFillRows, categoryLimit: cols * s.pickerAutoFillRows };
+                        })} className="w-full accent-sky-500" />
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.auto_fill_rows_setting')} Auto Fill Rows`) && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.auto_fill_rows_setting')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.auto_fill_rows_desc')}</div>
+                          </div>
+                          <button
+                            onClick={() => setSettings(s => {
+                              const nextRows = s.pickerAutoFillRows ? 0 : 1;
+                              if (!nextRows) return { ...s, pickerAutoFillRows: 0 };
+                              const scale = (s.uiScale || 100) / 100;
+                              const availableWidth = Math.max(400, window.innerWidth / scale - 40);
+                              const cols = Math.max(5, Math.min(500, Math.floor((availableWidth - 24 + 6) / ((s.pickerRowHeight || 32) + 6))));
+                              return { ...s, pickerAutoFillRows: nextRows, wrapLimit: cols, commonLimit: cols, categoryLimit: cols };
+                            })}
+                            className={`shrink-0 px-3 h-7 rounded border text-[10px] font-black transition-colors ${settings.pickerAutoFillRows ? 'bg-sky-500/20 border-sky-500/40 text-sky-200' : 'bg-black/20 border-white/10 text-zinc-400 hover:bg-white/5'}`}
+                          >
+                            {t('spell_picker.fixed_palette.auto_fill')}
+                          </button>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="20"
+                          value={settings.pickerAutoFillRows || 1}
+                          onChange={e => setSettings(s => {
+                            const rows = parseInt(e.target.value) || 1;
+                            const scale = (s.uiScale || 100) / 100;
+                            const availableWidth = Math.max(400, window.innerWidth / scale - 40);
+                            const cols = Math.max(5, Math.min(500, Math.floor((availableWidth - 24 + 6) / ((s.pickerRowHeight || 32) + 6))));
+                            return { ...s, pickerAutoFillRows: rows, wrapLimit: cols, commonLimit: cols * rows, categoryLimit: cols * rows };
+                          })}
+                          className="w-full accent-sky-500"
+                        />
+                      </div>
+                    )}
+                    {isMatch(t('settings.hide_labels')) && (
+                      <div className="flex justify-between items-center bg-sky-500/5 p-3 rounded-lg border border-sky-500/10">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-sky-500/10 rounded-lg text-sky-400">
+                            <Layers size={16} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('settings.hide_labels')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('settings.hide_labels_desc')}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, hideLabels: !s.hideLabels }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-sky-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
-                {isMatch(t('settings.category_limit')) && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.category_limit')}</label>
-                    <div className="flex items-center gap-4">
-                      <input type="range" min="1" max="50" value={settings.categoryLimit} onChange={e => setSettings(s => ({ ...s, categoryLimit: parseInt(e.target.value) || 1 }))} className="flex-1 accent-emerald-500" />
-                      <span className="text-xs font-mono font-bold text-emerald-400 w-8">{settings.categoryLimit}</span>
+                {[
+                  t('spell_picker.fixed_palette.settings_title'),
+                  t('spell_picker.fixed_palette.icon_size'),
+                  t('spell_picker.fixed_palette.cols_setting'),
+                  t('spell_picker.fixed_palette.auto_fill_rows_setting'),
+                  t('spell_picker.fixed_palette.hide_labels'),
+                  'Pinned Spell Palette Fixed Spell Palette'
+                ].some(isMatch) && (
+                  <div className="space-y-4 bg-emerald-500/5 p-4 rounded-lg border border-emerald-500/10">
+                    <div>
+                      <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.settings_title')}</div>
+                      <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.settings_desc')}</div>
                     </div>
-                  </div>
-                )}
-                {isMatch(t('settings.wrap_limit')) && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.wrap_limit')} ({settings.wrapLimit})</label>
-                    <input type="range" min="5" max="40" value={settings.wrapLimit} onChange={e => setSettings(s => ({ ...s, wrapLimit: parseInt(e.target.value) || 20 }))} className="w-full accent-indigo-500" />
-                  </div>
-                )}
-                {isMatch(t('settings.picker_row_height')) && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.picker_row_height')} ({settings.pickerRowHeight}px)</label>
-                    <input type="range" min="24" max="64" step="4" value={settings.pickerRowHeight} onChange={e => setSettings(s => ({ ...s, pickerRowHeight: parseInt(e.target.value) || 32 }))} className="w-full accent-amber-500" />
+                    {isMatch(`${t('spell_picker.fixed_palette.settings_title')} Pinned Spell Palette Fixed Spell Palette`) && (
+                      <button
+                        type="button"
+                        onClick={() => setSettings(s => ({ ...s, pinnedSpellPaletteOpen: !s.pinnedSpellPaletteOpen }))}
+                        className={`w-full px-3 py-2 rounded-lg border text-xs font-bold transition-colors ${settings.pinnedSpellPaletteOpen ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-200' : 'bg-black/20 border-white/10 text-zinc-400 hover:bg-white/5'}`}
+                      >
+                        {settings.pinnedSpellPaletteOpen ? t('spell_picker.fixed_palette.enabled') : t('spell_picker.fixed_palette.disabled')}
+                      </button>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.icon_size')} Icon Size`) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('spell_picker.fixed_palette.icon_size')} ({settings.pinnedSpellPaletteIconSize || 32}px)</label>
+                        <input type="range" min="24" max="64" step="4" value={settings.pinnedSpellPaletteIconSize || 32} onChange={e => setSettings(s => ({ ...s, pinnedSpellPaletteIconSize: parseInt(e.target.value) || 32 }))} className="w-full accent-emerald-500" />
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.cols_setting')} Columns`) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('spell_picker.fixed_palette.cols_setting')} ({settings.pinnedSpellPaletteWrapLimit || 24})</label>
+                        <input type="range" min="6" max="500" value={settings.pinnedSpellPaletteWrapLimit || 24} onChange={e => setSettings(s => ({ ...s, pinnedSpellPaletteAutoFillRows: 0, pinnedSpellPaletteWrapLimit: parseInt(e.target.value) || 24 }))} className="w-full accent-emerald-500" />
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.auto_fill_rows_setting')} Auto Fill Rows`) && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.auto_fill_rows_setting')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.auto_fill_rows_desc')}</div>
+                          </div>
+                          <button
+                            onClick={() => setSettings(s => ({ ...s, pinnedSpellPaletteAutoFillRows: s.pinnedSpellPaletteAutoFillRows ? 0 : 1 }))}
+                            className={`shrink-0 px-3 h-7 rounded border text-[10px] font-black transition-colors ${settings.pinnedSpellPaletteAutoFillRows ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-200' : 'bg-black/20 border-white/10 text-zinc-400 hover:bg-white/5'}`}
+                          >
+                            {t('spell_picker.fixed_palette.auto_fill')}
+                          </button>
+                        </div>
+                        <input type="range" min="1" max="20" value={settings.pinnedSpellPaletteAutoFillRows || 1} onChange={e => setSettings(s => ({ ...s, pinnedSpellPaletteAutoFillRows: parseInt(e.target.value) || 1 }))} className="w-full accent-emerald-500" />
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.hide_labels')} Hide Group Labels`) && (
+                      <div className="flex justify-between items-center bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                            <Layers size={16} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.hide_labels')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.hide_labels_desc')}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, pinnedSpellPaletteHideLabels: !s.pinnedSpellPaletteHideLabels }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.pinnedSpellPaletteHideLabels ? 'bg-emerald-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.pinnedSpellPaletteHideLabels ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
                 {isMatch(t('settings.warehouse_folder_height')) && (
@@ -823,25 +974,6 @@ export function SettingsModal({
                       className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.compactAttributes ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                     >
                       <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.compactAttributes ? 'left-6' : 'left-1'}`} />
-                    </button>
-                  </div>
-                )}
-                {isMatch(t('settings.hide_labels')) && (
-                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 bg-zinc-500/10 rounded-lg text-zinc-400">
-                        <Layers size={16} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-zinc-200">{t('settings.hide_labels')}</div>
-                        <div className="text-[10px] text-zinc-500">{t('settings.hide_labels_desc')}</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSettings(s => ({ ...s, hideLabels: !s.hideLabels }))}
-                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.hideLabels ? 'bg-indigo-600' : 'bg-zinc-700'}`}
-                    >
-                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.hideLabels ? 'left-6' : 'left-1'}`} />
                     </button>
                   </div>
                 )}

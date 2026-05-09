@@ -7,6 +7,7 @@ import { getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter'
 import { useTranslation } from 'react-i18next';
 import { detectPatterns, getMergedRules, type PatternMatch } from '../lib/spellPatterns';
 import { SpellGridCanvas } from './SpellGridCanvas';
+import { FixedSpellPalette } from './FixedSpellPalette';
 
 interface WandEditorProps {
   slot: string;
@@ -24,10 +25,12 @@ interface WandEditorProps {
   openPicker: (slot: string, idx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string, rowTop?: number, insertAnchor?: { wandSlot: string; idx: number; isRightHalf: boolean } | null }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setMousePos?: (pos: { x: number; y: number }) => void;
   requestEvaluation: (wand: WandData, force?: boolean) => void;
   onMoveSelection?: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   settings: AppSettings;
   isConnected: boolean;
+  spellStats?: { overall: SpellInfo[]; categories: SpellInfo[][] };
   /** 隐藏法杖属性面板、导出按钮等 (用于智能标签编辑) */
   hideAttributes?: boolean;
   /** 隐藏始终施放区域 (用于智能标签编辑) */
@@ -53,10 +56,12 @@ export function WandEditor({
   openPicker,
   setSelection,
   setSettings,
+  setMousePos,
   requestEvaluation,
   onMoveSelection,
   settings,
   isConnected,
+  spellStats,
   hideAttributes,
   hideAlwaysCast,
   isCanvasMode,
@@ -851,6 +856,16 @@ export function WandEditor({
           setSettings={setSettings}
           t={t}
         />
+        {settings.pinnedSpellPaletteOpen && spellStats && (!settings.pinnedSpellPaletteWandSlot || settings.pinnedSpellPaletteWandSlot === slot) && (
+          <FixedSpellPalette
+            spellDb={spellDb}
+            settings={settings}
+            setSettings={setSettings}
+            setMousePos={setMousePos || (() => {})}
+            handleSlotMouseUp={handleSlotMouseUp}
+            isConnected={isConnected}
+          />
+        )}
       </div>}
     </div>
   );

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { WandData, Tab, AppSettings, SpellArea } from '../types';
 import { DEFAULT_WAND } from '../constants';
 import { useUIStore } from '../store/useUIStore';
+import { moveDragPreview } from '../lib/dragPreviewMotion';
 
 const normalizeAlwaysCast = (spells: (string | null | undefined)[]) =>
   spells.map(s => s ?? '');
@@ -37,9 +38,12 @@ export const useInteraction = (params: {
       const wand = activeTab.wands[wandSlot];
       const sid = area === 'always_cast' ? wand?.always_cast[idx - 1] : wand?.spells[idx.toString()];
       if (sid) {
-        if (pointer) setMousePos(pointer);
+        if (pointer) {
+          setMousePos(pointer);
+          moveDragPreview(pointer);
+        }
         setHoveredSlot({ wandSlot, area, idx, isRightHalf: !!isRightClick });
-        setDragSource({ wandSlot, area, idx, sid });
+        setDragSource({ source: 'wand_slot', wandSlot, area, idx, sid });
       }
     }
 
@@ -100,6 +104,7 @@ export const useInteraction = (params: {
   const handleSlotMouseUp = useCallback((wandSlot: string, idx: number, area: SpellArea = 'main') => {
     const dragSource = useUIStore.getState().dragSource;
     if (dragSource) {
+      const isPaletteSource = dragSource.source === 'palette';
       const sourceWandSlot = dragSource.wandSlot;
       const sourceArea = dragSource.area;
       const sourceIdx = dragSource.idx;
@@ -107,6 +112,25 @@ export const useInteraction = (params: {
       const targetIdx = idx;
 
       if (targetIdx < 0) {
+        if (isPaletteSource) {
+          const hovered = useUIStore.getState().hoveredSlot;
+          const targetSlot = hovered?.wandSlot || targetWandSlot;
+          performAction((prevWands: Record<string, WandData>) => {
+            const targetWand = prevWands[targetSlot];
+            if (!targetWand) return prevWands;
+            const nextWands = { ...prevWands };
+            const nextTargetWand = insertIntoAlwaysCast(targetWand, Math.max(1, (targetWand.always_cast || []).length + 1), dragSource.sid, false);
+            nextWands[targetSlot] = nextTargetWand;
+            if (activeTab.isRealtime) syncWand(targetSlot, nextTargetWand);
+            return nextWands;
+          }, t('app.notification.move_spell'), [dragSource.sid]);
+
+          setHoveredSlot(null);
+          setDragSource(null);
+          setIsSelecting(false);
+          return;
+        }
+
         performAction((prevWands: Record<string, WandData>) => {
           const sourceWand = prevWands[sourceWandSlot];
           const sid = sourceArea === 'always_cast' ? sourceWand?.always_cast[sourceIdx - 1] : sourceWand?.spells[sourceIdx.toString()];
@@ -131,6 +155,15 @@ export const useInteraction = (params: {
       performAction((prevWands: Record<string, WandData>) => {
         const nextWands = { ...prevWands };
         const hovered = useUIStore.getState().hoveredSlot;
+
+        if (isPaletteSource && area === 'always_cast') {
+          const targetWand = prevWands[targetWandSlot];
+          if (!targetWand) return prevWands;
+          const nextTargetWand = insertIntoAlwaysCast(targetWand, targetIdx, dragSource.sid, !!hovered?.isRightHalf);
+          nextWands[targetWandSlot] = nextTargetWand;
+          if (activeTab.isRealtime) syncWand(targetWandSlot, nextTargetWand);
+          return nextWands;
+        }
 
         if (sourceArea === 'always_cast' || area === 'always_cast') {
           const sourceWand = prevWands[sourceWandSlot];
@@ -184,20 +217,25 @@ export const useInteraction = (params: {
           }
         }
 
-        if (sourceArea !== 'main' || area !== 'main') return prevWands;
-        const sourceWand = { ...nextWands[sourceWandSlot] };
+        if (!isPaletteSource && (sourceArea !== 'main' || area !== 'main')) return prevWands;
+        if (isPaletteSource && area !== 'main') return prevWands;
+        const sourceWand = isPaletteSource ? null : { ...nextWands[sourceWandSlot] };
 
-        const sid = sourceWand.spells[sourceIdx.toString()];
-        const uses = sourceWand.spell_uses?.[sourceIdx.toString()];
+        const sid = isPaletteSource ? dragSource.sid : sourceWand!.spells[sourceIdx.toString()];
+        const uses = isPaletteSource ? undefined : sourceWand!.spell_uses?.[sourceIdx.toString()];
 
-       const newSourceSpells = { ...sourceWand.spells };
-        const newSourceUses = { ...(sourceWand.spell_uses || {}) };
-        delete newSourceSpells[sourceIdx.toString()];
-        delete newSourceUses[sourceIdx.toString()];
-        sourceWand.spells = newSourceSpells;
-        sourceWand.spell_uses = newSourceUses;
+        if (!sid) return prevWands;
 
-        const targetWand = sourceWandSlot === targetWandSlot ? sourceWand : { ...nextWands[targetWandSlot] };
+        if (sourceWand) {
+          const newSourceSpells = { ...sourceWand.spells };
+          const newSourceUses = { ...(sourceWand.spell_uses || {}) };
+          delete newSourceSpells[sourceIdx.toString()];
+          delete newSourceUses[sourceIdx.toString()];
+          sourceWand.spells = newSourceSpells;
+          sourceWand.spell_uses = newSourceUses;
+        }
+
+        const targetWand = !isPaletteSource && sourceWandSlot === targetWandSlot ? sourceWand! : { ...nextWands[targetWandSlot] };
 
         if (settings.dragSpellMode === 'noita_swap') {
 
@@ -214,8 +252,8 @@ export const useInteraction = (params: {
           targetWand.spells = nextTargetSpells;
           targetWand.spell_uses = nextTargetUses;
 
-          if (sourceIdx >= 0 && (sourceWandSlot !== targetWandSlot || sourceIdx !== targetIdx)) {
-            const sourceWandToUpdate = sourceWandSlot === targetWandSlot ? targetWand : sourceWand;
+          if (!isPaletteSource && sourceIdx >= 0 && (sourceWandSlot !== targetWandSlot || sourceIdx !== targetIdx)) {
+            const sourceWandToUpdate = sourceWandSlot === targetWandSlot ? targetWand : sourceWand!;
             const nextSourceSpells = { ...sourceWandToUpdate.spells };
             const nextSourceUses = { ...(sourceWandToUpdate.spell_uses || {}) };
 
@@ -244,7 +282,7 @@ export const useInteraction = (params: {
           const bIdx = isRightHalf ? targetIdx : targetIdx - 1;
           const cIdx = isRightHalf ? targetIdx + 1 : targetIdx;
 
-          if (sourceWandSlot === targetWandSlot && targetIdx === sourceIdx) {
+          if (!isPaletteSource && sourceWandSlot === targetWandSlot && targetIdx === sourceIdx) {
             // Restore original position
             const finalSpells = { ...targetWand.spells };
             const finalUses = { ...(targetWand.spell_uses || {}) };
@@ -318,7 +356,7 @@ export const useInteraction = (params: {
           const maxIdx = Math.max(targetWand.deck_capacity, ...Object.keys(targetWand.spells).map(Number), sourceWandSlot === targetWandSlot ? sourceIdx : 0);
           const slots: { sid: string, uses?: number }[] = [];
           for (let i = 1; i <= maxIdx; i++) {
-            if (sourceWandSlot === targetWandSlot && i === sourceIdx) continue;
+            if (!isPaletteSource && sourceWandSlot === targetWandSlot && i === sourceIdx) continue;
             slots.push({
               sid: targetWand.spells[i.toString()] || "",
               uses: targetWand.spell_uses?.[i.toString()]
@@ -326,7 +364,7 @@ export const useInteraction = (params: {
           }
 
           let adjustedInsertIdx = insertIdx;
-          if (sourceWandSlot === targetWandSlot && sourceIdx >= 0 && sourceIdx < insertIdx) {
+          if (!isPaletteSource && sourceWandSlot === targetWandSlot && sourceIdx >= 0 && sourceIdx < insertIdx) {
             adjustedInsertIdx--;
           }
 
@@ -350,12 +388,12 @@ export const useInteraction = (params: {
           }
         }
 
-        nextWands[sourceWandSlot] = sourceWand;
-        if (sourceWandSlot !== targetWandSlot) nextWands[targetWandSlot] = targetWand;
+        if (sourceWand) nextWands[sourceWandSlot] = sourceWand;
+        if (isPaletteSource || sourceWandSlot !== targetWandSlot) nextWands[targetWandSlot] = targetWand;
 
         if (activeTab.isRealtime) {
-          syncWand(sourceWandSlot, sourceWand);
-          if (sourceWandSlot !== targetWandSlot) syncWand(targetWandSlot, targetWand);
+          if (sourceWand) syncWand(sourceWandSlot, sourceWand);
+          if (isPaletteSource || sourceWandSlot !== targetWandSlot) syncWand(targetWandSlot, targetWand);
         }
 
         return nextWands;

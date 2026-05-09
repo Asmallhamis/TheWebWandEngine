@@ -2,12 +2,13 @@ import React from 'react';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WandCard } from './WandCard';
-import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse } from '../types';
+import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats } from '../types';
 
 interface WandWorkspaceProps {
   activeTab: Tab;
   isConnected: boolean;
   spellDb: SpellDb;
+  spellStats: SpellStats;
   selection: SpellAreaSelection | null;
   onMoveSelection: (wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: HoveredSpellSlot | null;
@@ -29,6 +30,7 @@ interface WandWorkspaceProps {
   openPicker: (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setMousePos: (pos: { x: number; y: number }) => void;
   evalResults: Record<string, { data: EvalResponse; id: number; loading?: boolean }>;
   settings: AppSettings;
   saveToWarehouse: (data: WandData) => void;
@@ -38,6 +40,7 @@ export function WandWorkspace({
   activeTab,
   isConnected,
   spellDb,
+  spellStats,
   selection,
   onMoveSelection,
   hoveredSlot,
@@ -59,6 +62,7 @@ export function WandWorkspace({
   openPicker,
   setSelection,
   setSettings,
+  setMousePos,
   evalResults,
   settings,
   saveToWarehouse,
@@ -75,6 +79,7 @@ export function WandWorkspace({
           activeTab={activeTab}
           isConnected={isConnected}
           spellDb={spellDb}
+          spellStats={spellStats}
           selection={selection}
           onMoveSelection={(direction) => onMoveSelection(slot, direction)}
           hoveredSlot={hoveredSlot}
@@ -96,6 +101,7 @@ export function WandWorkspace({
           openPicker={openPicker}
           setSelection={setSelection}
           setSettings={setSettings}
+          setMousePos={setMousePos}
           evalData={evalResults[`${activeTab.id}-${slot}`]}
           settings={settings}
           onSaveToWarehouse={saveToWarehouse}

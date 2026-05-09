@@ -123,7 +123,21 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     setSelection: (selection) => set({ selection }),
     setDragSource: (dragSource) => set({ dragSource }),
-    setHoveredSlot: (hoveredSlot) => set({ hoveredSlot }),
+    setHoveredSlot: (hoveredSlot) => set((state) => {
+        const prev = state.hoveredSlot;
+        if (
+            prev === hoveredSlot ||
+            (
+                prev?.wandSlot === hoveredSlot?.wandSlot &&
+                prev?.area === hoveredSlot?.area &&
+                prev?.idx === hoveredSlot?.idx &&
+                prev?.isRightHalf === hoveredSlot?.isRightHalf
+            )
+        ) {
+            return state;
+        }
+        return { hoveredSlot };
+    }),
     registerHoverResolver: (id, resolver) => set((state) => ({ hoverResolvers: { ...state.hoverResolvers, [id]: resolver } })),
     unregisterHoverResolver: (id) => set((state) => {
         const next = { ...state.hoverResolvers };

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent, useControls } from 'react-zoom-pan-pinch';
-import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse } from '../types';
+import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats } from '../types';
 import { Activity, Frame, Navigation, Lock, Unlock, Pin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import WandEvaluator from './WandEvaluator';
@@ -24,6 +24,7 @@ interface CanvasWorkspaceProps {
   activeTab: Tab;
   isConnected: boolean;
   spellDb: SpellDb;
+  spellStats: SpellStats;
   selection: SpellAreaSelection | null;
   onMoveSelection: (wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: HoveredSpellSlot | null;
@@ -39,6 +40,7 @@ interface CanvasWorkspaceProps {
   openPicker: (wandSlot: string, spellIdx: string, e: React.MouseEvent | { x: number, y: number, initialSearch?: string }) => void;
   setSelection: (s: any) => void;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setMousePos: (pos: { x: number; y: number }) => void;
   evalResults: Record<string, { data: EvalResponse; id: number; loading?: boolean }>;
   settings: AppSettings;
   saveToWarehouse: (data: WandData) => void;
