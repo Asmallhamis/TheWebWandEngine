@@ -111,6 +111,8 @@ export interface AppSettings {
   pinnedSpellPaletteWandSlot?: string;
   pinnedSpellPaletteHideLabels: boolean;
   pinnedSpellPaletteExpandedGroups: number[];
+  pinnedSpellPaletteDeleteOnDrop: boolean;
+  pinnedSpellPaletteShowOnEveryWand: boolean;
   themeColors: string[];
   wrapLimit: number;
   hideLabels: boolean;

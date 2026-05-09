@@ -588,7 +588,11 @@
       "auto_fill_rows_setting": "Fill Rows",
       "auto_fill_rows_desc": "Automatically fills the requested number of rows based on the fixed panel width and icon size.",
       "hide_labels": "Hide Group Labels",
-      "hide_labels_desc": "Hide Common Spells and category names in the fixed spell palette."
+      "hide_labels_desc": "Hide Common Spells and category names in the fixed spell palette.",
+      "delete_on_drop": "Delete spells dropped on fixed palette",
+      "delete_on_drop_desc": "When a spell from a wand is dropped on the fixed picker area, remove that spell while keeping the wand slot capacity.",
+      "show_on_every_wand": "Show fixed picker on every wand",
+      "show_on_every_wand_desc": "Enabled by default on first mobile use. Desktop users can enable it too; mobile users can turn it off."
     }
   },
   "header": {

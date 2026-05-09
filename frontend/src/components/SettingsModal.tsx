@@ -805,6 +805,8 @@ export function SettingsModal({
                   t('spell_picker.fixed_palette.cols_setting'),
                   t('spell_picker.fixed_palette.auto_fill_rows_setting'),
                   t('spell_picker.fixed_palette.hide_labels'),
+                  t('spell_picker.fixed_palette.delete_on_drop'),
+                  t('spell_picker.fixed_palette.show_on_every_wand'),
                   'Pinned Spell Palette Fixed Spell Palette'
                 ].some(isMatch) && (
                   <div className="space-y-4 bg-emerald-500/5 p-4 rounded-lg border border-emerald-500/10">
@@ -866,6 +868,44 @@ export function SettingsModal({
                           className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.pinnedSpellPaletteHideLabels ? 'bg-emerald-600' : 'bg-zinc-700'}`}
                         >
                           <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.pinnedSpellPaletteHideLabels ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.delete_on_drop')} Delete On Drop`) && (
+                      <div className="flex justify-between items-center bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                            <Trash2 size={16} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.delete_on_drop')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.delete_on_drop_desc')}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, pinnedSpellPaletteDeleteOnDrop: !s.pinnedSpellPaletteDeleteOnDrop }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.pinnedSpellPaletteDeleteOnDrop ? 'bg-emerald-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.pinnedSpellPaletteDeleteOnDrop ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+                    {isMatch(`${t('spell_picker.fixed_palette.show_on_every_wand')} Show On Every Wand`) && (
+                      <div className="flex justify-between items-center bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                            <Smartphone size={16} />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-zinc-200">{t('spell_picker.fixed_palette.show_on_every_wand')}</div>
+                            <div className="text-[10px] text-zinc-500">{t('spell_picker.fixed_palette.show_on_every_wand_desc')}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, pinnedSpellPaletteShowOnEveryWand: !s.pinnedSpellPaletteShowOnEveryWand }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${settings.pinnedSpellPaletteShowOnEveryWand ? 'bg-emerald-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${settings.pinnedSpellPaletteShowOnEveryWand ? 'left-6' : 'left-1'}`} />
                         </button>
                       </div>
                     )}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grip, Minus, Plus, Search, X } from 'lucide-react';
-import { AppSettings, SpellArea, SpellInfo } from '../types';
+import { AppSettings, SpellArea, SpellInfo, WandData } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useUIStore } from '../store/useUIStore';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ interface FixedSpellPaletteProps {
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   setMousePos: (pos: { x: number; y: number }) => void;
   handleSlotMouseUp: (slot: string, idx: number, area?: SpellArea) => void;
+  updateWand: (slot: string, updates: Partial<WandData> | ((curr: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
   isConnected: boolean;
 }
 
@@ -23,11 +24,13 @@ export function FixedSpellPalette({
   setSettings,
   setMousePos,
   handleSlotMouseUp,
+  updateWand,
   isConnected,
 }: FixedSpellPaletteProps) {
   const { t, i18n } = useTranslation();
   const [search, setSearch] = React.useState('');
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const paletteRef = React.useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = React.useState(0);
   const setDragSource = useUIStore(s => s.setDragSource);
   const setHoveredSlot = useUIStore(s => s.setHoveredSlot);
@@ -79,6 +82,50 @@ export function FixedSpellPalette({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  React.useEffect(() => {
+    if (!settings.pinnedSpellPaletteDeleteOnDrop) return;
+
+    const isWithinPalette = (clientX: number, clientY: number) => {
+      const rect = paletteRef.current?.getBoundingClientRect();
+      return !!rect && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const dragSource = useUIStore.getState().dragSource;
+      if (!dragSource || dragSource.source !== 'wand_slot') return;
+      if (!isWithinPalette(event.clientX, event.clientY)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof event.stopImmediatePropagation === 'function') {
+        event.stopImmediatePropagation();
+      }
+
+      if (dragSource.area === 'always_cast') {
+        updateWand(dragSource.wandSlot, (curr) => {
+          const nextAlwaysCast = [...(curr.always_cast || [])];
+          while (nextAlwaysCast.length < dragSource.idx) nextAlwaysCast.push('');
+          nextAlwaysCast[dragSource.idx - 1] = '';
+          return { always_cast: nextAlwaysCast };
+        }, t('app.notification.delete_spell'), [dragSource.sid]);
+      } else {
+        updateWand(dragSource.wandSlot, (curr) => {
+          const nextSpells = { ...(curr.spells || {}) };
+          const nextUses = { ...(curr.spell_uses || {}) };
+          delete nextSpells[dragSource.idx.toString()];
+          delete nextUses[dragSource.idx.toString()];
+          return { spells: nextSpells, spell_uses: nextUses };
+        }, t('app.notification.delete_spell'), [dragSource.sid]);
+      }
+
+      setHoveredSlot(null);
+      setDragSource(null);
+    };
+
+    window.addEventListener('pointerup', handlePointerUp, true);
+    return () => window.removeEventListener('pointerup', handlePointerUp, true);
+  }, [settings.pinnedSpellPaletteDeleteOnDrop, setDragSource, setHoveredSlot, t, updateWand]);
 
   const setNumberSetting = (key: 'pinnedSpellPaletteIconSize' | 'pinnedSpellPaletteRows' | 'pinnedSpellPaletteWrapLimit', value: number, min: number, max: number) => {
     setSettings(prev => ({
@@ -211,7 +258,7 @@ export function FixedSpellPalette({
   };
 
   return (
-    <div className="export-ignore rounded-lg border border-white/10 bg-zinc-950/70 shadow-inner backdrop-blur">
+    <div ref={paletteRef} className={`export-ignore rounded-lg border bg-zinc-950/70 shadow-inner backdrop-blur transition-colors ${settings.pinnedSpellPaletteDeleteOnDrop ? 'border-emerald-500/20' : 'border-white/10'}`}>
       <div className="flex flex-wrap items-center gap-2 border-b border-white/5 bg-black/20 p-2">
         <Grip size={14} className="text-indigo-400" />
         <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded border border-white/5 bg-black/20 px-2 py-1.5 focus-within:border-indigo-500/50">

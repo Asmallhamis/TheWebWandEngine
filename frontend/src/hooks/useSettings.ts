@@ -23,6 +23,8 @@ export const useSettings = () => {
       pinnedSpellPaletteWandSlot: '',
       pinnedSpellPaletteHideLabels: false,
       pinnedSpellPaletteExpandedGroups: [-1],
+      pinnedSpellPaletteDeleteOnDrop: true,
+      pinnedSpellPaletteShowOnEveryWand: isMobileDevice,
       themeColors: [
         'from-blue-500/10 to-blue-600/20',
         'from-green-500/10 to-green-600/20',

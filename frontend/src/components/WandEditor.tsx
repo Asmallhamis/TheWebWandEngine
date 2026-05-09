@@ -856,13 +856,14 @@ export function WandEditor({
           setSettings={setSettings}
           t={t}
         />
-        {settings.pinnedSpellPaletteOpen && spellStats && (!settings.pinnedSpellPaletteWandSlot || settings.pinnedSpellPaletteWandSlot === slot) && (
+        {settings.pinnedSpellPaletteOpen && spellStats && (settings.pinnedSpellPaletteShowOnEveryWand || !settings.pinnedSpellPaletteWandSlot || settings.pinnedSpellPaletteWandSlot === slot) && (
           <FixedSpellPalette
             spellDb={spellDb}
             settings={settings}
             setSettings={setSettings}
             setMousePos={setMousePos || (() => {})}
             handleSlotMouseUp={handleSlotMouseUp}
+            updateWand={updateWand}
             isConnected={isConnected}
           />
         )}

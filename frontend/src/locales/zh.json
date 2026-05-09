@@ -590,7 +590,11 @@
       "auto_fill_rows_setting": "占满行数",
       "auto_fill_rows_desc": "按固定面板宽度和图标大小自动占满指定行数。",
       "hide_labels": "隐藏分组标签",
-      "hide_labels_desc": "隐藏固定法术面板中的“常用法术”及各分类名称。"
+      "hide_labels_desc": "隐藏固定法术面板中的“常用法术”及各分类名称。",
+      "delete_on_drop": "拖到固定面板删除法术",
+      "delete_on_drop_desc": "把法杖里的法术拖到固定选择器区域松开时删除该法术，但保留法杖格子容量。",
+      "show_on_every_wand": "每个法杖都显示固定选择器",
+      "show_on_every_wand_desc": "移动端首次默认开启；桌面端也可手动开启。开启后每个展开的法杖下都会显示固定选择器。"
     }
   },
   "header": {
