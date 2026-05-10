@@ -4,15 +4,22 @@ import {
   Search, Wand2, Activity, Layers, Database, Star, Package,
   HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer, Smartphone
 } from 'lucide-react';
-import { AppSettings, WandData, SpellTypeConfig, SpellGroupConfig, SpellInfo, SpellMarkingRule } from '../types';
+import { AppSettings, Tab, WandData, SpellTypeConfig, SpellGroupConfig, SpellInfo, SpellMarkingRule, WarehouseWand } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { getMergedRules, normalizeSpellId, parsePatternText, serializePattern } from '../lib/spellPatterns';
-
+import {
+  buildSpellScoreDetails,
+  DEFAULT_SPELL_SCORE_PRESET_ID,
+  DEFAULT_SPELL_SCORE_WEIGHTS,
+  ensureSpellScorePresets,
+  getActiveSpellScorePreset
+} from '../lib/spellScores';
 const SPELL_MARKING_EXPORT_TYPE = 'twwe_spell_marking_rules';
+const SPELL_SCORE_PRESET_EXPORT_TYPE = 'twwe_spell_score_preset';
 
 const isPlainObject = (value: unknown): value is Record<string, any> => (
   !!value && typeof value === 'object' && !Array.isArray(value)
@@ -100,6 +107,26 @@ const makeUniqueRuleId = (baseId: string, usedIds: Set<string>) => {
   return candidate;
 };
 
+const makeUniquePresetId = (baseId: string, usedIds: Set<string>) => {
+  const cleanBase = (baseId || 'spell_score_preset').replace(/[^a-zA-Z0-9_-]+/g, '_') || 'spell_score_preset';
+  let candidate = cleanBase;
+  let suffix = 1;
+  while (usedIds.has(candidate)) {
+    candidate = `${cleanBase}_${suffix++}`;
+  }
+  usedIds.add(candidate);
+  return candidate;
+};
+
+const normalizeScoreMap = (value: unknown): Record<string, number> => {
+  if (!isPlainObject(value)) return {};
+  return Object.entries(value).reduce<Record<string, number>>((acc, [spellId, rawScore]) => {
+    const score = Number(rawScore);
+    if (spellId && Number.isFinite(score) && score !== 0) acc[spellId] = score;
+    return acc;
+  }, {});
+};
+
 // 天赋图标路径映射 (全部使用 public/perk_icons/ 下的静态资源)
 const PERK_ICON_MAP: Record<string, string> = {
   critical_hit_boost: 'perk_icons/Effect_Bloody.png',
@@ -132,6 +159,8 @@ interface SettingsModalProps {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   spellDb: Record<string, SpellInfo>;
+  tabs: Tab[];
+  warehouseWands: WarehouseWand[];
   isConnected: boolean;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onExport: () => void;
@@ -141,7 +170,7 @@ interface SettingsModalProps {
   initialExpandedBundleId?: string | null;
 }
 
-type Category = 'general' | 'appearance' | 'interaction' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
+type Category = 'general' | 'appearance' | 'spell_scores' | 'interaction' | 'wand' | 'cast' | 'sync' | 'spell_types' | 'data';
 
 export function SettingsModal({
   isOpen,
@@ -149,6 +178,8 @@ export function SettingsModal({
   settings,
   setSettings,
   spellDb,
+  tabs,
+  warehouseWands,
   isConnected,
   onImport,
   onExport,
@@ -167,8 +198,26 @@ export function SettingsModal({
   const [patternErrors, setPatternErrors] = useState<Record<string, string>>({});
   const [pickerState, setPickerState] = useState<{ ruleId: string; slotIndex: number } | null>(null);
   const [pickerSearch, setPickerSearch] = useState('');
+  const [spellScoreSearch, setSpellScoreSearch] = useState('');
+  const spellScoreImportInputRef = useRef<HTMLInputElement | null>(null);
   const markingRuleImportInputRef = useRef<HTMLInputElement | null>(null);
   const { t, i18n } = useTranslation();
+
+  const allSpellScoreDetails = React.useMemo(() => (
+    buildSpellScoreDetails(tabs, warehouseWands, spellDb, settings)
+  ), [tabs, warehouseWands, spellDb, settings]);
+
+  const spellScoreDetails = React.useMemo(() => {
+    const query = spellScoreSearch.trim().toLowerCase();
+    if (!query) return allSpellScoreDetails;
+    return allSpellScoreDetails.filter(({ spell }) => [
+      spell.id,
+      spell.name,
+      spell.en_name || '',
+      spell.aliases || '',
+    ].join(' ').toLowerCase().includes(query));
+  }, [allSpellScoreDetails, spellScoreSearch]);
+  const activeSpellScorePreset = getActiveSpellScorePreset(settings);
 
   const loadModBundles = async () => {
     try {
@@ -324,6 +373,196 @@ export function SettingsModal({
     });
   };
 
+  const getDisplayedScoreSnapshot = (source: 'workflow' | 'warehouse') => (
+    allSpellScoreDetails.reduce<Record<string, number>>((acc, detail) => {
+      const value = source === 'workflow' ? detail.workflowScore : detail.warehouseScore;
+      if (value !== 0) acc[detail.spell.id] = value;
+      return acc;
+    }, {})
+  );
+
+  const getLiveScoreSnapshot = (source: 'workflow' | 'warehouse') => (
+    allSpellScoreDetails.reduce<Record<string, number>>((acc, detail) => {
+      const value = source === 'workflow' ? detail.liveWorkflowScore : detail.liveWarehouseScore;
+      if (value !== 0) acc[detail.spell.id] = value;
+      return acc;
+    }, {})
+  );
+
+  const updateSpellScoreWeight = (key: keyof AppSettings['spellScoreWeights'], value: number) => {
+    setSettings(prev => ({
+      ...prev,
+      spellScoreWeights: {
+        ...DEFAULT_SPELL_SCORE_WEIGHTS,
+        ...(prev.spellScoreWeights || {}),
+        [key]: Number.isFinite(value) ? value : 0,
+      },
+      spellScorePresets: ensureSpellScorePresets(prev).map(preset => (
+        preset.id === (prev.activeSpellScorePresetId || DEFAULT_SPELL_SCORE_PRESET_ID)
+          ? {
+              ...preset,
+              weights: {
+                ...DEFAULT_SPELL_SCORE_WEIGHTS,
+                ...(preset.weights || prev.spellScoreWeights || {}),
+                [key]: Number.isFinite(value) ? value : 0,
+              },
+            }
+          : preset
+      )),
+    }));
+  };
+
+  const updateManualSpellScore = (spellId: string, value: number) => {
+    setSettings(prev => {
+      const activePresetId = prev.activeSpellScorePresetId || DEFAULT_SPELL_SCORE_PRESET_ID;
+      const presets = ensureSpellScorePresets(prev);
+      const activePreset = presets.find(preset => preset.id === activePresetId) || presets[0];
+      const next = { ...(activePreset.scores || {}) };
+      if (!Number.isFinite(value) || value === 0) delete next[spellId];
+      else next[spellId] = value;
+      return {
+        ...prev,
+        spellManualScores: activePresetId === DEFAULT_SPELL_SCORE_PRESET_ID ? next : prev.spellManualScores,
+        activeSpellScorePresetId: activePresetId,
+        spellScorePresets: presets.map(preset => preset.id === activePreset.id ? { ...preset, scores: next } : preset),
+      };
+    });
+  };
+
+  const createPresetFromCurrentPreset = () => {
+    const name = prompt('预设名称', 'My Spell Score Preset')?.trim();
+    if (!name) return;
+    setSettings(prev => {
+      const usedIds = new Set((prev.spellScorePresets || []).map(preset => preset.id));
+      const current = getActiveSpellScorePreset(prev);
+      const preset = {
+        ...current,
+        id: makeUniquePresetId(name, usedIds),
+        name,
+      };
+      return {
+        ...prev,
+        spellScorePresets: [...ensureSpellScorePresets(prev), preset],
+        activeSpellScorePresetId: preset.id,
+      };
+    });
+  };
+
+  const renameActiveSpellScorePreset = () => {
+    const current = getActiveSpellScorePreset(settings);
+    const name = prompt('预设名称', current.name)?.trim();
+    if (!name || name === current.name) return;
+    setSettings(prev => ({
+      ...prev,
+      spellScorePresets: ensureSpellScorePresets(prev).map(preset => (
+        preset.id === current.id ? { ...preset, name } : preset
+      )),
+    }));
+  };
+
+  const deleteActiveSpellScorePreset = () => {
+    const current = getActiveSpellScorePreset(settings);
+    if (current.id === DEFAULT_SPELL_SCORE_PRESET_ID) return;
+    if (!confirm(`删除预设「${current.name}」？`)) return;
+    setSettings(prev => ({
+      ...prev,
+      spellScorePresets: ensureSpellScorePresets(prev).filter(preset => preset.id !== current.id),
+      activeSpellScorePresetId: DEFAULT_SPELL_SCORE_PRESET_ID,
+    }));
+  };
+
+  const exportActiveSpellScorePreset = () => {
+    const preset = getActiveSpellScorePreset(settings);
+    const exportedPreset = {
+      ...preset,
+      lockWorkflowScores: true,
+      lockWarehouseScores: true,
+      workflowScores: getDisplayedScoreSnapshot('workflow'),
+      warehouseScores: getDisplayedScoreSnapshot('warehouse'),
+    };
+    downloadJson(`${safeFileName(preset.name)}.json`, {
+      type: SPELL_SCORE_PRESET_EXPORT_TYPE,
+      version: 1,
+      exportedAt: Date.now(),
+      preset: exportedPreset,
+    });
+  };
+
+  const handleImportSpellScorePreset = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    try {
+      const json = JSON.parse(await file.text());
+      const rawPreset = isPlainObject(json) && isPlainObject(json.preset) ? json.preset : json;
+      if (!isPlainObject(rawPreset)) throw new Error('Invalid preset');
+      const scores = normalizeScoreMap(rawPreset.scores);
+      const filePresetName = file.name.replace(/\.json$/i, '').trim();
+      const name = filePresetName || (typeof rawPreset.name === 'string' && rawPreset.name.trim()
+        ? rawPreset.name.trim()
+        : 'Imported Spell Score Preset');
+      setSettings(prev => {
+        const usedIds = new Set(ensureSpellScorePresets(prev).map(preset => preset.id));
+        const importedWorkflowScores = normalizeScoreMap(rawPreset.workflowScores);
+        const importedWarehouseScores = normalizeScoreMap(rawPreset.warehouseScores);
+        const preset = {
+          ...rawPreset,
+          id: makeUniquePresetId(typeof rawPreset.id === 'string' ? rawPreset.id : name, usedIds),
+          name,
+          scores,
+          weights: {
+            ...DEFAULT_SPELL_SCORE_WEIGHTS,
+            ...(isPlainObject(rawPreset.weights) ? rawPreset.weights : {}),
+          },
+          workflowScores: Object.keys(importedWorkflowScores).length > 0
+            ? importedWorkflowScores
+            : getDisplayedScoreSnapshot('workflow'),
+          warehouseScores: Object.keys(importedWarehouseScores).length > 0
+            ? importedWarehouseScores
+            : getDisplayedScoreSnapshot('warehouse'),
+          lockWorkflowScores: true,
+          lockWarehouseScores: true,
+        };
+        return {
+          ...prev,
+          spellScorePresets: [...ensureSpellScorePresets(prev), preset],
+          activeSpellScorePresetId: preset.id,
+        };
+      });
+    } catch (err) {
+      alert('分数预设文件无效');
+    }
+  };
+
+  const setActiveSpellScorePresetId = (presetId: string) => {
+    setSettings(prev => ({
+      ...prev,
+      spellScorePresets: ensureSpellScorePresets(prev),
+      activeSpellScorePresetId: presetId || DEFAULT_SPELL_SCORE_PRESET_ID,
+    }));
+  };
+
+  const setSpellScoreSourceLock = (source: 'workflow' | 'warehouse', locked: boolean) => {
+    setSettings(prev => {
+      const activePresetId = prev.activeSpellScorePresetId || DEFAULT_SPELL_SCORE_PRESET_ID;
+      const presets = ensureSpellScorePresets(prev);
+      const scoreKey = source === 'workflow' ? 'workflowScores' : 'warehouseScores';
+      const lockKey = source === 'workflow' ? 'lockWorkflowScores' : 'lockWarehouseScores';
+      const snapshot = getLiveScoreSnapshot(source);
+
+      return {
+        ...prev,
+        activeSpellScorePresetId: activePresetId,
+        spellScorePresets: presets.map(preset => (
+          preset.id === activePresetId
+            ? { ...preset, [lockKey]: locked, [scoreKey]: locked ? snapshot : preset[scoreKey] }
+            : preset
+        )),
+      };
+    });
+  };
+
   const handleImportMarkingRules = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
@@ -470,6 +709,23 @@ export function SettingsModal({
     }));
   };
 
+  const hasCommonSpellGroup = (settings.commonLimit ?? 0) > 0;
+
+  const addCommonGroup = () => {
+    setSettings(prev => ({
+      ...prev,
+      commonLimit: prev.commonLimit > 0 ? prev.commonLimit : Math.max(1, prev.categoryLimit || 20),
+    }));
+  };
+
+  const deleteCommonGroup = () => {
+    setSettings(prev => ({
+      ...prev,
+      commonLimit: 0,
+      pinnedSpellPaletteExpandedGroups: (prev.pinnedSpellPaletteExpandedGroups || []).filter(idx => idx !== -1),
+    }));
+  };
+
   const deleteGroup = (idx: number) => {
     if (settings.spellGroups.length <= 1) return;
     setSettings(prev => ({
@@ -525,6 +781,7 @@ export function SettingsModal({
     { id: 'wand', name: t('settings.categories.wand'), icon: <Wand2 size={16} /> },
     { id: 'cast', name: t('settings.categories.cast'), icon: <Zap size={16} /> },
     { id: 'spell_types', name: t('settings.categories.spell_types'), icon: <Star size={16} /> },
+    { id: 'spell_scores', name: t('settings.categories.spell_scores', { defaultValue: 'Common Sort' }), icon: <Star size={16} /> },
     { id: 'sync', name: t('settings.categories.sync'), icon: <Activity size={16} /> },
     { id: 'data', name: t('settings.categories.data'), icon: <Database size={16} /> },
   ];
@@ -620,6 +877,192 @@ export function SettingsModal({
               </div>
             )}
 
+            {/* SPELL SCORES */}
+            {(searchQuery || activeCategory === 'spell_scores') && (
+              <div className="space-y-6">
+                {[
+                  '常用排序',
+                  '法术分数',
+                  'Spell Scores',
+                  'Spell Priority',
+                  'preset',
+                  'manual score'
+                ].some(isMatch) && (
+                  <div className="space-y-4 bg-amber-500/5 p-4 rounded-lg border border-amber-500/10">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">常用排序分数</div>
+                        <div className="text-[10px] text-zinc-500">最终分 = 自动统计分 + 预设分 + 手动分；常用列表按最终分排序。</div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={createPresetFromCurrentPreset}
+                          className="px-2 py-1 text-[10px] rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                        >
+                          复制为新预设
+                        </button>
+                        <button
+                          type="button"
+                          onClick={exportActiveSpellScorePreset}
+                          className="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 flex items-center gap-1"
+                        >
+                          <Download size={12} /> 导出预设
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => spellScoreImportInputRef.current?.click()}
+                          className="px-2 py-1 text-[10px] rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"
+                        >
+                          <Upload size={12} /> 导入预设
+                        </button>
+                        <input
+                          ref={spellScoreImportInputRef}
+                          type="file"
+                          accept=".json,application/json"
+                          className="hidden"
+                          onChange={handleImportSpellScorePreset}
+                        />
+                        <div className="flex h-7 min-w-[220px] items-stretch overflow-hidden rounded border border-white/10 bg-black/30">
+                          <select
+                            value={activeSpellScorePreset.id}
+                            onChange={e => setActiveSpellScorePresetId(e.target.value)}
+                            className="min-w-0 flex-1 bg-transparent px-2 text-[10px] font-bold text-zinc-200 outline-none"
+                          >
+                            {ensureSpellScorePresets(settings).map(preset => (
+                              <option key={preset.id} value={preset.id}>{preset.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={renameActiveSpellScorePreset}
+                            title="重命名预设"
+                            className="flex w-7 items-center justify-center border-l border-white/10 text-zinc-400 hover:bg-white/10 hover:text-zinc-100"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          {activeSpellScorePreset.id !== DEFAULT_SPELL_SCORE_PRESET_ID && (
+                            <button
+                              type="button"
+                              onClick={deleteActiveSpellScorePreset}
+                              title="删除预设"
+                              className="flex w-7 items-center justify-center border-l border-white/10 text-zinc-500 hover:bg-red-500/20 hover:text-red-200"
+                            >
+                              <X size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {[
+                        ['workflowOccurrence', '工作流出现次数 A'],
+                        ['workflowWandPresence', '工作流法杖去重 B'],
+                        ['warehouseWandPresence', '仓库法杖去重 C'],
+                      ].map(([key, label]) => {
+                        const weightKey = key as keyof AppSettings['spellScoreWeights'];
+                        const value = ({ ...DEFAULT_SPELL_SCORE_WEIGHTS, ...(settings.spellScoreWeights || {}), ...(activeSpellScorePreset.weights || {}) })[weightKey];
+                        return (
+                          <label key={key} className="space-y-1 rounded-lg border border-amber-500/10 bg-black/20 p-3">
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-amber-300">{label}</span>
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={value}
+                              onChange={e => updateSpellScoreWeight(weightKey, parseFloat(e.target.value))}
+                              className="w-full rounded border border-white/10 bg-black/30 px-2 py-1 text-xs text-zinc-100 outline-none focus:border-amber-500/50"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/10 bg-black/20 p-3">
+                        <div>
+                          <div className="text-xs font-bold text-zinc-200">工作流分数快照</div>
+                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWorkflowScores ? '已锁定：切换到这个预设时使用快照分' : '未锁定：按当前工作流实时统计'}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSpellScoreSourceLock('workflow', !activeSpellScorePreset.lockWorkflowScores)}
+                          className={`shrink-0 rounded border px-3 py-1.5 text-[10px] font-black ${activeSpellScorePreset.lockWorkflowScores ? 'border-amber-500/40 bg-amber-500/20 text-amber-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10'}`}
+                        >
+                          {activeSpellScorePreset.lockWorkflowScores ? '解锁重算' : '锁定当前'}
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/10 bg-black/20 p-3">
+                        <div>
+                          <div className="text-xs font-bold text-zinc-200">仓库分数快照</div>
+                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWarehouseScores ? '已锁定：切换到这个预设时使用快照分' : '未锁定：按当前仓库实时统计'}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSpellScoreSourceLock('warehouse', !activeSpellScorePreset.lockWarehouseScores)}
+                          className={`shrink-0 rounded border px-3 py-1.5 text-[10px] font-black ${activeSpellScorePreset.lockWarehouseScores ? 'border-amber-500/40 bg-amber-500/20 text-amber-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10'}`}
+                        >
+                          {activeSpellScorePreset.lockWarehouseScores ? '解锁重算' : '锁定当前'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded border border-white/5 bg-black/20 px-2 py-1.5 focus-within:border-amber-500/50">
+                      <Search size={13} className="text-zinc-500" />
+                      <input
+                        value={spellScoreSearch}
+                        onChange={e => setSpellScoreSearch(e.target.value)}
+                        placeholder="搜索法术 ID / 名称"
+                        className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-zinc-600"
+                      />
+                    </div>
+
+                    <div className="max-h-96 overflow-y-auto rounded-lg border border-white/10 bg-black/20 custom-scrollbar">
+                      <div className="grid grid-cols-[minmax(180px,1fr)_64px_64px_64px_82px_120px] gap-2 border-b border-white/10 bg-black/30 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-zinc-500 sticky top-0">
+                        <span>法术</span>
+                        <span className="text-right">总分</span>
+                        <span className="text-right">自动</span>
+                        <span className="text-right">调整</span>
+                        <span className="text-right">编辑</span>
+                        <span className="text-right">操作</span>
+                      </div>
+                      {spellScoreDetails.slice(0, 200).map(detail => {
+                        const displayName = i18n.language.startsWith('en') && detail.spell.en_name ? detail.spell.en_name : detail.spell.name;
+                        return (
+                          <div key={detail.spell.id} className="grid grid-cols-[minmax(180px,1fr)_64px_64px_64px_82px_120px] gap-2 items-center border-b border-white/5 px-3 py-2 text-xs">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <img src={getIconUrl(detail.spell.icon, isConnected)} className="h-6 w-6 image-pixelated rounded border border-white/10" alt="" />
+                              <div className="min-w-0">
+                                <div className="truncate font-bold text-zinc-200">{displayName}</div>
+                                <div className="truncate text-[9px] text-zinc-600">{detail.spell.id} · 次数 {detail.workflowOccurrence} · 工作流杖 {detail.workflowWandPresence} · 仓库杖 {detail.warehouseWandPresence}</div>
+                              </div>
+                            </div>
+                            <span className="text-right font-mono font-bold text-amber-300">{detail.total}</span>
+                            <span className="text-right font-mono text-zinc-400">{detail.auto}</span>
+                            <span className="text-right font-mono text-zinc-400">{detail.preset}</span>
+                            <input
+                              type="number"
+                              value={detail.preset}
+                              onChange={e => updateManualSpellScore(detail.spell.id, parseFloat(e.target.value))}
+                              className="h-7 rounded border border-white/10 bg-black/30 px-1 text-right font-mono text-xs text-zinc-100 outline-none focus:border-amber-500/50"
+                            />
+                            <div className="flex justify-end gap-1">
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-amber-500/20 hover:text-amber-200">置顶</button>
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, -9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-red-500/20 hover:text-red-200">沉底</button>
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 0)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/10">重置</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {spellScoreDetails.length === 0 && (
+                        <div className="py-8 text-center text-xs text-zinc-600">无匹配法术</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* APPEARANCE */}
             {(searchQuery || activeCategory === 'appearance') && (
               <div className="space-y-6">
@@ -627,7 +1070,7 @@ export function SettingsModal({
                 {isMatch(t('settings.cool_ui_mode')) && (
                   <div className="space-y-4 bg-purple-500/10 p-4 rounded-xl border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] relative overflow-hidden transition-all duration-500">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent mix-blend-overlay pointer-events-none" />
-                    
+
                     <div className="flex justify-between items-center relative z-10">
                       <div className="pr-4">
                         <div className="text-[13px] font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]">
@@ -654,8 +1097,8 @@ export function SettingsModal({
                                  key={key}
                                  onClick={() => setSettings(s => ({ ...s, coolUITheme: key }))}
                                  className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all border text-left flex justify-between items-center ${
-                                   settings.coolUITheme === key 
-                                   ? 'bg-purple-500/20 border-purple-400 text-purple-100 shadow-[0_0_8px_rgba(192,132,252,0.4)]' 
+                                   settings.coolUITheme === key
+                                   ? 'bg-purple-500/20 border-purple-400 text-purple-100 shadow-[0_0_8px_rgba(192,132,252,0.4)]'
                                    : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'
                                  }`}
                                >
@@ -675,8 +1118,8 @@ export function SettingsModal({
                                 key={key}
                                 onClick={() => setSettings(s => ({ ...s, coolUIBackground: key }))}
                                 className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-all border ${
-                                  settings.coolUIBackground === key 
-                                  ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-purple-400/50 text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.3)]' 
+                                  settings.coolUIBackground === key
+                                  ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-purple-400/50 text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
                                   : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10'
                                 }`}
                               >
@@ -689,7 +1132,7 @@ export function SettingsModal({
                     )}
                   </div>
                 )}
-                
+
                 {[
                   t('settings.common_limit'),
                   t('settings.category_limit'),
@@ -941,7 +1384,7 @@ export function SettingsModal({
                         <div className="text-[10px] text-zinc-500">{t('settings.canvas_grid_layout_desc')}</div>
                       </div>
                     </div>
-                    
+
                     {isMatch(t('settings.default_canvas_cells')) && (
                       <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-2">
                         <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.default_canvas_cells')} ({settings.defaultCanvasCellsPerRow ?? 26})</label>
@@ -1972,15 +2415,56 @@ export function SettingsModal({
                       <div className="w-1 h-3 rounded-full bg-indigo-500" />
                       {t('settings.spell_group_management')}
                     </h3>
-                    <button
-                      onClick={addGroup}
-                      className="text-[9px] font-black bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-500/20 flex items-center gap-1"
-                    >
-                      <Plus size={10} /> {t('settings.add_group')}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {!hasCommonSpellGroup && (
+                        <button
+                          onClick={addCommonGroup}
+                          className="text-[9px] font-black bg-amber-500/10 text-amber-300 px-2 py-1 rounded hover:bg-amber-500/20 flex items-center gap-1"
+                        >
+                          <Plus size={10} /> 添加常用组
+                        </button>
+                      )}
+                      <button
+                        onClick={addGroup}
+                        className="text-[9px] font-black bg-indigo-500/10 text-indigo-400 px-2 py-1 rounded hover:bg-indigo-500/20 flex items-center gap-1"
+                      >
+                        <Plus size={10} /> {t('settings.add_group')}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
+                    {hasCommonSpellGroup && (
+                      <div className="bg-amber-500/5 border border-amber-500/10 rounded-lg overflow-hidden">
+                        <div className="p-3 border-b border-amber-500/10 bg-black/20 flex items-center gap-3">
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <Star size={13} className="text-amber-400" />
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-zinc-200">{t('spell_picker.common_spells_global')}</div>
+                              <div className="text-[9px] text-zinc-500">按常用排序分数生成，显示数量由常用数量控制</div>
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                            数量
+                            <input
+                              type="number"
+                              min="1"
+                              max="5000"
+                              value={settings.commonLimit}
+                              onChange={e => setSettings(s => ({ ...s, commonLimit: Math.max(1, Math.min(5000, parseInt(e.target.value, 10) || 1)) }))}
+                              className="h-7 w-16 rounded border border-white/10 bg-black/30 px-2 text-right text-xs text-zinc-100 outline-none focus:border-amber-500/50"
+                            />
+                          </label>
+                          <button
+                            onClick={deleteCommonGroup}
+                            className="text-zinc-600 hover:text-red-400 transition-colors ml-1"
+                            title="删除常用组"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {settings.spellGroups.map((group, gIdx) => (
                       <div key={gIdx} className="bg-white/5 border border-white/5 rounded-lg overflow-hidden">
                         <div className="p-3 border-b border-white/5 bg-black/20 flex items-center gap-3">

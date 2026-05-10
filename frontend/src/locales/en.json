@@ -138,6 +138,7 @@
     "categories": {
       "general": "General",
       "appearance": "Appearance",
+      "spell_scores": "Common Sort",
       "interaction": "Interaction",
       "wand": "Wand",
       "cast": "Cast Parameters",

@@ -24,7 +24,7 @@ import { useTabs } from './hooks/useTabs';
 import { useInteraction } from './hooks/useInteraction';
 import { useUIStore } from './store/useUIStore';
 import { useWandEvaluator } from './hooks/useWandEvaluator';
-import { useSpellSearch } from './hooks/useSpellSearch';
+import { buildSpellStats, useSpellSearch } from './hooks/useSpellSearch';
 import { useWarehouse } from './hooks/useWarehouse';
 import { useWandActions } from './hooks/useWandActions';
 import { useHistory } from './hooks/useHistory';
@@ -200,7 +200,12 @@ function App() {
     pickerSearch, setPickerSearch,
     pickerExpandedGroups, setPickerExpandedGroups,
     spellStats, searchResults
-  } = useSpellSearch(tabs, spellDb, settings);
+  } = useSpellSearch(tabs, warehouseWands, spellDb, settings);
+
+  const pinnedSpellStats = useMemo(() => {
+    const allPinnedGroups = new Set([-1, ...settings.spellGroups.map((_, idx) => idx)]);
+    return buildSpellStats(tabs, warehouseWands, spellDb, settings, allPinnedGroups);
+  }, [tabs, warehouseWands, spellDb, settings]);
 
   const updateWand = useCallback((slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName = t('app.notification.modify_wand'), icons?: string[]) => {
     lastLocalUpdateRef.current = Date.now();
@@ -523,6 +528,7 @@ function App() {
             isConnected={isConnected}
             spellDb={spellDb}
             spellStats={spellStats}
+            pinnedSpellStats={pinnedSpellStats}
             selection={selection}
             onMoveSelection={moveSelection}
             hoveredSlot={hoveredSlot}
@@ -555,6 +561,7 @@ function App() {
             isConnected={isConnected}
             spellDb={spellDb}
             spellStats={spellStats}
+            pinnedSpellStats={pinnedSpellStats}
             onMoveSelection={moveSelection}
             selection={selection}
             hoveredSlot={hoveredSlot}

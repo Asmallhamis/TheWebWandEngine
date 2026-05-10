@@ -18,6 +18,7 @@ interface WandCardProps {
   isConnected: boolean;
   spellDb: Record<string, SpellInfo>;
   spellStats: SpellStats;
+  pinnedSpellStats: SpellStats;
   selection: SpellAreaSelection | null;
   onMoveSelection: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: HoveredSpellSlot | null;
@@ -52,6 +53,7 @@ export function WandCard({
   isConnected,
   spellDb,
   spellStats,
+  pinnedSpellStats,
   selection,
   onMoveSelection,
   hoveredSlot,
@@ -510,6 +512,7 @@ export function WandCard({
             data={data}
             spellDb={spellDb}
             spellStats={spellStats}
+            pinnedSpellStats={pinnedSpellStats}
             selection={selection}
             onMoveSelection={onMoveSelection}
             hoveredSlot={hoveredSlot}

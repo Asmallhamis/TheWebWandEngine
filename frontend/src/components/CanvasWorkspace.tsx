@@ -25,6 +25,7 @@ interface CanvasWorkspaceProps {
   isConnected: boolean;
   spellDb: SpellDb;
   spellStats: SpellStats;
+  pinnedSpellStats: SpellStats;
   selection: SpellAreaSelection | null;
   onMoveSelection: (wandSlot: string, direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   hoveredSlot: HoveredSpellSlot | null;

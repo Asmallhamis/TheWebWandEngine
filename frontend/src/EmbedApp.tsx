@@ -15,6 +15,14 @@ import './index.css';
 const DEFAULT_EMBED_SETTINGS: AppSettings = {
   commonLimit: 20,
   categoryLimit: 20,
+  spellScoreWeights: {
+    workflowOccurrence: 1,
+    workflowWandPresence: 5,
+    warehouseWandPresence: 2,
+  },
+  spellManualScores: {},
+  spellScorePresets: [],
+  activeSpellScorePresetId: '',
   allowCompactEdit: false,
   pickerRowHeight: 32,
   pickerAutoFillRows: 0,

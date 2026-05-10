@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SpellInfo, Tab, AppSettings } from '../types';
+import { SpellInfo, Tab, AppSettings, SpellStats, WarehouseWand } from '../types';
 import { checkPinyinFuzzy } from '../lib/searchUtils';
+import { buildSpellScoreDetails, buildSpellStatsFromScores } from '../lib/spellScores';
 
 export const searchSpells = (
   spellDb: Record<string, SpellInfo>,
@@ -83,8 +84,23 @@ export const searchSpells = (
   return scored.map(x => x.spell);
 };
 
+export const buildSpellStats = (
+  tabs: Tab[],
+  warehouseWands: WarehouseWand[],
+  spellDb: Record<string, SpellInfo>,
+  settings: AppSettings,
+  expandedGroups: Set<number>
+): SpellStats => {
+  return buildSpellStatsFromScores(
+    buildSpellScoreDetails(tabs, warehouseWands, spellDb, settings),
+    settings,
+    expandedGroups
+  );
+};
+
 export const useSpellSearch = (
   tabs: Tab[],
+  warehouseWands: WarehouseWand[],
   spellDb: Record<string, SpellInfo>,
   settings: AppSettings
 ) => {
@@ -94,32 +110,8 @@ export const useSpellSearch = (
 
   // --- Frequency Analysis (Common Spells) ---
   const spellStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-    tabs.forEach(tab => {
-      if (!tab.wands) return;
-      Object.values(tab.wands).forEach(wand => {
-        if (!wand || !wand.spells) return;
-        Object.values(wand.spells).forEach(sid => {
-          counts[sid] = (counts[sid] || 0) + 1;
-        });
-      });
-    });
-
-    const getTopN = (list: SpellInfo[], n: number, forceAll = false) => {
-      const sorted = [...list].sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
-      return forceAll ? sorted : sorted.slice(0, n);
-    };
-
-    const allSpells = Object.values(spellDb);
-    const overall = getTopN(allSpells, settings.commonLimit, pickerExpandedGroups.has(-1));
-
-    const categories = settings.spellGroups.map((group, idx) => {
-      const filtered = allSpells.filter(s => group.types.includes(s.type));
-      return getTopN(filtered, settings.categoryLimit, pickerExpandedGroups.has(idx));
-    });
-
-    return { overall, categories };
-  }, [tabs, spellDb, settings.commonLimit, settings.categoryLimit, settings.spellGroups, pickerExpandedGroups]);
+    return buildSpellStats(tabs, warehouseWands, spellDb, settings, pickerExpandedGroups);
+  }, [tabs, warehouseWands, spellDb, settings, pickerExpandedGroups]);
 
   const searchResults = useMemo(() => {
     if (!pickerSearch) return null;

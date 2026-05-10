@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grip, Minus, Plus, Search, X } from 'lucide-react';
-import { AppSettings, SpellArea, SpellInfo, WandData } from '../types';
+import { AppSettings, SpellArea, SpellInfo, SpellStats, WandData } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useUIStore } from '../store/useUIStore';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { DEFAULT_SPELL_GROUPS } from '../constants';
 
 interface FixedSpellPaletteProps {
   spellDb: Record<string, SpellInfo>;
+  spellStats: SpellStats;
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   setMousePos: (pos: { x: number; y: number }) => void;
@@ -20,6 +21,7 @@ interface FixedSpellPaletteProps {
 
 export function FixedSpellPalette({
   spellDb,
+  spellStats,
   settings,
   setSettings,
   setMousePos,
@@ -51,11 +53,6 @@ export function FixedSpellPalette({
     [settings.pinnedSpellPaletteExpandedGroups]
   );
   const isEnglish = i18n.language.startsWith('en');
-  const allSpells = React.useMemo(() => Object.values(spellDb), [spellDb]);
-  const fullCategories = React.useMemo(
-    () => settings.spellGroups.map(group => allSpells.filter(spell => group.types.includes(spell.type))),
-    [allSpells, settings.spellGroups]
-  );
 
   const translateSpellGroup = (name: string) => {
     const defaultIdx = DEFAULT_SPELL_GROUPS.findIndex(group => group.name === name);
@@ -224,8 +221,8 @@ export function FixedSpellPalette({
 
   const renderGroup = (label: string, spells: SpellInfo[], groupIdx: number) => {
     if (!spells.length) return null;
-    const isExpanded = expandedGroups.has(groupIdx);
-    const visibleSpells = isExpanded ? spells : spells.slice(0, Math.max(1, collapsedSpellLimit));
+    const isExpanded = autoFillRows <= 0 && expandedGroups.has(groupIdx);
+    const visibleSpells = spells.slice(0, isExpanded ? spells.length : Math.max(1, collapsedSpellLimit));
     return (
       <section key={groupIdx} className="space-y-2">
         <div className={`flex items-center justify-between gap-3 ${hideLabels ? 'h-6 justify-end' : ''}`}>
@@ -343,9 +340,9 @@ export function FixedSpellPalette({
           )
         ) : (
           <div className="space-y-4">
-            {renderGroup(t('spell_picker.common_spells_global'), allSpells, -1)}
+            {renderGroup(t('spell_picker.common_spells_global'), spellStats.overall, -1)}
             {settings.spellGroups.map((group, idx) =>
-              renderGroup(translateSpellGroup(group.name), fullCategories[idx] || [], idx)
+              renderGroup(translateSpellGroup(group.name), spellStats.categories[idx] || [], idx)
             )}
           </div>
         )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { WandData, SpellInfo, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource } from '../types';
+import { WandData, SpellInfo, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellStats } from '../types';
 import { PropInput } from './Common';
 import { getWandSpriteUrl, spritePathToWikiName } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
@@ -30,7 +30,8 @@ interface WandEditorProps {
   onMoveSelection?: (direction: 'next' | 'prev' | 'up' | 'down' | 'right' | 'left') => void;
   settings: AppSettings;
   isConnected: boolean;
-  spellStats?: { overall: SpellInfo[]; categories: SpellInfo[][] };
+  spellStats?: SpellStats;
+  pinnedSpellStats?: SpellStats;
   /** 隐藏法杖属性面板、导出按钮等 (用于智能标签编辑) */
   hideAttributes?: boolean;
   /** 隐藏始终施放区域 (用于智能标签编辑) */
@@ -62,6 +63,7 @@ export function WandEditor({
   settings,
   isConnected,
   spellStats,
+  pinnedSpellStats,
   hideAttributes,
   hideAlwaysCast,
   isCanvasMode,
@@ -856,9 +858,10 @@ export function WandEditor({
           setSettings={setSettings}
           t={t}
         />
-        {settings.pinnedSpellPaletteOpen && spellStats && (settings.pinnedSpellPaletteShowOnEveryWand || !settings.pinnedSpellPaletteWandSlot || settings.pinnedSpellPaletteWandSlot === slot) && (
+        {settings.pinnedSpellPaletteOpen && pinnedSpellStats && (settings.pinnedSpellPaletteShowOnEveryWand || !settings.pinnedSpellPaletteWandSlot || settings.pinnedSpellPaletteWandSlot === slot) && (
           <FixedSpellPalette
             spellDb={spellDb}
+            spellStats={pinnedSpellStats}
             settings={settings}
             setSettings={setSettings}
             setMousePos={setMousePos || (() => {})}

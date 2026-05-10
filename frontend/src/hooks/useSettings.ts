@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AppSettings } from '../types';
 import { DEFAULT_SPELL_TYPES, DEFAULT_SPELL_GROUPS } from '../constants';
+import { DEFAULT_SPELL_SCORE_PRESET_ID, DEFAULT_SPELL_SCORE_WEIGHTS, ensureSpellScorePresets } from '../lib/spellScores';
 
 const SETTINGS_KEY = 'twwe_settings';
 const LEGACY_SETTINGS_KEY = 'wand2h_settings';
@@ -12,6 +13,10 @@ export const useSettings = () => {
     const defaults: AppSettings = {
       commonLimit: 20,
       categoryLimit: 20,
+      spellScoreWeights: DEFAULT_SPELL_SCORE_WEIGHTS,
+      spellManualScores: {},
+      spellScorePresets: ensureSpellScorePresets({}),
+      activeSpellScorePresetId: DEFAULT_SPELL_SCORE_PRESET_ID,
       allowCompactEdit: false,
       pickerRowHeight: 32,
       pickerAutoFillRows: 0,
@@ -89,10 +94,21 @@ export const useSettings = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        const spellScorePresets = ensureSpellScorePresets(parsed);
+        const activeSpellScorePresetId = spellScorePresets.some(preset => preset.id === parsed.activeSpellScorePresetId)
+          ? parsed.activeSpellScorePresetId
+          : DEFAULT_SPELL_SCORE_PRESET_ID;
         return {
           ...defaults,
           ...parsed,
           defaultWandStats: parsed.defaultWandStats || {},
+          spellScoreWeights: {
+            ...DEFAULT_SPELL_SCORE_WEIGHTS,
+            ...(parsed.spellScoreWeights || {}),
+          },
+          spellManualScores: parsed.spellManualScores || {},
+          spellScorePresets,
+          activeSpellScorePresetId,
           dragSpellMode: parsed.dragSpellMode || (parsed.useNoitaSwapLogic ? 'noita_swap' : '20260222')
         };
       } catch (e) {

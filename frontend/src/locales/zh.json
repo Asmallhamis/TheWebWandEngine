@@ -138,6 +138,7 @@
     "categories": {
       "general": "常规",
       "appearance": "外观",
+      "spell_scores": "常用排序",
       "interaction": "交互",
       "wand": "法杖",
       "cast": "施法参数",

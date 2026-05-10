@@ -72,6 +72,23 @@ export interface SpellGroupConfig {
   color?: string;
 }
 
+export interface SpellScoreWeights {
+  workflowOccurrence: number;
+  workflowWandPresence: number;
+  warehouseWandPresence: number;
+}
+
+export interface SpellScorePreset {
+  id: string;
+  name: string;
+  scores: Record<string, number>;
+  weights?: SpellScoreWeights;
+  lockWorkflowScores?: boolean;
+  lockWarehouseScores?: boolean;
+  workflowScores?: Record<string, number>;
+  warehouseScores?: Record<string, number>;
+}
+
 /** 模式中的单个槽位匹配器 */
 export interface PatternSlot {
   /** 候选法术 ID，任一匹配即可。支持前缀通配: 'DIVIDE_*' */
@@ -100,6 +117,10 @@ export interface SpellMarkingRule {
 export interface AppSettings {
   commonLimit: number;
   categoryLimit: number;
+  spellScoreWeights: SpellScoreWeights;
+  spellManualScores: Record<string, number>;
+  spellScorePresets: SpellScorePreset[];
+  activeSpellScorePresetId: string;
   allowCompactEdit: boolean;
   pickerRowHeight: number;
   pickerAutoFillRows: number;

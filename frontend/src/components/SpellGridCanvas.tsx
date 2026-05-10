@@ -215,6 +215,18 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     return computeGridLayout(containerWidth || 800, totalSlots, gap);
   }, [area, areaSlots?.length, containerWidth, totalSlots, gap, isCanvasMode, data.canvas_cells_per_row, settings.defaultCanvasCellsPerRow]);
 
+  const canvasClipPath = useMemo(() => {
+    const { cols, cellOuter } = layout;
+    const lastRowCount = totalSlots % cols;
+    if (!lastRowCount) return undefined;
+    const fullRows = Math.floor(totalSlots / cols);
+    const fullWidth = cols * cellOuter;
+    const partialWidth = lastRowCount * cellOuter;
+    const breakY = CANVAS_PADDING_TOP + fullRows * cellOuter;
+    const fullHeight = layout.rows * cellOuter + CANVAS_PADDING_TOP;
+    return `polygon(0 0, ${fullWidth}px 0, ${fullWidth}px ${breakY}px, ${partialWidth}px ${breakY}px, ${partialWidth}px ${fullHeight}px, 0 ${fullHeight}px)`;
+  }, [layout, totalSlots]);
+
   // Pattern match lookup
   const slotMatchMap = useMemo(() => {
     const map: Record<number, PatternMatch> = {};
@@ -1246,7 +1258,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       <canvas
         ref={canvasRef}
         data-spell-grid-area={area}
-        style={{ cursor, imageRendering: 'pixelated', touchAction: 'none' }} data-wand-slot-canvas={`${slot}-${area}`}
+        style={{ cursor, imageRendering: 'pixelated', touchAction: 'none', clipPath: canvasClipPath }} data-wand-slot-canvas={`${slot}-${area}`}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
