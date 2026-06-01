@@ -222,6 +222,7 @@ export function FixedSpellPalette({
   const renderGroup = (label: string, spells: SpellInfo[], groupIdx: number) => {
     if (!spells.length) return null;
     const isExpanded = autoFillRows <= 0 && expandedGroups.has(groupIdx);
+    const isStoredExpanded = expandedGroups.has(groupIdx);
     const visibleSpells = spells.slice(0, isExpanded ? spells.length : Math.max(1, collapsedSpellLimit));
     return (
       <section key={groupIdx} className="space-y-2">
@@ -236,13 +237,21 @@ export function FixedSpellPalette({
             type="button"
             className="flex h-6 w-6 items-center justify-center rounded bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
             onClick={() => {
+              const shouldCollapse = autoFillRows <= 0 && isStoredExpanded;
               setSettings(prev => {
                 const next = new Set(prev.pinnedSpellPaletteExpandedGroups ?? [-1]);
-                if (next.has(groupIdx)) next.delete(groupIdx);
+                if (shouldCollapse) next.delete(groupIdx);
                 else next.add(groupIdx);
-                return { ...prev, pinnedSpellPaletteExpandedGroups: Array.from(next).sort((a, b) => a - b) };
+                return {
+                  ...prev,
+                  // “占满行数”模式会强制按行数折叠显示。用户点击 + 时应当明确展开该分组，
+                  // 因此同时退出自动占满模式；否则静态站点/新来源的默认设置下 + 看起来会“没有用”。
+                  pinnedSpellPaletteAutoFillRows: shouldCollapse ? prev.pinnedSpellPaletteAutoFillRows : 0,
+                  pinnedSpellPaletteExpandedGroups: Array.from(next).sort((a, b) => a - b),
+                };
               });
             }}
+            title={isExpanded ? t('common.collapse', 'Collapse') : t('common.expand', 'Expand')}
           >
             {isExpanded ? <Minus size={13} /> : <Plus size={13} />}
           </button>
