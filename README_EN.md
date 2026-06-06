@@ -2,24 +2,36 @@
 
 [中文](./README_zh.md) | English
 
-A web-based Noita wand evaluation and synchronization tool. This project aims to provide an intuitive, beautiful, and powerful interface to help players analyze complex wand logic and achieve real-time linkage between web design and in-game data through a highly integrated synchronization system.
+A web-based Noita wand editing, evaluation, collection, and synchronization tool. It is meant to be a practical workbench for Noita players and wand tinkerers: build wands in the browser, save ideas, import Wiki templates, inspect cast results, and, in the local version, manually sync wands with your game save.
+
+TWWE is still actively evolving. It is an unofficial utility and research aid, not an attempt to replace in-game editors. The online version is best for quick checks and lightweight simulation; the local version is better when you need game sync, mod spell data, or higher-performance evaluation.
+
+## What It Is Useful For
+
+*   **Building and saving wands**: Edit wands in the browser, keep common designs in the local warehouse, and organize them with folders, tags, search, and sorting.
+*   **Inspecting complex cast logic**: Use the local `wand_eval_tree` engine or static WASM mode to inspect spell execution, trigger chains, and simulation output.
+*   **Moving data between the web UI and the game**: The local version can pull wands from Noita through a mod/backend bridge, or push web-designed wands back into the game.
+*   **Working with Wiki and sharing material**: Import Noita Wiki `{{Wand2 ...}}` templates, copy share links, or export wand images for notes and community discussion.
+*   **Researching modded environments**: The local version can sync currently loaded mod spell data and attempt to inject some mod logic into the simulator.
 
 ## ✨ Core Features
 
 ### 1. Bidirectional Game Data Sync
-*   **Manual Push/Pull**: Supports one-click synchronization of wands from your current save to the web or pushing web-designed wands to the game (currently, the auto-sync function is not perfect, so manual single-time push/pull is recommended).
+*   **Manual Push/Pull**: Supports one-click synchronization of wands from your current save to the web or pushing web-designed wands to the game. Manual single-time push/pull is currently recommended; automatic sync is still experimental.
 *   **Single-Sync Reliability**: Deeply polished push and pull logic ensures that single-time synchronization remains stable and reliable even in complex modded environments.
 *   **Seamless Connection**: The plugin interacts with the backend via high-performance Socket communication, supporting real-time acquisition of all in-game wands and spell data.
 
 ### 2. Local Wand Warehouse
 *   **Persistent Storage**: Built-in powerful local warehouse system allows you to store various wand designs in the browser (localStorage). Also supports **one-click export/import backup**, ensuring data can be recovered even after browser cache cleanup.
 *   **Directory Tree Management**: Supports creating multi-level folders and easily organizing your wand collection via drag-and-drop.
-*   **Smart Tags & Search**: Automatically generates indexing information for wands in the warehouse, supporting filtering by name and Pinyin.
+*   **Smart Tags & Search**: Supports manual tags, smart tags, name/Pinyin search, and sorting by date, name, capacity, filled spell count, wand stats, and tag count.
+*   **Batch Organization**: Supports multi-select, drag-and-drop moves, and importing/exporting the full warehouse or individual folders.
 
 ### 3. Multi-mod Ecosystem Compatibility
 *   **Deep Integration**: Supports one-click import of stored wands from `Wand Editor` and `Spell Lab Shugged` save settings.
 *   **Real-time Mod Spell Fetching**: Synchronizes all mod spell data loaded at game runtime via Socket, ensuring absolute accuracy of spell icons and attributes.
 *   **Simulator Injection**: The backend supports injecting mod `ModLuaFileAppend` logic into the local evaluation engine, achieving precise attribute simulation and recursive calculation for mod spells.
+*   **Mod Environment Management**: Supports saving/importing mod environment bundles, reviewing which mods add or modify spells, and toggling active mods in the frontend.
 
 ### 4. Noita Wiki Deep Integration
 *   **Template Parsing**: Directly paste Noita Wiki `{{Wand2 ...}}` or legacy `{{Wand ...}}` template code, and TWWE will instantly restore it as a visual wand.
@@ -28,6 +40,8 @@ A web-based Noita wand evaluation and synchronization tool. This project aims to
 ### 5. High-Efficiency Interaction Design
 *   **Frequency-based Preference Sorting**: The spell selector automatically counts spell usage frequency across all workflows, prioritizing commonly used spells.
 *   **Pinyin Search**: Supports spell name search via full Pinyin and initials for fast and precise positioning.
+*   **Spell Marking Rules**: Built-in and custom rules can mark spell sequences, making common structures, debugging targets, or important slots easier to spot.
+*   **Image Export**: Supports exporting spell-only images and wand stat screenshots for notes or community sharing.
 *   **Deep Keyboard Shortcuts**:
     *   `Ctrl + C` / `V` / `X`: **Smart Context-aware Operations**. Defaults to Copy/Paste/Cut for a single slot under the mouse; if a group of spells is selected, it performs batch operations on the entire selection.
     *   `Ctrl + Z` / `Y`: Unlimited Undo and Redo levels.
@@ -41,6 +55,7 @@ A web-based Noita wand evaluation and synchronization tool. This project aims to
     *   **Hand Mode**: Grabbing Mode. Supports clicking or dragging a single spell.
     *   `Middle Click`: Mark/unmark a spell slot (used for highlighting or specific debugging).
     *   `Alt + Left Click`: Quickly toggle spell remaining uses (0 or Full); if it's one of IF_HP,IF_PROJECTILE,IF_ENEM, it directly toggles the corresponding simulation environment switch.
+*   **Canvas/Grid Editing**: Supports both regular list-style editing and grid/canvas-style views, which are more comfortable for high-capacity wands.
 
 ### 6. Dual-Engine Evaluation
 *   **Local High-Performance Mode**: Calls a highly optimized local `wand_eval_tree` process, supporting complex spell calculations with millions of recursions, simulating real firing logic with extreme performance.
