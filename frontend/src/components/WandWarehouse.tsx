@@ -31,7 +31,8 @@ import {
   FolderPlus,
   GripVertical,
   SortAsc,
-  Calendar
+  Calendar,
+  ArrowUpDown
 } from 'lucide-react';
 import { checkPinyinFuzzy } from '../lib/searchUtils';
 import { WandData, WarehouseWand, SpellInfo, SmartTag, WarehouseFolder as FolderType, AppSettings } from '../types';
@@ -49,6 +50,24 @@ function cn(...inputs: ClassValue[]) {
 
 const BONES_FOLDER_ID = 'bones_folder';
 const ALL_WANDS_FOLDER_ID = '__all_wands__';
+type WarehouseSortBy =
+  | 'manual'
+  | 'date'
+  | 'name'
+  | 'capacity'
+  | 'spellCount'
+  | 'manaMax'
+  | 'manaCharge'
+  | 'castDelay'
+  | 'rechargeTime'
+  | 'spellsPerCast'
+  | 'shuffle'
+  | 'alwaysCastCount'
+  | 'tagCount';
+type WarehouseSortDirection = 'asc' | 'desc';
+
+const getFilledSpellCount = (wand: WarehouseWand) =>
+  Object.values(wand.spells || {}).filter(Boolean).length;
 
 interface WandWarehouseProps {
   isOpen: boolean;
@@ -111,7 +130,8 @@ export function WandWarehouse({
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>('root');
-  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [sortBy, setSortBy] = useState<WarehouseSortBy>('manual');
+  const [sortDirection, setSortDirection] = useState<WarehouseSortDirection>('desc');
 
   // Performance: Pagination / Infinite Scroll
   const [displayLimit, setDisplayLimit] = useState(50);
@@ -645,15 +665,38 @@ export function WandWarehouse({
       });
     }
 
-    return filtered.sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      // Default to manual order if available, else date
-      if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
-        return a.order - b.order;
+    return [...filtered].sort((a, b) => {
+      const direction = sortDirection === 'asc' ? 1 : -1;
+      const fallback = (b.createdAt || 0) - (a.createdAt || 0);
+
+      if (sortBy === 'manual') {
+        if (a.order !== undefined && b.order !== undefined && a.order !== b.order) {
+          return a.order - b.order;
+        }
+        return fallback;
       }
-      return b.createdAt - a.createdAt;
+
+      let result = 0;
+      if (sortBy === 'name') result = a.name.localeCompare(b.name);
+      else if (sortBy === 'date') result = (a.createdAt || 0) - (b.createdAt || 0);
+      else if (sortBy === 'capacity') result = (a.deck_capacity || 0) - (b.deck_capacity || 0);
+      else if (sortBy === 'spellCount') result = getFilledSpellCount(a) - getFilledSpellCount(b);
+      else if (sortBy === 'manaMax') result = (a.mana_max || 0) - (b.mana_max || 0);
+      else if (sortBy === 'manaCharge') result = (a.mana_charge_speed || 0) - (b.mana_charge_speed || 0);
+      else if (sortBy === 'castDelay') result = (a.fire_rate_wait || 0) - (b.fire_rate_wait || 0);
+      else if (sortBy === 'rechargeTime') result = (a.reload_time || 0) - (b.reload_time || 0);
+      else if (sortBy === 'spellsPerCast') result = (a.actions_per_round || 0) - (b.actions_per_round || 0);
+      else if (sortBy === 'shuffle') result = Number(a.shuffle_deck_when_empty) - Number(b.shuffle_deck_when_empty);
+      else if (sortBy === 'alwaysCastCount') result = (a.always_cast?.filter(Boolean).length || 0) - (b.always_cast?.filter(Boolean).length || 0);
+      else if (sortBy === 'tagCount') {
+        const getTagCount = (wand: WarehouseWand) =>
+          new Set([...(wand.tags || []), ...getWandSmartTags(wand.id).map(st => st.name)]).size;
+        result = getTagCount(a) - getTagCount(b);
+      }
+
+      return result === 0 ? fallback : result * direction;
     });
-  }, [wands, searchQuery, selectedFolderId, selectedTags, sortBy, getWandSmartTags, spellDb, i18n.language]);
+  }, [wands, searchQuery, selectedFolderId, selectedTags, sortBy, sortDirection, getWandSmartTags, spellDb, i18n.language]);
 
   // Keyboard Shortcuts for Warehouse
   useEffect(() => {
@@ -762,19 +805,43 @@ export function WandWarehouse({
               {t('warehouse.new_folder')}
             </button>
             <div className="w-px h-4 bg-white/10 mx-1" />
+            <div className="flex items-center gap-1 pl-1">
+              {sortBy === 'date' ? <Calendar size={14} className="text-zinc-500" /> : <SortAsc size={14} className="text-zinc-500" />}
+              <select
+                value={sortBy}
+                onChange={e => {
+                  const nextSortBy = e.target.value as WarehouseSortBy;
+                  setSortBy(nextSortBy);
+                  setSortDirection(nextSortBy === 'name' ? 'asc' : 'desc');
+                }}
+                className="h-7 max-w-[132px] bg-zinc-900 border border-white/10 rounded px-2 text-[10px] font-bold text-zinc-300 outline-none hover:border-purple-500/40 focus:border-purple-500/60"
+                title={t('warehouse.sort_by')}
+              >
+                <option value="manual">{t('warehouse.sort_manual')}</option>
+                <option value="date">{t('warehouse.sort_by_date')}</option>
+                <option value="name">{t('warehouse.sort_by_name')}</option>
+                <option value="capacity">{t('warehouse.sort_by_capacity')}</option>
+                <option value="spellCount">{t('warehouse.sort_by_spell_count')}</option>
+                <option value="manaMax">{t('warehouse.sort_by_mana_max')}</option>
+                <option value="manaCharge">{t('warehouse.sort_by_mana_charge')}</option>
+                <option value="castDelay">{t('warehouse.sort_by_cast_delay')}</option>
+                <option value="rechargeTime">{t('warehouse.sort_by_recharge_time')}</option>
+                <option value="spellsPerCast">{t('warehouse.sort_by_spells_per_cast')}</option>
+                <option value="shuffle">{t('warehouse.sort_by_shuffle')}</option>
+                <option value="alwaysCastCount">{t('warehouse.sort_by_always_cast_count')}</option>
+                <option value="tagCount">{t('warehouse.sort_by_tag_count')}</option>
+              </select>
+            </div>
             <button
-              onClick={() => setSortBy('date')}
-              className={cn("p-1.5 rounded hover:bg-white/10 transition-colors", sortBy === 'date' ? "text-purple-400" : "text-zinc-500")}
-              title={t('warehouse.sort_by_date')}
+              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className={cn(
+                "p-1.5 rounded hover:bg-white/10 transition-colors",
+                sortBy === 'manual' ? "text-zinc-700" : "text-purple-400"
+              )}
+              title={sortDirection === 'asc' ? t('warehouse.sort_ascending') : t('warehouse.sort_descending')}
+              disabled={sortBy === 'manual'}
             >
-              <Calendar size={14} />
-            </button>
-            <button
-              onClick={() => setSortBy('name')}
-              className={cn("p-1.5 rounded hover:bg-white/10 transition-colors", sortBy === 'name' ? "text-purple-400" : "text-zinc-500")}
-              title={t('warehouse.sort_by_name')}
-            >
-              <SortAsc size={14} />
+              <ArrowUpDown size={14} />
             </button>
           </div>
 
