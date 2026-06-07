@@ -331,7 +331,7 @@ export function SpellPicker({
             }}
           />
           <button onClick={() => handlePickSpell(null, false)} className="text-[10px] font-black text-red-400 bg-red-400/10 px-2 py-1 rounded hover:bg-red-400/20">
-            {t('settings.title') === 'Settings' ? 'CLEAR' : '清除槽位'}
+            {t('spell_picker.clear_slot')}
           </button>
           <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-zinc-500">
             <span>{t('spell_picker.fixed_palette.size')}</span>
@@ -422,7 +422,7 @@ export function SpellPicker({
               pinnedSpellPaletteWandSlot: pickerConfig.wandSlot,
             }))}
             className={`w-7 h-7 flex items-center justify-center rounded transition-colors ${settings.pinnedSpellPaletteOpen ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white'}`}
-            title={settings.pinnedSpellPaletteOpen ? '关闭固定法术面板' : '固定法术面板'}
+            title={settings.pinnedSpellPaletteOpen ? t('spell_picker.fixed_palette.close') : t('spell_picker.fixed_palette.settings_title')}
           >
             <Pin size={13} />
           </button>
@@ -606,7 +606,7 @@ export function SpellPicker({
 
           {(pickerSearch && searchResults?.every(g => g.length === 0)) && (
             <div className="py-10 text-center text-zinc-600 text-xs">
-              无匹配结果
+              {t('spell_picker.no_results')}
             </div>
           )}
         </div>

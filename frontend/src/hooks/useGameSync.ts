@@ -285,7 +285,7 @@ export const useGameSync = ({
             const id = Date.now().toString();
             setTabs(prev => [...prev, {
               id,
-              name: `[同步保存] ${activeTab.name}`,
+              name: t('tabs.sync_saved', { name: activeTab.name }),
               isRealtime: false,
               wands: gameWands,
               expandedWands: new Set(Object.keys(gameWands)),
@@ -330,7 +330,7 @@ export const useGameSync = ({
       const id = Date.now().toString();
       setTabs(prev => [...prev, {
         id,
-        name: `[备份] ${currentActiveTab.name}`,
+        name: t('tabs.backup', { name: currentActiveTab.name }),
         isRealtime: false,
         wands: conflict.gameWands,
         expandedWands: new Set(Object.keys(conflict.gameWands)),

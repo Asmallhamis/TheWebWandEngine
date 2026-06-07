@@ -1,4 +1,8 @@
 {
+  "common": {
+    "collapse": "收起",
+    "expand": "展开"
+  },
   "app": {
     "title": "TWWE",
     "notification": {
@@ -68,7 +72,9 @@
       "export_mod_bundle_success": "Mod 环境包导出成功！",
       "export_mod_bundle_failed": "Mod 环境包导出失败",
       "import_mod_bundle_success": "Mod 环境包导入成功！",
-      "wand_already_exists_moving_to_top": "该法杖已存在，已移到最前"
+      "wand_already_exists_moving_to_top": "该法杖已存在，已移到最前",
+      "import_from_url": "从 URL 导入",
+      "move_existing_wand_to_top": "将已有法杖移到最前"
     }
   },
 
@@ -314,6 +320,50 @@
     "trigger_visualization_mode_desc": "设置带触发/定时/到时触发的法术在射击详情和执行树中的显示方式。WandDBG 模式会将触发图标贴在法术图标上。",
     "trigger_visualization_mode_standard": "标准 (独立显示)",
     "trigger_visualization_mode_wanddbg": "WandDBG 模式 (占位符, 尚未完成)",
+    "show_spell_id": "显示法术 ID",
+    "show_spell_id_desc": "在可用位置显示法术 ID，方便检索和对照。",
+    "spell_score_score_alias": "法术分数",
+    "spell_score_title": "常用排序分数",
+    "spell_score_desc": "最终分 = 自动统计分 + 预设分 + 手动分；常用列表按最终分排序。",
+    "spell_score_default_preset": "默认预设",
+    "spell_score_new_preset_default": "我的法术分数预设",
+    "spell_score_preset_name_prompt": "预设名称",
+    "spell_score_delete_preset_confirm": "删除预设「{{name}}」？",
+    "spell_score_invalid_preset_file": "分数预设文件无效",
+    "spell_score_copy_as_preset": "复制为新预设",
+    "spell_score_export_preset": "导出预设",
+    "spell_score_import_preset": "导入预设",
+    "spell_score_rename_preset": "重命名预设",
+    "spell_score_delete_preset": "删除预设",
+    "spell_score_weight_workflow_occurrence": "工作流出现次数 A",
+    "spell_score_weight_workflow_wand_presence": "工作流法杖去重 B",
+    "spell_score_weight_warehouse_wand_presence": "仓库法杖去重 C",
+    "spell_score_workflow_snapshot": "工作流分数快照",
+    "spell_score_warehouse_snapshot": "仓库分数快照",
+    "spell_score_snapshot_locked": "已锁定：切换到这个预设时使用快照分",
+    "spell_score_workflow_live": "未锁定：按当前工作流实时统计",
+    "spell_score_warehouse_live": "未锁定：按当前仓库实时统计",
+    "spell_score_unlock_recalculate": "解锁重算",
+    "spell_score_lock_current": "锁定当前",
+    "spell_score_search_placeholder": "搜索法术 ID / 名称",
+    "spell_score_col_spell": "法术",
+    "spell_score_col_total": "总分",
+    "spell_score_col_auto": "自动",
+    "spell_score_col_adjust": "调整",
+    "spell_score_col_edit": "编辑",
+    "spell_score_col_actions": "操作",
+    "spell_score_spell_detail": "{{id}} · 次数 {{occurrences}} · 工作流杖 {{workflowWands}} · 仓库杖 {{warehouseWands}}",
+    "spell_score_pin_top": "置顶",
+    "spell_score_sink_bottom": "沉底",
+    "spell_score_reset": "重置",
+    "spell_score_no_matching_spells": "无匹配法术",
+    "add_common_group": "添加常用组",
+    "common_group_desc": "按常用排序分数生成，显示数量由常用数量控制",
+    "count": "数量",
+    "delete_common_group": "删除常用组",
+    "mod_bundle_spells_count": "{{count}} 个法术",
+    "unimpactful_mods": "未影响法术的 Mod ({{count}}):",
+    "divide_chain_rule_name": "一分链检测",
     "spell_marking_title": "法术标记",
     "spell_marking_desc": "自动检测法术编辑区中的特定模式（如一分链）并可视化标记。支持自定义规则。",
     "spell_marking_builtin": "内置",
@@ -467,6 +517,8 @@
     "export_tag": "导出此标签",
     "import_plans": "导入方案",
     "export_plans": "导出方案",
+    "required_spells": "必须包含",
+    "excluded_spells": "不能包含",
     "combination_placeholder": "例如: 10 10 4 2",
     "import_yukimi_confirm": "将尝试从 Wand Editor (Yukimi) 导入所有存档，是否继续？",
     "import_spell_lab_confirm": "将尝试从 Spell Lab Shugged 导入所有存档，是否继续？",
@@ -479,7 +531,11 @@
     "push_bones": "推送到磁盘老古",
     "pull_bones_confirm": "拉取将从磁盘读取所有老古法杖，并覆盖当前文件夹内的内容。确定继续吗？",
     "push_bones_confirm": "推送将用当前文件夹的内容覆盖磁盘上的老古存档（会自动备份到 twwe_bones_backups）。确定继续吗？",
-    "push_bones_success": "成功推送 {{count}} 根老古法杖，原文件已备份至 persistent 目录。"
+    "pull_bones_success": "成功拉取 {{count}} 根老古法杖。",
+    "pull_bones_failed": "从磁盘拉取老古法杖失败。",
+    "push_bones_success": "成功推送 {{count}} 根老古法杖，原文件已备份至 persistent 目录。",
+    "push_bones_failed": "推送老古法杖到磁盘失败。",
+    "bones_folder": "老古法杖"
   },
   "wand_card": {
     "copy": "复制 (Ctrl+C)",
@@ -520,7 +576,8 @@
     "reset_view": "重置视图",
     "unlock_editor_mode": "解除编辑模式锁定",
     "lock_editor_to_drag_mode": "锁定编辑器为拖动模式",
-    "randomize_seed": "随机化种子"
+    "randomize_seed": "随机化种子",
+    "cells_per_row": "每行格数: {{count}}"
   },
   "editor": {
     "shuffle": "乱序",
@@ -587,6 +644,8 @@
     "common_spells_global": "常用法术 (Global)",
     "search_placeholder": "搜索法术...",
     "no_results": "无匹配结果",
+    "clear_slot": "清除槽位",
+    "search_results_sorted": "搜索结果",
     "floating_settings_title": "悬浮法术选择器",
     "floating_settings_desc": "单击格子后弹出的快速选择器",
     "fixed_palette": {

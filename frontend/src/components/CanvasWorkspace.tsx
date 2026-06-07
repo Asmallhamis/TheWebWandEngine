@@ -576,7 +576,7 @@ function PinnedWandEditor({ slot, data, wandName, colorDef, handleRename, props,
                 }}
               />
             ) : (
-              <span className="select-none pointer-events-none whitespace-nowrap">每行格数: {cellsPerRow}</span>
+              <span className="select-none pointer-events-none whitespace-nowrap">{t('canvas.cells_per_row', { count: cellsPerRow })}</span>
             )}
           </div>
           {lockEnabled && (

@@ -19,7 +19,7 @@ export const useWarehouse = (setNotification: (n: AppNotification | null) => voi
     if (!folders.some((f: any) => f.id === 'bones_folder')) {
       folders.push({
         id: 'bones_folder',
-        name: '老古法杖 (Bones)',
+        name: t('warehouse.bones_folder'),
         order: -1,
         isOpen: true,
         parentId: null
@@ -38,13 +38,13 @@ export const useWarehouse = (setNotification: (n: AppNotification | null) => voi
     if (!warehouseFolders.some(f => f.id === 'bones_folder')) {
       setWarehouseFolders(prev => [...prev, {
         id: 'bones_folder',
-        name: '老古法杖 (Bones)',
+        name: t('warehouse.bones_folder'),
         order: -1,
         isOpen: true,
         parentId: null
       }]);
     }
-  }, [warehouseFolders, setWarehouseFolders]);
+  }, [warehouseFolders, setWarehouseFolders, t]);
 
   // Persistence
   useEffect(() => {

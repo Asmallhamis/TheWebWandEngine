@@ -202,6 +202,12 @@ export function SettingsModal({
   const spellScoreImportInputRef = useRef<HTMLInputElement | null>(null);
   const markingRuleImportInputRef = useRef<HTMLInputElement | null>(null);
   const { t, i18n } = useTranslation();
+  const getPresetDisplayName = (preset: { id: string; name: string }) => (
+    preset.id === DEFAULT_SPELL_SCORE_PRESET_ID ? t('settings.spell_score_default_preset') : preset.name
+  );
+  const getRuleDisplayName = (rule: SpellMarkingRule) => (
+    rule.id === 'divide_chain' ? t('settings.divide_chain_rule_name') : rule.name
+  );
 
   const allSpellScoreDetails = React.useMemo(() => (
     buildSpellScoreDetails(tabs, warehouseWands, spellDb, settings)
@@ -430,7 +436,7 @@ export function SettingsModal({
   };
 
   const createPresetFromCurrentPreset = () => {
-    const name = prompt('预设名称', 'My Spell Score Preset')?.trim();
+    const name = prompt(t('settings.spell_score_preset_name_prompt'), t('settings.spell_score_new_preset_default'))?.trim();
     if (!name) return;
     setSettings(prev => {
       const usedIds = new Set((prev.spellScorePresets || []).map(preset => preset.id));
@@ -450,7 +456,7 @@ export function SettingsModal({
 
   const renameActiveSpellScorePreset = () => {
     const current = getActiveSpellScorePreset(settings);
-    const name = prompt('预设名称', current.name)?.trim();
+    const name = prompt(t('settings.spell_score_preset_name_prompt'), getPresetDisplayName(current))?.trim();
     if (!name || name === current.name) return;
     setSettings(prev => ({
       ...prev,
@@ -463,7 +469,7 @@ export function SettingsModal({
   const deleteActiveSpellScorePreset = () => {
     const current = getActiveSpellScorePreset(settings);
     if (current.id === DEFAULT_SPELL_SCORE_PRESET_ID) return;
-    if (!confirm(`删除预设「${current.name}」？`)) return;
+    if (!confirm(t('settings.spell_score_delete_preset_confirm', { name: current.name }))) return;
     setSettings(prev => ({
       ...prev,
       spellScorePresets: ensureSpellScorePresets(prev).filter(preset => preset.id !== current.id),
@@ -531,7 +537,7 @@ export function SettingsModal({
         };
       });
     } catch (err) {
-      alert('分数预设文件无效');
+      alert(t('settings.spell_score_invalid_preset_file'));
     }
   };
 
@@ -881,8 +887,8 @@ export function SettingsModal({
             {(searchQuery || activeCategory === 'spell_scores') && (
               <div className="space-y-6">
                 {[
-                  '常用排序',
-                  '法术分数',
+                  t('settings.categories.spell_scores'),
+                  t('settings.spell_score_score_alias'),
                   'Spell Scores',
                   'Spell Priority',
                   'preset',
@@ -891,8 +897,8 @@ export function SettingsModal({
                   <div className="space-y-4 bg-amber-500/5 p-4 rounded-lg border border-amber-500/10">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <div className="text-xs font-bold text-zinc-200">常用排序分数</div>
-                        <div className="text-[10px] text-zinc-500">最终分 = 自动统计分 + 预设分 + 手动分；常用列表按最终分排序。</div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.spell_score_title')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.spell_score_desc')}</div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -900,21 +906,21 @@ export function SettingsModal({
                           onClick={createPresetFromCurrentPreset}
                           className="px-2 py-1 text-[10px] rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30"
                         >
-                          复制为新预设
+                          {t('settings.spell_score_copy_as_preset')}
                         </button>
                         <button
                           type="button"
                           onClick={exportActiveSpellScorePreset}
                           className="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 flex items-center gap-1"
                         >
-                          <Download size={12} /> 导出预设
+                          <Download size={12} /> {t('settings.spell_score_export_preset')}
                         </button>
                         <button
                           type="button"
                           onClick={() => spellScoreImportInputRef.current?.click()}
                           className="px-2 py-1 text-[10px] rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"
                         >
-                          <Upload size={12} /> 导入预设
+                          <Upload size={12} /> {t('settings.spell_score_import_preset')}
                         </button>
                         <input
                           ref={spellScoreImportInputRef}
@@ -930,13 +936,13 @@ export function SettingsModal({
                             className="min-w-0 flex-1 bg-transparent px-2 text-[10px] font-bold text-zinc-200 outline-none"
                           >
                             {ensureSpellScorePresets(settings).map(preset => (
-                              <option key={preset.id} value={preset.id}>{preset.name}</option>
+                              <option key={preset.id} value={preset.id}>{getPresetDisplayName(preset)}</option>
                             ))}
                           </select>
                           <button
                             type="button"
                             onClick={renameActiveSpellScorePreset}
-                            title="重命名预设"
+                            title={t('settings.spell_score_rename_preset')}
                             className="flex w-7 items-center justify-center border-l border-white/10 text-zinc-400 hover:bg-white/10 hover:text-zinc-100"
                           >
                             <Edit2 size={12} />
@@ -945,7 +951,7 @@ export function SettingsModal({
                             <button
                               type="button"
                               onClick={deleteActiveSpellScorePreset}
-                              title="删除预设"
+                              title={t('settings.spell_score_delete_preset')}
                               className="flex w-7 items-center justify-center border-l border-white/10 text-zinc-500 hover:bg-red-500/20 hover:text-red-200"
                             >
                               <X size={13} />
@@ -957,9 +963,9 @@ export function SettingsModal({
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {[
-                        ['workflowOccurrence', '工作流出现次数 A'],
-                        ['workflowWandPresence', '工作流法杖去重 B'],
-                        ['warehouseWandPresence', '仓库法杖去重 C'],
+                        ['workflowOccurrence', t('settings.spell_score_weight_workflow_occurrence')],
+                        ['workflowWandPresence', t('settings.spell_score_weight_workflow_wand_presence')],
+                        ['warehouseWandPresence', t('settings.spell_score_weight_warehouse_wand_presence')],
                       ].map(([key, label]) => {
                         const weightKey = key as keyof AppSettings['spellScoreWeights'];
                         const value = ({ ...DEFAULT_SPELL_SCORE_WEIGHTS, ...(settings.spellScoreWeights || {}), ...(activeSpellScorePreset.weights || {}) })[weightKey];
@@ -981,28 +987,28 @@ export function SettingsModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/10 bg-black/20 p-3">
                         <div>
-                          <div className="text-xs font-bold text-zinc-200">工作流分数快照</div>
-                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWorkflowScores ? '已锁定：切换到这个预设时使用快照分' : '未锁定：按当前工作流实时统计'}</div>
+                          <div className="text-xs font-bold text-zinc-200">{t('settings.spell_score_workflow_snapshot')}</div>
+                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWorkflowScores ? t('settings.spell_score_snapshot_locked') : t('settings.spell_score_workflow_live')}</div>
                         </div>
                         <button
                           type="button"
                           onClick={() => setSpellScoreSourceLock('workflow', !activeSpellScorePreset.lockWorkflowScores)}
                           className={`shrink-0 rounded border px-3 py-1.5 text-[10px] font-black ${activeSpellScorePreset.lockWorkflowScores ? 'border-amber-500/40 bg-amber-500/20 text-amber-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10'}`}
                         >
-                          {activeSpellScorePreset.lockWorkflowScores ? '解锁重算' : '锁定当前'}
+                          {activeSpellScorePreset.lockWorkflowScores ? t('settings.spell_score_unlock_recalculate') : t('settings.spell_score_lock_current')}
                         </button>
                       </div>
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/10 bg-black/20 p-3">
                         <div>
-                          <div className="text-xs font-bold text-zinc-200">仓库分数快照</div>
-                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWarehouseScores ? '已锁定：切换到这个预设时使用快照分' : '未锁定：按当前仓库实时统计'}</div>
+                          <div className="text-xs font-bold text-zinc-200">{t('settings.spell_score_warehouse_snapshot')}</div>
+                          <div className="text-[10px] text-zinc-500">{activeSpellScorePreset.lockWarehouseScores ? t('settings.spell_score_snapshot_locked') : t('settings.spell_score_warehouse_live')}</div>
                         </div>
                         <button
                           type="button"
                           onClick={() => setSpellScoreSourceLock('warehouse', !activeSpellScorePreset.lockWarehouseScores)}
                           className={`shrink-0 rounded border px-3 py-1.5 text-[10px] font-black ${activeSpellScorePreset.lockWarehouseScores ? 'border-amber-500/40 bg-amber-500/20 text-amber-200' : 'border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10'}`}
                         >
-                          {activeSpellScorePreset.lockWarehouseScores ? '解锁重算' : '锁定当前'}
+                          {activeSpellScorePreset.lockWarehouseScores ? t('settings.spell_score_unlock_recalculate') : t('settings.spell_score_lock_current')}
                         </button>
                       </div>
                     </div>
@@ -1012,19 +1018,19 @@ export function SettingsModal({
                       <input
                         value={spellScoreSearch}
                         onChange={e => setSpellScoreSearch(e.target.value)}
-                        placeholder="搜索法术 ID / 名称"
+                        placeholder={t('settings.spell_score_search_placeholder')}
                         className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-zinc-600"
                       />
                     </div>
 
                     <div className="max-h-96 overflow-y-auto rounded-lg border border-white/10 bg-black/20 custom-scrollbar">
                       <div className="grid grid-cols-[minmax(180px,1fr)_64px_64px_64px_82px_120px] gap-2 border-b border-white/10 bg-black/30 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-zinc-500 sticky top-0">
-                        <span>法术</span>
-                        <span className="text-right">总分</span>
-                        <span className="text-right">自动</span>
-                        <span className="text-right">调整</span>
-                        <span className="text-right">编辑</span>
-                        <span className="text-right">操作</span>
+                        <span>{t('settings.spell_score_col_spell')}</span>
+                        <span className="text-right">{t('settings.spell_score_col_total')}</span>
+                        <span className="text-right">{t('settings.spell_score_col_auto')}</span>
+                        <span className="text-right">{t('settings.spell_score_col_adjust')}</span>
+                        <span className="text-right">{t('settings.spell_score_col_edit')}</span>
+                        <span className="text-right">{t('settings.spell_score_col_actions')}</span>
                       </div>
                       {spellScoreDetails.slice(0, 200).map(detail => {
                         const displayName = i18n.language.startsWith('en') && detail.spell.en_name ? detail.spell.en_name : detail.spell.name;
@@ -1034,7 +1040,14 @@ export function SettingsModal({
                               <img src={getIconUrl(detail.spell.icon, isConnected)} className="h-6 w-6 image-pixelated rounded border border-white/10" alt="" />
                               <div className="min-w-0">
                                 <div className="truncate font-bold text-zinc-200">{displayName}</div>
-                                <div className="truncate text-[9px] text-zinc-600">{detail.spell.id} · 次数 {detail.workflowOccurrence} · 工作流杖 {detail.workflowWandPresence} · 仓库杖 {detail.warehouseWandPresence}</div>
+                                <div className="truncate text-[9px] text-zinc-600">
+                                  {t('settings.spell_score_spell_detail', {
+                                    id: detail.spell.id,
+                                    occurrences: detail.workflowOccurrence,
+                                    workflowWands: detail.workflowWandPresence,
+                                    warehouseWands: detail.warehouseWandPresence
+                                  })}
+                                </div>
                               </div>
                             </div>
                             <span className="text-right font-mono font-bold text-amber-300">{detail.total}</span>
@@ -1047,15 +1060,15 @@ export function SettingsModal({
                               className="h-7 rounded border border-white/10 bg-black/30 px-1 text-right font-mono text-xs text-zinc-100 outline-none focus:border-amber-500/50"
                             />
                             <div className="flex justify-end gap-1">
-                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-amber-500/20 hover:text-amber-200">置顶</button>
-                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, -9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-red-500/20 hover:text-red-200">沉底</button>
-                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 0)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/10">重置</button>
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-amber-500/20 hover:text-amber-200">{t('settings.spell_score_pin_top')}</button>
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, -9999)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-red-500/20 hover:text-red-200">{t('settings.spell_score_sink_bottom')}</button>
+                              <button type="button" onClick={() => updateManualSpellScore(detail.spell.id, 0)} className="rounded bg-white/5 px-2 py-1 text-[10px] text-zinc-300 hover:bg-white/10">{t('settings.spell_score_reset')}</button>
                             </div>
                           </div>
                         );
                       })}
                       {spellScoreDetails.length === 0 && (
-                        <div className="py-8 text-center text-xs text-zinc-600">无匹配法术</div>
+                        <div className="py-8 text-center text-xs text-zinc-600">{t('settings.spell_score_no_matching_spells')}</div>
                       )}
                     </div>
                   </div>
@@ -1140,7 +1153,8 @@ export function SettingsModal({
                   t('settings.picker_row_height'),
                   t('settings.hide_labels'),
                   t('spell_picker.fixed_palette.auto_fill_rows_setting'),
-                  '悬浮法术选择器 Floating Spell Picker'
+                  t('spell_picker.floating_settings_title'),
+                  'Floating Spell Picker'
                 ].some(isMatch) && (
                   <div className="space-y-4 bg-sky-500/5 p-4 rounded-lg border border-sky-500/10">
                     <div>
@@ -2421,7 +2435,7 @@ export function SettingsModal({
                           onClick={addCommonGroup}
                           className="text-[9px] font-black bg-amber-500/10 text-amber-300 px-2 py-1 rounded hover:bg-amber-500/20 flex items-center gap-1"
                         >
-                          <Plus size={10} /> 添加常用组
+                          <Plus size={10} /> {t('settings.add_common_group')}
                         </button>
                       )}
                       <button
@@ -2441,11 +2455,11 @@ export function SettingsModal({
                             <Star size={13} className="text-amber-400" />
                             <div className="min-w-0">
                               <div className="text-xs font-bold text-zinc-200">{t('spell_picker.common_spells_global')}</div>
-                              <div className="text-[9px] text-zinc-500">按常用排序分数生成，显示数量由常用数量控制</div>
+                              <div className="text-[9px] text-zinc-500">{t('settings.common_group_desc')}</div>
                             </div>
                           </div>
                           <label className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                            数量
+                            {t('settings.count')}
                             <input
                               type="number"
                               min="1"
@@ -2458,7 +2472,7 @@ export function SettingsModal({
                           <button
                             onClick={deleteCommonGroup}
                             className="text-zinc-600 hover:text-red-400 transition-colors ml-1"
-                            title="删除常用组"
+                            title={t('settings.delete_common_group')}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -2638,13 +2652,13 @@ export function SettingsModal({
                             <div className="flex flex-col">
                               <div className="text-xs font-bold text-zinc-200">{bundle.name}</div>
                               <div className="text-[9px] text-zinc-500">
-                                {Object.keys(bundle.spells || {}).length} Spells
+                                {t('settings.mod_bundle_spells_count', { count: Object.keys(bundle.spells || {}).length })}
                                 {totalImpactfulCount > 0 ? ` | ${activeImpactfulCount}/${totalImpactfulCount} ${t('settings.mod_bundle_active_mods')}` : ''}
                                 {' | '}{new Date(bundle.timestamp).toLocaleString()}
                               </div>
                               {hiddenMods.length > 0 && (
                                 <div className="text-[9px] text-zinc-600 mt-1 flex flex-wrap gap-x-2">
-                                  <span className="font-bold">未影响法术的 Mod ({hiddenMods.length}):</span>
+                                  <span className="font-bold">{t('settings.unimpactful_mods', { count: hiddenMods.length })}</span>
                                   <span className="opacity-70">{hiddenMods.join(', ')}</span>
                                 </div>
                               )}
