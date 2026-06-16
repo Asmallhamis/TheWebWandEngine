@@ -40,13 +40,20 @@ def parse_wiki_wand(text):
     data = {}
 
     def get_val(key, default=None):
-        # 匹配 |key = value (直到 next | or } or newline)
-        m = re.search(rf'\|\s*{key}\s*=\s*([^|\n}}]+)', text, re.IGNORECASE)
+        # 匹配 |key = value，并允许 spells 里携带 BLACK_HOLE{0} 这种次数标注
+        m = re.search(rf'\|\s*{key}\s*=\s*((?:\{{-?\d+\}}|[^|\n}}])+)', text, re.IGNORECASE)
         if m:
             val = m.group(1).strip()
             val = re.sub(r'<!--.*?-->', '', val).strip()
             return val
         return default
+
+    def parse_spell_token(raw):
+        token = raw.strip()
+        m = re.match(r'^(.*?)\{(-?\d+)\}$', token)
+        if not m:
+            return token, None
+        return m.group(1).strip(), int(m.group(2))
 
     try:
         mana_max = get_val("manaMax")
@@ -110,9 +117,17 @@ def parse_wiki_wand(text):
             spells = re.sub(r'\[\[([^|\]]+\|)?([^\]]+)\]\]', r'\2', spells)
             spells_list = [s.strip() for s in spells.split(',')]
             data["spells"] = {}
+            spell_uses = {}
             for i, s in enumerate(spells_list):
                 if s:
-                    data["spells"][str(i + 1)] = s
+                    spell_id, uses = parse_spell_token(s)
+                    if spell_id:
+                        slot = str(i + 1)
+                        data["spells"][slot] = spell_id
+                        if uses is not None and uses != -1:
+                            spell_uses[slot] = uses
+            if spell_uses:
+                data["spell_uses"] = spell_uses
     except Exception as e:
         print(f"Error parsing wiki wand: {e}")
 

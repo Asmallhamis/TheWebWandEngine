@@ -13,8 +13,16 @@ function utf8ToBase64(str: string): string {
   }
 }
 
+export function formatSpellForWand2(spellId: string, uses?: number): string {
+  if (!spellId) return '';
+  return uses !== undefined && uses !== -1 ? `${spellId}{${uses}}` : spellId;
+}
+
 function getOrderedSpellSequence(wand: WandData): string[] {
-  return Array.from({ length: wand.deck_capacity }, (_, i) => wand.spells[(i + 1).toString()] || '');
+  return Array.from({ length: wand.deck_capacity }, (_, i) => {
+    const slot = (i + 1).toString();
+    return formatSpellForWand2(wand.spells[slot] || '', wand.spell_uses?.[slot]);
+  });
 }
 
 function getWikiSpriteName(wand: WandData): string {

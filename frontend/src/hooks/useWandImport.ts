@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { SpellInfo, WandData, Tab, AppSettings, HistoryItem, WarehouseWand, AppNotification } from '../types';
 import { DEFAULT_WAND } from '../constants';
 import { spritePathToWikiName, wikiNameToSpritePath } from '../lib/evaluatorAdapter';
+import { formatSpellForWand2 } from '../lib/wand/share';
 import { useUIStore } from '../store/useUIStore';
 
 export const readMetadataFromPng = async (file: File): Promise<string | null> => {
@@ -101,6 +102,7 @@ export const useWandImport = ({
       speed_multiplier: Math.round((w.speed_multiplier || 1) * 100) / 100,
       // 只比较非空法术
       spells: Object.fromEntries(Object.entries(w.spells).filter(([_, id]) => !!id)),
+      spell_uses: Object.fromEntries(Object.entries(w.spell_uses || {}).filter(([_, uses]) => uses !== -1)),
       always_cast: compactAlwaysCast(w.always_cast),
       appearance: w.appearance ? {
         sprite: w.appearance.sprite,
@@ -151,6 +153,19 @@ export const useWandImport = ({
       .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
       .trim();
 
+    const parseSpellToken = (raw: string) => {
+      const token = raw.trim();
+      const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/);
+      const spellText = (usesMatch ? usesMatch[1] : token).trim();
+      const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
+      const norm = normalize(spellText);
+      return {
+        spellText,
+        spellId: spellNameToId[norm] || spellText.toUpperCase(),
+        uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
+      };
+    };
+
     // Determine where to paste
     let targetWandSlot = forceTarget?.slot;
     let startIdx = forceTarget?.idx;
@@ -176,13 +191,14 @@ export const useWandImport = ({
       // If no target slot but it's Wand data, create a new wand instead of failing
       if (isWandData) {
         const getVal = (key: string) => {
-          const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
+          const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*((?:\\{-?\\d+\\}|[^|\\n}])+)`);
           const match = text.match(regex);
           if (!match) return null;
           return match[1].trim();
         };
 
         const newSpells: Record<string, string> = {};
+        const newSpellUses: Record<string, number> = {};
         const alwaysCasts: string[] = [];
         let deckCapacity = 0;
 
@@ -191,8 +207,12 @@ export const useWandImport = ({
           const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
           spellsList.forEach((sid, i) => {
             if (sid) {
-              const norm = normalize(sid);
-              newSpells[(i + 1).toString()] = spellNameToId[norm] || sid.toUpperCase();
+              const slot = (i + 1).toString();
+              const parsed = parseSpellToken(sid);
+              if (parsed.spellText) {
+                newSpells[slot] = parsed.spellId;
+                if (parsed.uses !== undefined && parsed.uses !== -1) newSpellUses[slot] = parsed.uses;
+              }
             }
           });
           deckCapacity = parseInt(getVal('capacity') || '0') || DEFAULT_WAND.deck_capacity;
@@ -240,6 +260,7 @@ export const useWandImport = ({
           spread_degrees: parseFloat(getVal('spread') || '0') || DEFAULT_WAND.spread_degrees,
           speed_multiplier: parseFloat(getVal('speed') || '1') || DEFAULT_WAND.speed_multiplier,
           spells: newSpells,
+          spell_uses: newSpellUses,
           always_cast: alwaysCasts,
           appearance: (() => {
             const pic = getVal('wandPic') || getVal('wand_file');
@@ -252,7 +273,7 @@ export const useWandImport = ({
 
         if (settings.moveExistingWandToTopOnDuplicatePaste) {
           // 重复检测：如果当前标签页已存在完全一致的法杖，则移动到顶部
-          const existingSlot = Object.keys(activeTab.wands).find(slot => 
+          const existingSlot = Object.keys(activeTab.wands).find(slot =>
             areWandsIdentical(activeTab.wands[slot], newWand)
           );
 
@@ -260,10 +281,10 @@ export const useWandImport = ({
             performAction(prevWands => {
               const nextWands: Record<string, WandData> = {};
               const wandsList = Object.entries(prevWands).sort(([a], [b]) => Number(a) - Number(b));
-              
+
               // 移动到顶部 (Slot 1)
               nextWands["1"] = prevWands[existingSlot];
-              
+
               let nextSlotNum = 2;
               for (const [slot, wand] of wandsList) {
                 if (slot === existingSlot) continue;
@@ -272,10 +293,10 @@ export const useWandImport = ({
               }
               return nextWands;
             }, t('app.notification.move_existing_wand_to_top'));
-            
+
             setNotification({ msg: t('app.notification.wand_already_exists_moving_to_top'), type: 'info' });
             setActiveTabId(activeTabId); // Trigger refresh if needed
-            
+
             // 滚动到顶部
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return true;
@@ -307,12 +328,13 @@ export const useWandImport = ({
 
     if (isWandData) {
       const getVal = (key: string) => {
-        const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
+        const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*((?:\\{-?\\d+\\}|[^|\\n}])+)`);
         const match = text.match(regex);
         return match ? match[1].trim() : null;
       };
 
       const newSpells: Record<string, string> = {};
+      const newSpellUses: Record<string, number> = {};
       const alwaysCasts: string[] = [];
       let deckCapacity = wand.deck_capacity;
 
@@ -321,8 +343,12 @@ export const useWandImport = ({
         const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
         spellsList.forEach((sid, i) => {
           if (sid) {
-            const norm = normalize(sid);
-            newSpells[(i + 1).toString()] = spellNameToId[norm] || sid.toUpperCase();
+            const slot = (i + 1).toString();
+            const parsed = parseSpellToken(sid);
+            if (parsed.spellText) {
+              newSpells[slot] = parsed.spellId;
+              if (parsed.uses !== undefined && parsed.uses !== -1) newSpellUses[slot] = parsed.uses;
+            }
           }
         });
         deckCapacity = parseInt(getVal('capacity') || '0') || deckCapacity;
@@ -369,6 +395,7 @@ export const useWandImport = ({
         spread_degrees: parseFloat(getVal('spread') || '0') || wand.spread_degrees,
         speed_multiplier: parseFloat(getVal('speed') || '1') || wand.speed_multiplier,
         always_cast: alwaysCasts,
+        spell_uses: newSpellUses,
         appearance: (() => {
           const pic = getVal('wandPic') || getVal('wand_file');
           if (!pic) return wand.appearance;
@@ -385,38 +412,45 @@ export const useWandImport = ({
         const nextAlwaysCast = [...(wand.always_cast || [])];
         const insertAt = Math.max(0, (startIdx || 1) - 1);
         while (nextAlwaysCast.length < insertAt) nextAlwaysCast.push('');
-        nextAlwaysCast.splice(insertAt, 0, ...text.split(',').map(s => s.trim()).map(s => {
-          const norm = normalize(s);
-          return spellNameToId[norm] || s.toUpperCase();
-        }).filter(Boolean));
+        nextAlwaysCast.splice(insertAt, 0, ...text.split(',').map(s => parseSpellToken(s).spellId).filter(Boolean));
         updateWand(targetWandSlot, { always_cast: nextAlwaysCast }, t('app.notification.insert_spell_sequence'), nextAlwaysCast.filter(Boolean));
         return true;
       }
-      const newSpellsList = text.split(',').map(s => s.trim()).map(s => {
-        const norm = normalize(s);
-        return spellNameToId[norm] || s.toUpperCase();
+      const newSlots = text.split(',').map(s => {
+        const parsed = parseSpellToken(s);
+        return {
+          sid: parsed.spellText ? parsed.spellId : null,
+          uses: parsed.uses
+        };
       });
-      const existingSpells: (string | null)[] = [];
+      const existingSlots: { sid: string | null, uses?: number }[] = [];
       const maxIdx = Math.max(wand.deck_capacity, ...Object.keys(wand.spells).map(Number));
       for (let i = 1; i <= maxIdx; i++) {
-        existingSpells.push(wand.spells[i.toString()] || null);
+        const slot = i.toString();
+        const sid = wand.spells[slot] || null;
+        existingSlots.push({ sid, uses: sid ? wand.spell_uses?.[slot] : undefined });
       }
       const headIdx = startIdx - 1;
-      if (existingSpells[headIdx] === null) {
-        existingSpells.splice(headIdx, 1);
-      } else if (existingSpells[headIdx - 1] === null) {
-        existingSpells.splice(headIdx - 1, 1);
+      if (existingSlots[headIdx]?.sid === null) {
+        existingSlots.splice(headIdx, 1);
+      } else if (existingSlots[headIdx - 1]?.sid === null) {
+        existingSlots.splice(headIdx - 1, 1);
         startIdx--;
       }
-      const head = existingSpells.slice(0, startIdx - 1);
-      const tail = existingSpells.slice(startIdx - 1);
-      const combined = [...head, ...newSpellsList, ...tail];
+      const head = existingSlots.slice(0, startIdx - 1);
+      const tail = existingSlots.slice(startIdx - 1);
+      const combined = [...head, ...newSlots, ...tail];
       const finalSpellsObj: Record<string, string> = {};
-      combined.forEach((sid, i) => {
-        if (sid) finalSpellsObj[(i + 1).toString()] = sid;
+      const finalSpellUses: Record<string, number> = {};
+      combined.forEach((item, i) => {
+        if (item.sid) {
+          const slot = (i + 1).toString();
+          finalSpellsObj[slot] = item.sid;
+          if (item.uses !== undefined && item.uses !== -1) finalSpellUses[slot] = item.uses;
+        }
       });
       let newCapacity = wand.deck_capacity;
-      const lastSpellIdx = combined.reduce((acc, val, idx) => val !== null ? idx + 1 : acc, 0);
+      const lastSpellIdx = combined.reduce((acc, item, idx) => item.sid ? idx + 1 : acc, 0);
       if (lastSpellIdx > wand.deck_capacity) {
         if (settings.autoExpandOnPaste) {
           newCapacity = lastSpellIdx;
@@ -426,7 +460,8 @@ export const useWandImport = ({
           }
         }
       }
-      updateWand(targetWandSlot, { spells: finalSpellsObj, deck_capacity: newCapacity }, t('app.notification.insert_spell_sequence'), newSpellsList.filter(s => s));
+      const insertedSpellIds = newSlots.map(item => item.sid).filter(Boolean) as string[];
+      updateWand(targetWandSlot, { spells: finalSpellsObj, spell_uses: finalSpellUses, deck_capacity: newCapacity }, t('app.notification.insert_spell_sequence'), insertedSpellIds);
       return true;
     }
   }, [spellDb, settings, activeTabId, activeTab, spellNameToId, performAction, syncWand, t, updateWand]);
@@ -467,6 +502,11 @@ export const useWandImport = ({
       if (targetArea === 'always_cast') return wand.always_cast[i - 1] || "";
       return wand.spells[i.toString()] || "";
     });
+    const clipboardSequence = sortedIndices.map(i => {
+      if (targetArea === 'always_cast') return wand.always_cast[i - 1] || "";
+      const slot = i.toString();
+      return formatSpellForWand2(wand.spells[slot] || '', wand.spell_uses?.[slot]);
+    });
 
     if (sequence.length === 1 && !sequence[0] && !isCut) return;
 
@@ -474,6 +514,10 @@ export const useWandImport = ({
       // Full wand format (兼容 CE 的 Wand2 模板风格)
       const wikiPic = spritePathToWikiName(wand.appearance);
       const alwaysCasts = (wand.always_cast || []).map(s => s || '').filter(Boolean);
+      const wand2Sequence = sortedIndices.map(i => {
+        const slot = i.toString();
+        return formatSpellForWand2(wand.spells[slot] || '', wand.spell_uses?.[slot]);
+      });
       let lines = ['{{Wand2'];
       lines.push('| wandCard     = Yes');
       if (wikiPic) lines.push(`| wandPic      = ${wikiPic}`);
@@ -489,12 +533,12 @@ export const useWandImport = ({
       if (alwaysCasts.length > 0) {
         lines.push(`| alwaysCasts  = ${alwaysCasts.join(',')}`);
       }
-      lines.push(`| spells       = ${sequence.join(',')}`);
+      lines.push(`| spells       = ${wand2Sequence.join(',')}`);
       lines.push('}}');
       textToCopy = lines.join('\n');
     } else {
       // Spell sequence format (Preserve empty slots as ,,)
-      textToCopy = sequence.join(',');
+      textToCopy = clipboardSequence.join(',');
     }
 
     if (textToCopy !== undefined) {

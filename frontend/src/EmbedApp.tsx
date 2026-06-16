@@ -127,12 +127,26 @@ function parseWandFromText(text: string, spellNameToId: Record<string, string>):
   if (!isWand2Data && !isWikiWand) return null;
 
   const getVal = (key: string) => {
-    const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*([^|\\n}]+)`);
+    const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*((?:\\{-?\\d+\\}|[^|\\n}])+)`);
     const match = text.match(regex);
     return match ? match[1].trim() : null;
   };
 
+  const parseSpellToken = (raw: string) => {
+    const token = raw.trim();
+    const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/);
+    const spellText = (usesMatch ? usesMatch[1] : token).trim();
+    const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
+    const norm = normalize(spellText);
+    return {
+      spellText,
+      spellId: spellNameToId[norm] || spellText.toUpperCase(),
+      uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
+    };
+  };
+
   const newSpells: Record<string, string> = {};
+  const newSpellUses: Record<string, number> = {};
   const alwaysCasts: string[] = [];
   let deckCapacity = 0;
 
@@ -141,8 +155,12 @@ function parseWandFromText(text: string, spellNameToId: Record<string, string>):
     const spellsList = spellsStr ? spellsStr.split(',').map(s => s.trim()) : [];
     spellsList.forEach((sid, i) => {
       if (sid) {
-        const norm = normalize(sid);
-        newSpells[(i + 1).toString()] = spellNameToId[norm] || sid.toUpperCase();
+        const slot = (i + 1).toString();
+        const parsed = parseSpellToken(sid);
+        if (parsed.spellText) {
+          newSpells[slot] = parsed.spellId;
+          if (parsed.uses !== undefined && parsed.uses !== -1) newSpellUses[slot] = parsed.uses;
+        }
       }
     });
     deckCapacity = parseInt(getVal('capacity') || '0') || spellsList.length || DEFAULT_WAND.deck_capacity;
@@ -189,6 +207,7 @@ function parseWandFromText(text: string, spellNameToId: Record<string, string>):
     spread_degrees: parseFloat(getVal('spread') || '0') || DEFAULT_WAND.spread_degrees,
     speed_multiplier: parseFloat(getVal('speed') || '1') || DEFAULT_WAND.speed_multiplier,
     spells: newSpells,
+    spell_uses: newSpellUses,
     always_cast: alwaysCasts,
     appearance: (() => {
       const pic = getVal('wandPic') || getVal('wand_file');
