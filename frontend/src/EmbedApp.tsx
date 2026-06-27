@@ -100,23 +100,42 @@ function parseWandFromText(text: string, spellNameToId: Record<string, string>):
     .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
     .trim();
 
+  const parseSpellToken = (raw: string) => {
+    const token = raw.trim();
+    const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/) || token.match(/^(.*?)#(-?\d+)$/);
+    const spellText = (usesMatch ? usesMatch[1] : token).trim();
+    const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
+    const norm = normalize(spellText);
+    return {
+      spellText,
+      spellId: spellNameToId[norm] || spellText.toUpperCase(),
+      uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
+    };
+  };
+
   // 兼容外部模拟器 URL
   if (text.includes('?spells=') || text.includes('&spells=')) {
     try {
       const url = new URL(text.startsWith('http') ? text : `http://x.com/${text}`);
       const spellsStr = url.searchParams.get('spells');
       if (spellsStr) {
-        const ids = spellsStr.split(',').filter(s => !!s);
+        const parsedSpells = spellsStr.split(',').map(s => parseSpellToken(s)).filter(s => !!s.spellText);
+        const newSpells = parsedSpells.reduce<Record<string, string>>((acc, spell, i) => ({ ...acc, [(i + 1).toString()]: spell.spellId }), {});
+        const newSpellUses = parsedSpells.reduce<Record<string, number>>((acc, spell, i) => {
+          if (spell.uses !== undefined && spell.uses !== -1) acc[(i + 1).toString()] = spell.uses;
+          return acc;
+        }, {});
         return {
           ...DEFAULT_WAND,
           mana_max: parseFloat(url.searchParams.get('mana_max') || '400'),
           mana_charge_speed: parseFloat(url.searchParams.get('mana_charge_speed') || '10'),
           reload_time: parseInt(url.searchParams.get('reload_time') || '0'),
           fire_rate_wait: parseInt(url.searchParams.get('cast_delay') || '0'),
-          deck_capacity: parseInt(url.searchParams.get('deck_capacity') || String(ids.length)),
+          deck_capacity: parseInt(url.searchParams.get('deck_capacity') || String(parsedSpells.length)),
           actions_per_round: parseInt(url.searchParams.get('actions_per_round') || '1'),
           shuffle_deck_when_empty: url.searchParams.get('shuffle_deck_when_empty') === 'true',
-          spells: ids.reduce((acc, id, i) => ({ ...acc, [(i + 1).toString()]: id }), {}),
+          spells: newSpells,
+          spell_uses: newSpellUses,
         };
       }
     } catch (e) { /* ignore */ }
@@ -130,19 +149,6 @@ function parseWandFromText(text: string, spellNameToId: Record<string, string>):
     const regex = new RegExp(`\\|\\s*${key}\\s*=\\s*((?:\\{-?\\d+\\}|[^|\\n}])+)`);
     const match = text.match(regex);
     return match ? match[1].trim() : null;
-  };
-
-  const parseSpellToken = (raw: string) => {
-    const token = raw.trim();
-    const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/);
-    const spellText = (usesMatch ? usesMatch[1] : token).trim();
-    const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
-    const norm = normalize(spellText);
-    return {
-      spellText,
-      spellId: spellNameToId[norm] || spellText.toUpperCase(),
-      uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
-    };
   };
 
   const newSpells: Record<string, string> = {};

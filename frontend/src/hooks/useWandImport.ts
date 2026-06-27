@@ -116,12 +116,36 @@ export const useWandImport = ({
   }, [compactAlwaysCast]);
 
   const importFromText = useCallback(async (text: string, forceTarget?: { slot: string, idx: number }) => {
+    const normalize = (s: string) => s.toLowerCase()
+      .replace(/\[\[|\]\]/g, '')
+      .split('|')[0]
+      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
+      .trim();
+
+    const parseSpellToken = (raw: string) => {
+      const token = raw.trim();
+      const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/) || token.match(/^(.*?)#(-?\d+)$/);
+      const spellText = (usesMatch ? usesMatch[1] : token).trim();
+      const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
+      const norm = normalize(spellText);
+      return {
+        spellText,
+        spellId: spellNameToId[norm] || spellText.toUpperCase(),
+        uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
+      };
+    };
+
     // 兼容外部模拟器 URL 粘贴
     if (text.includes('?spells=') || text.includes('&spells=')) {
       const url = new URL(text.startsWith('http') ? text : `http://x.com/${text}`);
       const spellsStr = url.searchParams.get('spells');
       if (spellsStr) {
-        const ids = spellsStr.split(',').filter(s => !!s);
+        const parsedSpells = spellsStr.split(',').map(s => parseSpellToken(s)).filter(s => !!s.spellText);
+        const newSpells = parsedSpells.reduce<Record<string, string>>((acc, spell, i) => ({ ...acc, [(i + 1).toString()]: spell.spellId }), {});
+        const newSpellUses = parsedSpells.reduce<Record<string, number>>((acc, spell, i) => {
+          if (spell.uses !== undefined && spell.uses !== -1) acc[(i + 1).toString()] = spell.uses;
+          return acc;
+        }, {});
         const hoveredSlot = useUIStore.getState().hoveredSlot;
         const targetSlot = forceTarget?.slot || (hoveredSlot?.wandSlot) || (Math.max(0, ...Object.keys(activeTab.wands).map(Number)) + 1).toString();
         const nextWand = {
@@ -133,7 +157,8 @@ export const useWandImport = ({
           deck_capacity: parseInt(url.searchParams.get('deck_capacity') || '10'),
           actions_per_round: parseInt(url.searchParams.get('actions_per_round') || '1'),
           shuffle_deck_when_empty: url.searchParams.get('shuffle_deck_when_empty') === 'true',
-          spells: ids.reduce((acc, id, i) => ({ ...acc, [(i + 1).toString()]: id }), {})
+          spells: newSpells,
+          spell_uses: newSpellUses
         };
         performAction(prev => ({ ...prev, [targetSlot]: nextWand }), t('app.notification.import_from_url'));
         return true;
@@ -146,25 +171,6 @@ export const useWandImport = ({
     const isSpellSeq = text.includes(',') || Object.keys(spellDb).some(id => text.includes(id));
 
     if (!isWandData && !isSpellSeq) return false;
-
-    const normalize = (s: string) => s.toLowerCase()
-      .replace(/\[\[|\]\]/g, '')
-      .split('|')[0]
-      .replace(/[^a-z0-9\u4e00-\u9fa5]/g, '')
-      .trim();
-
-    const parseSpellToken = (raw: string) => {
-      const token = raw.trim();
-      const usesMatch = token.match(/^(.*?)\{(-?\d+)\}$/);
-      const spellText = (usesMatch ? usesMatch[1] : token).trim();
-      const parsedUses = usesMatch ? parseInt(usesMatch[2], 10) : undefined;
-      const norm = normalize(spellText);
-      return {
-        spellText,
-        spellId: spellNameToId[norm] || spellText.toUpperCase(),
-        uses: parsedUses !== undefined && Number.isFinite(parsedUses) ? parsedUses : undefined
-      };
-    };
 
     // Determine where to paste
     let targetWandSlot = forceTarget?.slot;
