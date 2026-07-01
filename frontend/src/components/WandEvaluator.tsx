@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { EvalNode, ShotState, SpellInfo, AppSettings, EvalResponse, EvalTimeline } from '../types';
+import { EvalNode, ShotState, SpellInfo, AppSettings, EvalResponse, EvalTimeline, TimelineJumpRequest } from '../types';
 import { ChevronRight, ChevronDown, Pause, Play, Search, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,7 @@ interface Props {
   deckCapacity?: number;
   renderMode?: 'all' | 'stats' | 'tree';
   isCanvas?: boolean;
+  externalTimelineJumpRequest?: TimelineJumpRequest | null;
   settings: AppSettings;
 }
 
@@ -159,12 +160,19 @@ const ShotTree: React.FC<{
   );
 };
 
-const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity, renderMode = 'all', isCanvas = false }) => {
+const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity, renderMode = 'all', isCanvas = false, externalTimelineJumpRequest }) => {
   const { t, i18n } = useTranslation();
   const [userExpandedCasts, setUserExpandedCasts] = useState<Record<number, boolean>>({});
   const [userShowAllCasts, setUserShowAllCasts] = useState<Record<number, boolean>>({}); // 控制是否展开合并的每一轮
   const [isAltPressed, setIsAltPressed] = useState(false);
   const [hoveredShotId, setHoveredShotId] = useState<{ cast: number, id: number } | null>(null);
+  const [timelineJumpRequest, setTimelineJumpRequest] = useState<TimelineJumpRequest | null>(null);
+
+  const jumpTimelineToNode = (node: EvalNode) => {
+    const timelineId = getFirstTimelineId(node);
+    if (timelineId === undefined) return;
+    setTimelineJumpRequest({ timelineId, nonce: Date.now() });
+  };
 
   const absoluteToOrdinal = useMemo(() => {
     if (!wandSpells || deckCapacity === undefined) return null;
@@ -275,11 +283,22 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
     return groups;
   }, [data, settings.groupIdenticalCasts]);
 
+  const evaluatorSectionOrder = normalizeEvaluatorSectionOrder(settings.evaluatorSectionOrder);
+  const evaluatorSectionOrderMap = evaluatorSectionOrder.reduce<Record<EvaluatorSectionId, number>>((acc, id, index) => {
+    acc[id] = index;
+    return acc;
+  }, { timeline: 0, shot_states: 1, tree: 2 });
+  const canRenderTimeline = (settings.showCastTimeline ?? true)
+    && (renderMode === 'all' || renderMode === 'stats')
+    && !!data.timeline
+    && data.timeline.events.length > 0;
+  const timelineNodeClick = canRenderTimeline ? jumpTimelineToNode : undefined;
+
   return (
-    <div className={isCanvas ? "space-y-6 eval-orionfire-region" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg space-y-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
+    <div className={isCanvas ? "flex flex-col gap-6 eval-orionfire-region" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg flex flex-col gap-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
       {/* Overall Spell Counts Section */}
       {(renderMode === 'all' || renderMode === 'stats') && sortedOverallCounts.length > 0 && (
-        <section data-testid="eval-overall-counts">
+        <section data-testid="eval-overall-counts" style={{ order: -1 }}>
           {!isCanvas && (
             <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] rounded-full"></span>
@@ -312,13 +331,15 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
         </section>
       )}
 
-      {(renderMode === 'all' || renderMode === 'stats') && data.timeline && data.timeline.events.length > 0 && (
-        <WandTimelinePlayer timeline={data.timeline} spellDb={spellDb} absoluteToOrdinal={absoluteToOrdinal} settings={settings} />
+      {canRenderTimeline && data.timeline && (
+        <div style={{ order: evaluatorSectionOrderMap.timeline }}>
+          <WandTimelinePlayer timeline={data.timeline} spellDb={spellDb} absoluteToOrdinal={absoluteToOrdinal} settings={settings} jumpRequest={externalTimelineJumpRequest || timelineJumpRequest} />
+        </div>
       )}
 
       {/* Shot States Section */}
       {(renderMode === 'all' || renderMode === 'stats') && (
-        <section>
+        <section style={{ order: evaluatorSectionOrderMap.shot_states }}>
           {!isCanvas && (
             <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between mb-4">
               <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
@@ -427,7 +448,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 
       {/* Tree Flowchart Section */}
       {(renderMode === 'all' || renderMode === 'tree') && (
-        <section>
+        <section style={{ order: evaluatorSectionOrderMap.tree }}>
           {!isCanvas && (
             <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] rounded-full"></span>
@@ -489,6 +510,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                               isRoot={true}
                               onHover={onHoverSlots}
                               onHoverShotId={(sid) => setHoveredShotId(sid ? { cast: group.start, id: sid } : null)}
+                              onTimelineNodeClick={timelineNodeClick}
                               markedSlots={markedSlots}
                               showIndices={isAltPressed || settings.showIndices}
                               absoluteToOrdinal={absoluteToOrdinal}
@@ -519,6 +541,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                                   isRoot={true}
                                   onHover={onHoverSlots}
                                   onHoverShotId={(sid) => setHoveredShotId(sid ? { cast: cNum, id: sid } : null)}
+                                  onTimelineNodeClick={timelineNodeClick}
                                   markedSlots={markedSlots}
                                   showIndices={isAltPressed || settings.showIndices}
                                   absoluteToOrdinal={absoluteToOrdinal}
@@ -553,6 +576,8 @@ type TimelineFrame = {
   key: string;
 };
 
+type EvaluatorSectionId = 'timeline' | 'shot_states' | 'tree';
+const EVALUATOR_SECTION_IDS: EvaluatorSectionId[] = ['timeline', 'shot_states', 'tree'];
 const TIMELINE_PILE_LABELS: TimelinePileName[] = ['discarded', 'hand', 'deck'];
 const MAX_STAGE_CARDS_PER_PILE = 96;
 const TIMELINE_SPEED_STORAGE_KEY = 'twwe.timeline.speed';
@@ -567,6 +592,24 @@ const isDivideAction = (id?: string) => /^DIVIDE_\d+$/.test(id || '');
 
 const formatProgressText = (step: number, total?: number) =>
   total === undefined ? String(step) : `${step}/${total}`;
+
+const getFirstTimelineId = (node: EvalNode) => {
+  if (typeof node.timeline_id === 'number') return node.timeline_id;
+  return node.timeline_ids?.find(id => typeof id === 'number');
+};
+
+const normalizeEvaluatorSectionOrder = (order?: AppSettings['evaluatorSectionOrder']) => {
+  const seen = new Set<string>();
+  const normalized = (order || []).filter((id): id is EvaluatorSectionId => {
+    if (!EVALUATOR_SECTION_IDS.includes(id as EvaluatorSectionId) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  EVALUATOR_SECTION_IDS.forEach(id => {
+    if (!seen.has(id)) normalized.push(id);
+  });
+  return normalized;
+};
 
 const clampTimelineSpeed = (value: number) => {
   if (!Number.isFinite(value)) return 1;
@@ -696,8 +739,10 @@ const WandTimelinePlayer: React.FC<{
   spellDb: Record<string, SpellInfo>;
   absoluteToOrdinal: Record<number, number> | null;
   settings: AppSettings;
-}> = ({ timeline, spellDb, absoluteToOrdinal, settings }) => {
+  jumpRequest?: TimelineJumpRequest | null;
+}> = ({ timeline, spellDb, absoluteToOrdinal, settings, jumpRequest }) => {
   const { t, i18n } = useTranslation();
+  const sectionRef = React.useRef<HTMLElement | null>(null);
   const stageRef = React.useRef<HTMLDivElement | null>(null);
   const lastFrameRef = React.useRef<TimelineFrame | null>(null);
   const [stageWidth, setStageWidth] = useState(900);
@@ -744,6 +789,18 @@ const WandTimelinePlayer: React.FC<{
     () => frames.map((frame, index) => frame.event.type === 'action_start' ? index : -1).filter(index => index >= 0),
     [frames]
   );
+
+  const timelineIdToFrameIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    frames.forEach((frame, index) => {
+      if (frame.event.type !== 'action_start') return;
+      const timelineId = frame.event.info?.timeline_id;
+      if (typeof timelineId === 'number' && !map.has(timelineId)) {
+        map.set(timelineId, index);
+      }
+    });
+    return map;
+  }, [frames]);
 
   useEffect(() => {
     setSpeedText(formatTimelineSpeed(speed));
@@ -874,6 +931,14 @@ const WandTimelinePlayer: React.FC<{
       : [...matchingFrameIndices].reverse().find(index => index < currentIndex) ?? matchingFrameIndices[matchingFrameIndices.length - 1];
     jumpTo(target);
   };
+
+  useEffect(() => {
+    if (!jumpRequest) return;
+    const target = timelineIdToFrameIndex.get(jumpRequest.timelineId);
+    if (target === undefined) return;
+    jumpTo(target);
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [jumpRequest, timelineIdToFrameIndex]);
 
   const getSpellDisplay = (id?: string) => {
     const spell = id ? spellDb[id] : null;
@@ -1015,7 +1080,7 @@ const WandTimelinePlayer: React.FC<{
   if (!currentFrame || !currentEvent) return null;
 
   return (
-    <section className="space-y-3">
+    <section ref={sectionRef} className="space-y-3">
       <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between gap-3">
         <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
           <span className="w-1.5 h-1.5 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] rounded-full"></span>
@@ -1400,11 +1465,12 @@ const TreeNode: React.FC<{
   isRoot?: boolean;
   onHover?: (indices: number[] | null) => void;
   onHoverShotId?: (id: number | null) => void;
+  onTimelineNodeClick?: (node: EvalNode) => void;
   markedSlots: number[];
   showIndices: boolean;
   absoluteToOrdinal: Record<number, number> | null;
   settings: AppSettings;
-}> = React.memo(({ node, spellDb, isRoot, onHover, onHoverShotId, markedSlots, showIndices, absoluteToOrdinal, settings }) => {
+}> = React.memo(({ node, spellDb, isRoot, onHover, onHoverShotId, onTimelineNodeClick, markedSlots, showIndices, absoluteToOrdinal, settings }) => {
   const { i18n } = useTranslation();
   const isCast = node.name.startsWith('Cast #') || node.name === 'Wand';
   const spell = spellDb[node.name];
@@ -1412,6 +1478,7 @@ const TreeNode: React.FC<{
 
   const iconUrl = spell ? getIconUrl(spell.icon, false) : null;
   const isMarked = node.index && node.index.some(idx => markedSlots.includes(idx));
+  const canJumpToTimeline = getFirstTimelineId(node) !== undefined && !!onTimelineNodeClick;
 
   return (
     <div className={`flex items-start shrink-0`}>
@@ -1434,8 +1501,13 @@ const TreeNode: React.FC<{
               onHover?.(null);
               onHoverShotId?.(null);
             }}
+            onClick={(event) => {
+              if (!canJumpToTimeline) return;
+              event.stopPropagation();
+              onTimelineNodeClick?.(node);
+            }}
             className={`
-              group relative p-2 rounded border transition-all cursor-help shrink-0
+              group relative p-2 rounded border transition-all ${canJumpToTimeline ? 'cursor-pointer' : 'cursor-help'} shrink-0
               ${isCast ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-900 border-white/10 shadow-xl'}
               ${isMarked ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-black scale-105 z-10 !border-amber-500/50' : ''}
               hover:scale-110 hover:z-20 hover:border-indigo-400 hover:bg-indigo-400/20
@@ -1563,6 +1635,7 @@ const TreeNode: React.FC<{
                     spellDb={spellDb}
                     onHover={onHover}
                     onHoverShotId={onHoverShotId}
+                    onTimelineNodeClick={onTimelineNodeClick}
                     markedSlots={markedSlots}
                     showIndices={showIndices}
                     absoluteToOrdinal={absoluteToOrdinal}

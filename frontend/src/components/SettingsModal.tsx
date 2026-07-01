@@ -2,7 +2,8 @@ import React, { useRef, useState } from 'react';
 import {
   Settings, X, Zap, Info, Download, Upload, Plus, Trash2, Edit2, GripVertical,
   Search, Wand2, Activity, Layers, Database, Star, Package,
-  HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer, Smartphone
+  HelpCircle, Image as ImageIcon, Hand, RefreshCw, MousePointer, Smartphone,
+  ArrowUp, ArrowDown
 } from 'lucide-react';
 import { AppSettings, Tab, WandData, SpellTypeConfig, SpellGroupConfig, SpellInfo, SpellMarkingRule, WarehouseWand } from '../types';
 import { SPELL_GROUPS } from '../constants';
@@ -208,6 +209,31 @@ export function SettingsModal({
   const getRuleDisplayName = (rule: SpellMarkingRule) => (
     rule.id === 'divide_chain' ? t('settings.divide_chain_rule_name') : rule.name
   );
+  const evaluatorSectionIds = ['timeline', 'shot_states', 'tree'] as const;
+  type EvaluatorSectionId = typeof evaluatorSectionIds[number];
+  const getEvaluatorSectionOrder = (order?: AppSettings['evaluatorSectionOrder']): EvaluatorSectionId[] => {
+    const seen = new Set<string>();
+    const normalized = (order || []).filter((id): id is EvaluatorSectionId => {
+      if (!evaluatorSectionIds.includes(id as EvaluatorSectionId) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+    evaluatorSectionIds.forEach(id => {
+      if (!seen.has(id)) normalized.push(id);
+    });
+    return normalized;
+  };
+  const moveEvaluatorSection = (sectionId: EvaluatorSectionId, direction: -1 | 1) => {
+    setSettings(s => {
+      const order = getEvaluatorSectionOrder(s.evaluatorSectionOrder);
+      const index = order.indexOf(sectionId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= order.length) return s;
+      const next = [...order];
+      [next[index], next[target]] = [next[target], next[index]];
+      return { ...s, evaluatorSectionOrder: next };
+    });
+  };
 
   const allSpellScoreDetails = React.useMemo(() => (
     buildSpellScoreDetails(tabs, warehouseWands, spellDb, settings)
@@ -224,6 +250,7 @@ export function SettingsModal({
     ].join(' ').toLowerCase().includes(query));
   }, [allSpellScoreDetails, spellScoreSearch]);
   const activeSpellScorePreset = getActiveSpellScorePreset(settings);
+  const evaluatorSectionOrder = getEvaluatorSectionOrder(settings.evaluatorSectionOrder);
 
   const loadModBundles = async () => {
     try {
@@ -1258,6 +1285,8 @@ export function SettingsModal({
                 )}
                 {[
                   t('settings.timeline_display_title'),
+                  t('settings.timeline_show'),
+                  t('settings.timeline_section_order'),
                   t('settings.timeline_action_layout'),
                   t('settings.timeline_icon_size'),
                   'Timeline Cast Timeline Current Action'
@@ -1272,6 +1301,59 @@ export function SettingsModal({
                         <div className="text-[10px] text-zinc-500">{t('settings.timeline_display_desc')}</div>
                       </div>
                     </div>
+
+                    {isMatch(`${t('settings.timeline_show')} Show Cast Timeline`) && (
+                      <div className="flex justify-between items-center bg-cyan-500/5 p-3 rounded-lg border border-cyan-500/10">
+                        <div className="pr-4">
+                          <div className="text-xs font-bold text-zinc-200">{t('settings.timeline_show')}</div>
+                          <div className="text-[10px] text-zinc-500">{t('settings.timeline_show_desc')}</div>
+                        </div>
+                        <button
+                          onClick={() => setSettings(s => ({ ...s, showCastTimeline: !(s.showCastTimeline ?? true) }))}
+                          className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${(settings.showCastTimeline ?? true) ? 'bg-cyan-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${(settings.showCastTimeline ?? true) ? 'left-6' : 'left-1'}`} />
+                        </button>
+                      </div>
+                    )}
+
+                    {isMatch(`${t('settings.timeline_section_order')} Evaluator Section Order`) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.timeline_section_order')}</label>
+                        <div className="space-y-1.5">
+                          {evaluatorSectionOrder.map((sectionId, index) => (
+                            <div key={sectionId} className="flex items-center gap-2 rounded border border-white/10 bg-black/20 px-2 py-1.5">
+                              <GripVertical size={13} className="text-zinc-600" />
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-zinc-300">
+                                {sectionId === 'timeline'
+                                  ? t('evaluator.timeline')
+                                  : sectionId === 'shot_states'
+                                    ? t('evaluator.shot_states')
+                                    : t('evaluator.execution_flow')}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={() => moveEvaluatorSection(sectionId, -1)}
+                                className="flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5"
+                                title={t('common.move_up')}
+                              >
+                                <ArrowUp size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === evaluatorSectionOrder.length - 1}
+                                onClick={() => moveEvaluatorSection(sectionId, 1)}
+                                className="flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5"
+                                title={t('common.move_down')}
+                              >
+                                <ArrowDown size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {isMatch(`${t('settings.timeline_action_layout')} Current Action Layout`) && (
                       <div className="space-y-2">

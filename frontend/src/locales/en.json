@@ -1,7 +1,9 @@
 {
   "common": {
     "collapse": "Collapse",
-    "expand": "Expand"
+    "expand": "Expand",
+    "move_up": "Move up",
+    "move_down": "Move down"
   },
   "app": {
     "title": "TWWE",
@@ -178,7 +180,10 @@
     "unlimit": "Unlimited",
     "editor_spell_gap": "Spell Slot Gap",
     "timeline_display_title": "Cast Timeline Display",
-    "timeline_display_desc": "Adjust spell icon size and Current Action layout in the cast timeline.",
+    "timeline_display_desc": "Adjust evaluator section order, timeline visibility, and Current Action layout.",
+    "timeline_show": "Show Cast Timeline",
+    "timeline_show_desc": "When disabled, the cast timeline is not rendered and tree nodes will not jump to it.",
+    "timeline_section_order": "Evaluator Section Order",
     "timeline_action_layout": "Current Action Layout",
     "timeline_action_layout_scroll": "Horizontal Scroll",
     "timeline_action_layout_wrap": "Wrap",

@@ -1,7 +1,9 @@
 {
   "common": {
     "collapse": "收起",
-    "expand": "展开"
+    "expand": "展开",
+    "move_up": "上移",
+    "move_down": "下移"
   },
   "app": {
     "title": "TWWE",
@@ -178,7 +180,10 @@
     "unlimit": "不限",
     "editor_spell_gap": "法术位间距",
     "timeline_display_title": "施法时间轴显示",
-    "timeline_display_desc": "调整时间轴中法术图标大小和当前执行区域的排列方式。",
+    "timeline_display_desc": "调整评估区块顺序、时间轴显示和当前执行区域的排列方式。",
+    "timeline_show": "显示施法时间轴",
+    "timeline_show_desc": "关闭后不渲染施法时间轴，树形图节点也不会跳转到时间轴。",
+    "timeline_section_order": "评估区块顺序",
     "timeline_action_layout": "当前执行排列",
     "timeline_action_layout_scroll": "横向滚动",
     "timeline_action_layout_wrap": "换行",

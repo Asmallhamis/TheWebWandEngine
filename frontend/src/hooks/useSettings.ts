@@ -87,6 +87,8 @@ export const useSettings = () => {
       enableCanvasEditorLock: false,
       pickerFirstSpaceBehavior: 'ignore',
       moveExistingWandToTopOnDuplicatePaste: false,
+      evaluatorSectionOrder: ['timeline', 'shot_states', 'tree'],
+      showCastTimeline: true,
       timelineActionLayout: 'scroll',
       timelineIconSize: isMobileDevice ? 30 : 36,
       coolUIMode: false,

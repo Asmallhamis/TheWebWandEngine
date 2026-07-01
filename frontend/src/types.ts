@@ -188,6 +188,8 @@ export interface AppSettings {
   enableCanvasEditorLock: boolean;
   pickerFirstSpaceBehavior: 'ignore' | 'insert_at_current_hover' | 'insert_at_open_anchor';
   moveExistingWandToTopOnDuplicatePaste: boolean;
+  evaluatorSectionOrder: Array<'timeline' | 'shot_states' | 'tree'>;
+  showCastTimeline: boolean;
   timelineActionLayout: 'scroll' | 'wrap';
   timelineIconSize: number;
   coolUIMode: boolean;
@@ -204,6 +206,8 @@ export interface EvalNode {
   iteration?: number;
   source?: 'action' | 'draw';
   recursion?: number;
+  timeline_id?: number;
+  timeline_ids?: number[];
   children: EvalNode[];
 }
 
@@ -249,6 +253,11 @@ export interface EvalTimelineEvent {
 export interface EvalTimeline {
   cards: EvalTimelineCard[];
   events: EvalTimelineEvent[];
+}
+
+export interface TimelineJumpRequest {
+  timelineId: number;
+  nonce: number;
 }
 
 export interface WarehouseWand extends WandData {

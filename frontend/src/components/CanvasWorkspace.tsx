@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent, useControls } from 'react-zoom-pan-pinch';
-import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats } from '../types';
+import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats, EvalNode, TimelineJumpRequest } from '../types';
 import { Activity, Frame, Navigation, Lock, Unlock, Pin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import WandEvaluator from './WandEvaluator';
@@ -296,10 +296,24 @@ const InitCamera = ({ wands, activeTabId }: { wands: string[], activeTabId: stri
 export function CanvasWorkspace(props: CanvasWorkspaceProps) {
   const { activeTab, evalResults, spellDb, settings } = props;
   const { t } = useTranslation();
+  const [timelineJumpRequests, setTimelineJumpRequests] = useState<Record<string, TimelineJumpRequest>>({});
   
   const wands = Object.keys(activeTab.wands || {}).sort();
 
   const requestedEvals = useRef<Set<string>>(new Set());
+  const getFirstTimelineId = (node: EvalNode) => {
+    if (typeof node.timeline_id === 'number') return node.timeline_id;
+    return node.timeline_ids?.find(id => typeof id === 'number');
+  };
+
+  const jumpCanvasTimelineToNode = (slot: string, node: EvalNode) => {
+    const timelineId = getFirstTimelineId(node);
+    if (timelineId === undefined) return;
+    setTimelineJumpRequests(prev => ({
+      ...prev,
+      [slot]: { timelineId, nonce: Date.now() },
+    }));
+  };
 
   // 自动为画布中未评估的法杖请求评估，确保树形图和统计在首次进入画布模式时自动出现
   useEffect(() => {
@@ -403,6 +417,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                           deckCapacity={data.deck_capacity}
                           renderMode="stats"
                           isCanvas={true}
+                          externalTimelineJumpRequest={timelineJumpRequests[slot] || null}
                         />
                       ) : (
                         <div className="text-zinc-600 italic px-4 py-8">{t('canvas.no_evaluation_data')}</div>
@@ -445,6 +460,9 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                                 showIndices={settings.showIndices}
                                 absoluteToOrdinal={absToOrdinal}
                                 markedSlots={data.marked_slots}
+                                onTimelineNodeClick={(settings.showCastTimeline ?? true) && evalData.data.timeline?.events?.length
+                                  ? (node) => jumpCanvasTimelineToNode(slot, node)
+                                  : undefined}
                                 onToggleMark={(indices) => {
                                   props.updateWand(slot, (curr: WandData) => {
                                     const marked = Array.isArray(curr.marked_slots) ? curr.marked_slots : [];

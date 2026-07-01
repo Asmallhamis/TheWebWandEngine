@@ -14,6 +14,7 @@ interface CanvasTreeRendererProps {
   absoluteToOrdinal?: Record<number, number> | null;
   markedSlots?: number[];
   onToggleMark?: (indices: number[]) => void;
+  onTimelineNodeClick?: (node: EvalNode) => void;
 }
 
 const BASE_NODE_HEIGHT = 44;
@@ -36,6 +37,11 @@ function countNodes(node: EvalNode): number {
   });
   return count;
 }
+
+const getFirstTimelineId = (node: EvalNode) => {
+  if (typeof node.timeline_id === 'number') return node.timeline_id;
+  return node.timeline_ids?.find(id => typeof id === 'number');
+};
 
 interface ComputedNode {
   node: EvalNode;
@@ -439,7 +445,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 // ----------------------------------------------------------------------
 // 主渲染组件
 // ----------------------------------------------------------------------
-export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, spellDb, settings, width = 1200, height = 800, onHover, showIndices, absoluteToOrdinal, markedSlots, onToggleMark }) => {
+export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, spellDb, settings, width = 1200, height = 800, onHover, showIndices, absoluteToOrdinal, markedSlots, onToggleMark, onTimelineNodeClick }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverNode, setHoverNode] = useState<ComputedNode | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -589,6 +595,7 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
   const logicalWidth = Math.max(800, computedLayout.totalWidth + 100);
   const logicalHeight = Math.max(600, computedLayout.totalHeight + 100);
   const dpr = Math.max(2, window.devicePixelRatio || 1);
+  const canJumpHoverNode = !!hoverNode && !!onTimelineNodeClick && getFirstTimelineId(hoverNode.node) !== undefined;
 
   // Generate Tile Coordinates
   const tiles = [];
@@ -607,9 +614,15 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
     <div
       ref={containerRef}
       className="relative bg-black/40 rounded-xl border border-white/5 overflow-hidden"
-      style={{ width: logicalWidth, height: logicalHeight, cursor: 'crosshair', minWidth: 'max-content' }}
+      style={{ width: logicalWidth, height: logicalHeight, cursor: canJumpHoverNode ? 'pointer' : 'crosshair', minWidth: 'max-content' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => { setHoverNode(null); onHover?.(null); }}
+      onClick={(e) => {
+        if (!hoverNode || !onTimelineNodeClick || getFirstTimelineId(hoverNode.node) === undefined) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onTimelineNodeClick(hoverNode.node);
+      }}
       onAuxClick={(e) => {
         if (e.button === 1 && hoverNode) {
           e.preventDefault();
