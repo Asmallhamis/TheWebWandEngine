@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { EvalNode, ShotState, SpellInfo, AppSettings } from '../types';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { EvalNode, ShotState, SpellInfo, AppSettings, EvalResponse, EvalTimeline } from '../types';
+import { ChevronRight, ChevronDown, Pause, Play, Search, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
 import { TiltContainer } from './TiltContainer';
@@ -11,7 +11,7 @@ interface Props {
     states: ShotState[];
     counts: Record<string, number>;
     cast_counts: Record<string, Record<string, number>>;
-  };
+  } & Pick<EvalResponse, 'timeline'>;
   spellDb: Record<string, SpellInfo>;
   onHoverSlots?: (indices: number[] | null) => void;
   onHoverShotId?: (id: number | null) => void;
@@ -312,6 +312,10 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
         </section>
       )}
 
+      {(renderMode === 'all' || renderMode === 'stats') && data.timeline && data.timeline.events.length > 0 && (
+        <WandTimelinePlayer timeline={data.timeline} spellDb={spellDb} absoluteToOrdinal={absoluteToOrdinal} settings={settings} />
+      )}
+
       {/* Shot States Section */}
       {(renderMode === 'all' || renderMode === 'stats') && (
         <section>
@@ -535,6 +539,634 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
       </section>
       )}
     </div>
+  );
+};
+
+type TimelinePileName = 'discarded' | 'hand' | 'deck';
+type TimelinePileSet = Record<TimelinePileName, number[]>;
+type TimelineProcessItem = { id: string; uid?: number; slot?: number; drawStep?: number; drawTotal?: number; copyStep?: number };
+type TimelineCardPosition = { x: number; y: number; visible: boolean };
+type TimelineFrame = {
+  event: EvalTimeline['events'][number];
+  rawIndex: number;
+  process: TimelineProcessItem[];
+  key: string;
+};
+
+const TIMELINE_PILE_LABELS: TimelinePileName[] = ['discarded', 'hand', 'deck'];
+const MAX_STAGE_CARDS_PER_PILE = 96;
+const TIMELINE_SPEED_STORAGE_KEY = 'twwe.timeline.speed';
+const TIMELINE_SPEED_EVENT = 'twwe:timeline-speed';
+const MIN_TIMELINE_SPEED = 0.1;
+const MAX_TIMELINE_SPEED = 8;
+
+const makePileKey = (piles: TimelinePileSet) =>
+  TIMELINE_PILE_LABELS.map(name => `${name}:${(piles[name] || []).join('.')}`).join('|');
+
+const isDivideAction = (id?: string) => /^DIVIDE_\d+$/.test(id || '');
+
+const formatProgressText = (step: number, total?: number) =>
+  total === undefined ? String(step) : `${step}/${total}`;
+
+const clampTimelineSpeed = (value: number) => {
+  if (!Number.isFinite(value)) return 1;
+  return Math.round(Math.max(MIN_TIMELINE_SPEED, Math.min(MAX_TIMELINE_SPEED, value)) * 100) / 100;
+};
+
+const formatTimelineSpeed = (value: number) =>
+  clampTimelineSpeed(value).toFixed(2).replace(/\.?0+$/, '');
+
+const readTimelineSpeed = () => {
+  if (typeof window === 'undefined') return 1;
+  return clampTimelineSpeed(Number(window.localStorage.getItem(TIMELINE_SPEED_STORAGE_KEY) || 1));
+};
+
+const useGlobalTimelineSpeed = () => {
+  const [speed, setSpeedState] = useState(readTimelineSpeed);
+
+  useEffect(() => {
+    const handleSpeedChange = (event: Event) => {
+      const next = (event as CustomEvent<number>).detail;
+      setSpeedState(clampTimelineSpeed(next));
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === TIMELINE_SPEED_STORAGE_KEY) {
+        setSpeedState(clampTimelineSpeed(Number(event.newValue || 1)));
+      }
+    };
+
+    window.addEventListener(TIMELINE_SPEED_EVENT, handleSpeedChange);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener(TIMELINE_SPEED_EVENT, handleSpeedChange);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  const setSpeed = (value: number) => {
+    const next = clampTimelineSpeed(value);
+    setSpeedState(next);
+    window.localStorage.setItem(TIMELINE_SPEED_STORAGE_KEY, String(next));
+    window.dispatchEvent(new CustomEvent(TIMELINE_SPEED_EVENT, { detail: next }));
+  };
+
+  return [speed, setSpeed] as const;
+};
+
+const makeFrameKey = (event: EvalTimeline['events'][number], process: TimelineProcessItem[]) =>
+  `${makePileKey(event.piles)}|process:${process.map(item => `${item.uid ?? item.id}:${item.drawStep ?? ''}/${item.drawTotal ?? ''}:${item.copyStep ?? ''}`).join('>')}`;
+
+const buildTimelineFrames = (events: EvalTimeline['events']): TimelineFrame[] => {
+  const frames: TimelineFrame[] = [];
+  const process: TimelineProcessItem[] = [];
+  let lastKey = '';
+
+  const pushFrame = (event: EvalTimeline['events'][number], rawIndex: number) => {
+    const key = makeFrameKey(event, process);
+    const shouldKeep = frames.length === 0 || rawIndex === events.length - 1 || key !== lastKey || event.type === 'cast_end';
+    if (!shouldKeep) return;
+    frames.push({ event, rawIndex, process: process.map(item => ({ ...item })), key });
+    lastKey = key;
+  };
+
+  events.forEach((event, rawIndex) => {
+    if (event.type === 'draw_many_start' && typeof event.info?.how_many === 'number') {
+      const topIndex = process.length - 1;
+      if (topIndex >= 0) {
+        process[topIndex] = {
+          ...process[topIndex],
+          drawStep: 0,
+          drawTotal: event.info.how_many,
+        };
+      }
+      pushFrame(event, rawIndex);
+      return;
+    }
+
+    if (event.type === 'action_start' && typeof event.info?.id === 'string') {
+      const drawStep = typeof event.info.draw_step === 'number' ? event.info.draw_step : undefined;
+      const drawTotal = typeof event.info.draw_total === 'number' ? event.info.draw_total : undefined;
+      const topIndex = process.length - 1;
+      if (topIndex >= 0 && isDivideAction(process[topIndex].id)) {
+        process[topIndex] = {
+          ...process[topIndex],
+          copyStep: (process[topIndex].copyStep ?? 0) + 1,
+        };
+      }
+      if (drawTotal !== undefined && topIndex >= 0) {
+        process[topIndex] = {
+          ...process[topIndex],
+          drawStep: drawStep ?? 0,
+          drawTotal,
+        };
+      }
+      process.push({
+        id: event.info.id,
+        uid: typeof event.info.uid === 'number' ? event.info.uid : undefined,
+        slot: typeof event.info.slot === 'number' ? event.info.slot : undefined,
+        drawStep: topIndex < 0 ? drawStep : undefined,
+        drawTotal: topIndex < 0 ? drawTotal : undefined,
+      });
+      pushFrame(event, rawIndex);
+      return;
+    }
+
+    if (event.type === 'action_end' && typeof event.info?.id === 'string') {
+      const uid = typeof event.info.uid === 'number' ? event.info.uid : undefined;
+      let idx = -1;
+      for (let i = process.length - 1; i >= 0; i -= 1) {
+        if ((uid !== undefined && process[i].uid === uid) || (uid === undefined && process[i].id === event.info.id)) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx >= 0) process.splice(idx, 1);
+      pushFrame(event, rawIndex);
+      return;
+    }
+
+    pushFrame(event, rawIndex);
+  });
+
+  return frames;
+};
+
+const WandTimelinePlayer: React.FC<{
+  timeline: EvalTimeline;
+  spellDb: Record<string, SpellInfo>;
+  absoluteToOrdinal: Record<number, number> | null;
+  settings: AppSettings;
+}> = ({ timeline, spellDb, absoluteToOrdinal, settings }) => {
+  const { t, i18n } = useTranslation();
+  const stageRef = React.useRef<HTMLDivElement | null>(null);
+  const lastFrameRef = React.useRef<TimelineFrame | null>(null);
+  const [stageWidth, setStageWidth] = useState(900);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useGlobalTimelineSpeed();
+  const [speedText, setSpeedText] = useState(() => formatTimelineSpeed(speed));
+  const [query, setQuery] = useState('');
+  const [fromFrame, setFromFrame] = useState<TimelineFrame | null>(null);
+  const [motion, setMotion] = useState(1);
+  const [hoverFrameIndex, setHoverFrameIndex] = useState<number | null>(null);
+
+  const actionLayout = settings.timelineActionLayout === 'wrap' ? 'wrap' : 'scroll';
+  const timelineIconSize = Math.max(24, Math.min(44, Number(settings.timelineIconSize) || 36));
+  const timelineImageSize = Math.max(16, timelineIconSize - 4);
+  const timelineStep = timelineIconSize + 7;
+  const processCardMinWidth = Math.max(44, timelineIconSize + 8);
+  const processCardRenderHeight = timelineIconSize + Math.max(22, Math.round(timelineIconSize * 0.55)) + 4;
+  const processHeight = actionLayout === 'wrap'
+    ? Math.max(142, processCardRenderHeight * 2 + 44)
+    : Math.max(96, processCardRenderHeight + 40);
+  const pileRows = actionLayout === 'wrap' ? 6 : 4;
+  const pileTop = processHeight + 30;
+  const pileHeight = 22 + pileRows * timelineStep;
+  const stageHeight = pileTop + pileHeight + 8;
+  const processViewportClass = actionLayout === 'wrap'
+    ? 'absolute left-3 right-3 top-6 bottom-2 overflow-y-auto overflow-x-hidden custom-scrollbar'
+    : 'absolute left-3 right-3 top-6 bottom-1 overflow-x-auto overflow-y-hidden custom-scrollbar';
+  const processListClass = actionLayout === 'wrap'
+    ? 'flex flex-wrap items-start gap-2.5 pr-1 pb-1'
+    : 'flex w-max items-start gap-2.5 pb-2';
+
+  const events = timeline.events || [];
+  const frames = useMemo(() => buildTimelineFrames(events), [events]);
+  const currentFrame = frames[currentIndex] || frames[0];
+  const currentEvent = currentFrame?.event;
+  const cardsByUid = useMemo(() => {
+    const map = new Map<number, typeof timeline.cards[number]>();
+    timeline.cards.forEach(card => map.set(card.uid, card));
+    return map;
+  }, [timeline.cards]);
+
+  const actionFrameIndices = useMemo(
+    () => frames.map((frame, index) => frame.event.type === 'action_start' ? index : -1).filter(index => index >= 0),
+    [frames]
+  );
+
+  useEffect(() => {
+    setSpeedText(formatTimelineSpeed(speed));
+  }, [speed]);
+
+  const matchingFrameIndices = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return frames.map((frame, index) => {
+      const event = frame.event;
+      if (event.type !== 'action_start') return -1;
+      const id = typeof event.info?.id === 'string' ? event.info.id : event.action;
+      if (!id) return -1;
+      const spell = spellDb[id];
+      const terms = [
+        id,
+        spell?.name,
+        spell?.en_name,
+      ].filter((term): term is string => typeof term === 'string' && term.length > 0);
+      return terms.some(term => term.toLowerCase().includes(q)) ? index : -1;
+    }).filter(index => index >= 0);
+  }, [frames, query, spellDb]);
+
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width;
+      if (width) setStageWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsPlaying(false);
+    lastFrameRef.current = null;
+    setFromFrame(null);
+    setMotion(1);
+  }, [timeline]);
+
+  useEffect(() => {
+    if (!isPlaying || frames.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setCurrentIndex(index => {
+        if (index >= frames.length - 1) {
+          setIsPlaying(false);
+          return index;
+        }
+        return index + 1;
+      });
+    }, Math.max(100, 700 / speed));
+    return () => window.clearInterval(timer);
+  }, [frames.length, isPlaying, speed]);
+
+  useEffect(() => {
+    if (!currentFrame) return;
+    const previous = lastFrameRef.current || currentFrame;
+    lastFrameRef.current = currentFrame;
+    setFromFrame(previous);
+    setMotion(previous === currentFrame ? 1 : 0);
+
+    if (previous === currentFrame) return;
+    const start = performance.now();
+    const duration = Math.max(140, 360 / Math.sqrt(speed));
+    let raf = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setMotion(eased);
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [currentFrame, speed]);
+
+  const jumpTo = (index: number, pause = true) => {
+    setCurrentIndex(Math.max(0, Math.min(frames.length - 1, index)));
+    if (pause) setIsPlaying(false);
+  };
+
+  const togglePlayback = () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (frames.length <= 1) return;
+    if (currentIndex >= frames.length - 1) {
+      jumpTo(0, false);
+    }
+    setIsPlaying(true);
+  };
+
+  const updateHoverFrame = (event: React.PointerEvent<HTMLInputElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+    const index = Math.round(Math.max(0, Math.min(1, ratio)) * Math.max(0, frames.length - 1));
+    setHoverFrameIndex(index);
+  };
+
+  const commitSpeedText = () => {
+    const trimmed = speedText.trim();
+    if (!trimmed) {
+      setSpeedText(formatTimelineSpeed(speed));
+      return;
+    }
+    const next = Number(trimmed);
+    if (Number.isFinite(next)) {
+      setSpeed(next);
+    } else {
+      setSpeedText(formatTimelineSpeed(speed));
+    }
+  };
+
+  const jumpAction = (direction: -1 | 1) => {
+    if (actionFrameIndices.length === 0) return;
+    const target = direction > 0
+      ? actionFrameIndices.find(index => index > currentIndex)
+      : [...actionFrameIndices].reverse().find(index => index < currentIndex);
+    if (target !== undefined) jumpTo(target);
+  };
+
+  const jumpMatch = (direction: -1 | 1) => {
+    if (matchingFrameIndices.length === 0) return;
+    const target = direction > 0
+      ? matchingFrameIndices.find(index => index > currentIndex) ?? matchingFrameIndices[0]
+      : [...matchingFrameIndices].reverse().find(index => index < currentIndex) ?? matchingFrameIndices[matchingFrameIndices.length - 1];
+    jumpTo(target);
+  };
+
+  const getSpellDisplay = (id?: string) => {
+    const spell = id ? spellDb[id] : null;
+    return spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id || '?';
+  };
+
+  const getIcon = (id?: string) => {
+    const spell = id ? spellDb[id] : null;
+    return spell ? getIconUrl(spell.icon, false) : null;
+  };
+
+  const getSlotLabel = (slot?: number) => {
+    if (slot === undefined || slot === -999) return null;
+    return absoluteToOrdinal?.[slot] ?? slot;
+  };
+
+  const getPileOrigins = () => {
+    const width = Math.max(stageWidth, 360);
+    const colW = width / 3;
+    return {
+      discarded: { x: 12, y: pileTop + 20, maxPerRow: Math.max(2, Math.floor((colW - 24) / timelineStep)) },
+      hand: { x: colW + 12, y: pileTop + 20, maxPerRow: Math.max(2, Math.floor((colW - 24) / timelineStep)) },
+      deck: { x: colW * 2 + 12, y: pileTop + 20, maxPerRow: Math.max(2, Math.floor((colW - 24) / timelineStep)) },
+    } satisfies Record<TimelinePileName, { x: number; y: number; maxPerRow: number }>;
+  };
+
+  const getPileVisibleLimit = (maxPerRow: number) =>
+    Math.min(MAX_STAGE_CARDS_PER_PILE, maxPerRow * pileRows);
+
+  const getPileOnlyPositions = (frame: TimelineFrame | null) => {
+    const map = new Map<number, TimelineCardPosition>();
+    if (!frame) return map;
+    const origins = getPileOrigins();
+
+    TIMELINE_PILE_LABELS.forEach(pileName => {
+      const origin = origins[pileName];
+      (frame.event.piles[pileName] || []).slice(0, getPileVisibleLimit(origin.maxPerRow)).forEach((uid, index) => {
+        map.set(uid, {
+          x: origin.x + (index % origin.maxPerRow) * timelineStep,
+          y: origin.y + Math.floor(index / origin.maxPerRow) * timelineStep,
+          visible: true,
+        });
+      });
+    });
+
+    return map;
+  };
+
+  const renderAnimatedCards = () => {
+    const fromPositions = getPileOnlyPositions(fromFrame || currentFrame);
+    const toPositions = getPileOnlyPositions(currentFrame);
+    const uids = new Set<number>([...fromPositions.keys(), ...toPositions.keys()]);
+
+    return [...uids].map(uid => {
+      const card = cardsByUid.get(uid);
+      const from = fromPositions.get(uid) || toPositions.get(uid);
+      const to = toPositions.get(uid) || fromPositions.get(uid);
+      if (!card || !from || !to) return null;
+
+      const x = from.x + (to.x - from.x) * motion;
+      const y = from.y + (to.y - from.y) * motion;
+      const opacity = toPositions.has(uid) ? 1 : Math.max(0, 1 - motion);
+      const icon = getIcon(card.id);
+
+      return (
+        <div
+          key={uid}
+          className="absolute rounded border border-white/10 bg-zinc-950/90 z-10 shadow-lg flex items-center justify-center"
+          style={{ transform: `translate(${x}px, ${y}px)`, opacity, width: timelineIconSize, height: timelineIconSize }}
+          title={`${getSpellDisplay(card.id)}${card.slot !== undefined ? ` #${card.slot}` : ''}`}
+        >
+          {icon ? (
+            <img src={icon} alt={card.id} className="image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
+          ) : (
+            <span className="font-mono text-zinc-500" style={{ fontSize: Math.max(9, Math.round(timelineIconSize * 0.31)) }}>?</span>
+          )}
+          {card.permanent && (
+            <span
+              className="absolute -top-1 -right-1 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]"
+              style={{ width: Math.max(8, Math.round(timelineIconSize * 0.28)), height: Math.max(8, Math.round(timelineIconSize * 0.28)) }}
+            />
+          )}
+        </div>
+      );
+    });
+  };
+
+  const renderProcessCard = (item: TimelineProcessItem, index: number) => {
+    const icon = getIcon(item.id);
+    const progress = item.copyStep !== undefined
+      ? { label: t('evaluator.timeline_copy'), text: formatProgressText(item.copyStep), color: 'text-fuchsia-300/90' }
+      : item.drawTotal !== undefined
+        ? { label: t('evaluator.timeline_draw'), text: formatProgressText(item.drawStep ?? 0, item.drawTotal), color: 'text-amber-300/80' }
+        : null;
+    const slotLabel = getSlotLabel(item.slot);
+    const slotBadgeSize = Math.max(14, Math.round(timelineIconSize * 0.45));
+    const progressLabelSize = Math.max(8, Math.round(timelineIconSize * 0.22));
+    const progressTextSize = Math.max(10, Math.round(timelineIconSize * 0.28));
+    return (
+      <div
+        key={`${item.uid ?? item.id}-${index}`}
+        className="flex flex-col items-center gap-1"
+        style={{ minWidth: processCardMinWidth }}
+        title={getSpellDisplay(item.id)}
+      >
+        <div
+          className="relative rounded border border-amber-400/30 bg-amber-500/10 shadow-lg flex items-center justify-center"
+          style={{ width: timelineIconSize, height: timelineIconSize }}
+        >
+          {icon ? (
+            <img src={icon} alt={item.id} className="image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
+          ) : (
+            <span className="font-mono text-amber-300" style={{ fontSize: Math.max(9, Math.round(timelineIconSize * 0.31)) }}>?</span>
+          )}
+          {slotLabel !== null && (
+            <span
+              className="absolute -bottom-1 -right-1 px-0.5 rounded-sm bg-zinc-950 border border-cyan-400/50 font-black text-cyan-300 text-center shadow-md"
+              style={{
+                minWidth: slotBadgeSize,
+                height: slotBadgeSize,
+                fontSize: Math.max(8, Math.round(slotBadgeSize * 0.56)),
+                lineHeight: `${slotBadgeSize - 2}px`,
+              }}
+            >
+              {slotLabel}
+            </span>
+          )}
+        </div>
+        {progress && (
+          <div className="text-center font-mono leading-none">
+            <div className={`font-black uppercase ${progress.color}`} style={{ fontSize: progressLabelSize }}>{progress.label}</div>
+            <div className="font-black text-zinc-300" style={{ fontSize: progressTextSize }}>{progress.text}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (!currentFrame || !currentEvent) return null;
+
+  return (
+    <section className="space-y-3">
+      <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between gap-3">
+        <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
+          <span className="w-1.5 h-1.5 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] rounded-full"></span>
+          {t('evaluator.timeline')}
+        </h3>
+        <div className="text-[9px] font-mono text-zinc-500">
+          {currentIndex + 1}/{frames.length}
+          <span className="text-zinc-700"> · raw {currentFrame.rawIndex + 1}/{events.length}</span>
+        </div>
+      </div>
+
+      <div className="relative border border-white/10 bg-zinc-950/45 rounded-lg overflow-visible">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.03]">
+          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(0)} title={t('evaluator.timeline_first')}>
+            <SkipBack size={14} />
+          </button>
+          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(-1)} title={t('evaluator.timeline_prev_action')}>
+            <StepBack size={14} />
+          </button>
+          <button className="w-9 h-8 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 flex items-center justify-center text-cyan-300" onClick={togglePlayback} title={isPlaying ? t('evaluator.timeline_pause') : t('evaluator.timeline_play')}>
+            {isPlaying ? <Pause size={15} /> : <Play size={15} />}
+          </button>
+          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(1)} title={t('evaluator.timeline_next_action')}>
+            <StepForward size={14} />
+          </button>
+          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(frames.length - 1)} title={t('evaluator.timeline_last')}>
+            <SkipForward size={14} />
+          </button>
+
+          <div className="h-8 min-w-[210px] flex items-center gap-2 rounded border border-white/10 bg-zinc-950 px-2" title={t('evaluator.timeline_speed')}>
+            <span className="w-8 text-right text-[10px] font-black text-cyan-300">{formatTimelineSpeed(speed)}x</span>
+            <input
+              type="range"
+              min={0.25}
+              max={4}
+              step={0.05}
+              value={Math.max(0.25, Math.min(4, speed))}
+              onChange={event => setSpeed(Number(event.target.value))}
+              className="w-24 accent-cyan-400"
+            />
+            <input
+              type="number"
+              min={MIN_TIMELINE_SPEED}
+              max={MAX_TIMELINE_SPEED}
+              step={0.05}
+              value={speedText}
+              onChange={event => setSpeedText(event.target.value)}
+              onBlur={commitSpeedText}
+              onKeyDown={event => {
+                if (event.key === 'Enter') {
+                  commitSpeedText();
+                  event.currentTarget.blur();
+                }
+              }}
+              className="h-6 w-14 rounded border border-white/10 bg-black/30 px-1 text-center text-[10px] font-black text-zinc-200 outline-none focus:border-cyan-400/50"
+            />
+            <span className="text-[10px] font-black text-zinc-500">x</span>
+          </div>
+
+          <div className="relative flex-1 min-w-[180px]">
+            {hoverFrameIndex !== null && frames.length > 1 && (
+              <div
+                className="pointer-events-none absolute -top-7 z-50 rounded bg-zinc-950/95 px-2 py-1 text-[10px] font-black text-white shadow-lg border border-white/10"
+                style={{ left: `${(hoverFrameIndex / Math.max(1, frames.length - 1)) * 100}%`, transform: 'translateX(-50%)' }}
+              >
+                {hoverFrameIndex + 1}/{frames.length}
+              </div>
+            )}
+            <input
+              value={currentIndex}
+              min={0}
+              max={Math.max(0, frames.length - 1)}
+              step={1}
+              type="range"
+              onChange={event => jumpTo(Number(event.target.value))}
+              onPointerMove={updateHoverFrame}
+              onPointerEnter={updateHoverFrame}
+              onPointerLeave={() => setHoverFrameIndex(null)}
+              className="w-full accent-cyan-400"
+            />
+          </div>
+
+          <div className="relative w-56 max-w-full">
+            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') jumpMatch(event.shiftKey ? -1 : 1);
+              }}
+              placeholder={t('evaluator.timeline_search')}
+              className="w-full h-8 pl-7 pr-16 bg-zinc-950 border border-white/10 rounded text-[10px] font-bold text-zinc-300 outline-none focus:border-cyan-400/40"
+            />
+            <button
+              onClick={() => jumpMatch(1)}
+              className="absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[9px] font-black text-zinc-400"
+            >
+              {matchingFrameIndices.length}
+            </button>
+          </div>
+        </div>
+
+        <div className="px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2 text-[10px] font-mono">
+          <span className="px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-black uppercase">{currentEvent.type.replace(/_/g, ' ')}</span>
+          {currentEvent.cast !== undefined && <span className="text-zinc-500">cast {currentEvent.cast}</span>}
+          {currentEvent.shot !== undefined && <span className="text-zinc-500">shot {currentEvent.shot}</span>}
+          {currentEvent.action && <span className="text-amber-300">{currentEvent.action}</span>}
+          {typeof currentEvent.info?.id === 'string' && <span className="text-zinc-400">{currentEvent.info.id}</span>}
+        </div>
+
+        <div ref={stageRef} className="relative overflow-hidden bg-black/20" style={{ height: stageHeight }}>
+          <div
+            className="absolute left-3 top-3 right-3 rounded border border-amber-400/20 bg-amber-500/[0.04] overflow-hidden"
+            style={{ height: processHeight }}
+          >
+            <div className="absolute left-2 top-1 text-[9px] font-black uppercase tracking-widest text-amber-300/70">{t('evaluator.timeline_processing')}</div>
+            <div className={processViewportClass}>
+              <div className={processListClass}>
+                {currentFrame.process.length > 0 ? currentFrame.process.map(renderProcessCard) : (
+                  <span className="text-[10px] font-mono text-zinc-700">{t('evaluator.timeline_idle')}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {TIMELINE_PILE_LABELS.map((pileName, index) => {
+            const colW = Math.max(stageWidth, 360) / 3;
+            const origin = getPileOrigins()[pileName];
+            const pileCount = currentEvent.piles[pileName]?.length || 0;
+            const visibleLimit = getPileVisibleLimit(origin.maxPerRow);
+            return (
+              <div
+                key={pileName}
+                className="absolute rounded border border-white/10 bg-white/[0.025]"
+                style={{ left: index * colW + 8, top: pileTop, width: Math.max(88, colW - 16), height: pileHeight }}
+              >
+                <div className="absolute left-2 top-1 flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{t(`evaluator.timeline_${pileName}`)}</span>
+                  <span className="text-[9px] font-mono text-zinc-600">{pileCount}</span>
+                  {pileCount > visibleLimit && (
+                    <span className="text-[8px] font-black text-amber-500">+{pileCount - visibleLimit}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {renderAnimatedCards()}
+        </div>
+      </div>
+    </section>
   );
 };
 

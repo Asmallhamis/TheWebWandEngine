@@ -188,6 +188,8 @@ export interface AppSettings {
   enableCanvasEditorLock: boolean;
   pickerFirstSpaceBehavior: 'ignore' | 'insert_at_current_hover' | 'insert_at_open_anchor';
   moveExistingWandToTopOnDuplicatePaste: boolean;
+  timelineActionLayout: 'scroll' | 'wrap';
+  timelineIconSize: number;
   coolUIMode: boolean;
   coolUITheme: string;
   coolUIBackground: string;
@@ -220,6 +222,33 @@ export interface EvalResponse {
   states: ShotState[];
   counts: Record<string, number>;
   cast_counts: Record<string, Record<string, number>>;
+  timeline?: EvalTimeline;
+}
+
+export interface EvalTimelineCard {
+  uid: number;
+  id: string;
+  slot?: number;
+  permanent?: boolean;
+}
+
+export interface EvalTimelineEvent {
+  i: number;
+  type: string;
+  cast?: number;
+  shot?: number;
+  action?: string;
+  info: Record<string, string | number | boolean | null | undefined>;
+  piles: {
+    deck: number[];
+    hand: number[];
+    discarded: number[];
+  };
+}
+
+export interface EvalTimeline {
+  cards: EvalTimelineCard[];
+  events: EvalTimelineEvent[];
 }
 
 export interface WarehouseWand extends WandData {

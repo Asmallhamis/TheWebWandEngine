@@ -87,6 +87,8 @@ export const useSettings = () => {
       enableCanvasEditorLock: false,
       pickerFirstSpaceBehavior: 'ignore',
       moveExistingWandToTopOnDuplicatePaste: false,
+      timelineActionLayout: 'scroll',
+      timelineIconSize: isMobileDevice ? 30 : 36,
       coolUIMode: false,
       coolUITheme: 'gentleisland',
       coolUIBackground: 'aurora'

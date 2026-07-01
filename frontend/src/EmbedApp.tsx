@@ -88,6 +88,8 @@ const DEFAULT_EMBED_SETTINGS: AppSettings = {
   enableCanvasEditorLock: false,
   pickerFirstSpaceBehavior: 'ignore',
   moveExistingWandToTopOnDuplicatePaste: false,
+  timelineActionLayout: 'scroll',
+  timelineIconSize: 36,
   coolUIMode: false,
   coolUITheme: 'gentleisland',
   coolUIBackground: 'aurora'

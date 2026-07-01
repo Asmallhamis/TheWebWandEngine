@@ -1257,6 +1257,63 @@ export function SettingsModal({
                   </div>
                 )}
                 {[
+                  t('settings.timeline_display_title'),
+                  t('settings.timeline_action_layout'),
+                  t('settings.timeline_icon_size'),
+                  'Timeline Cast Timeline Current Action'
+                ].some(isMatch) && (
+                  <div className="space-y-4 bg-cyan-500/5 p-4 rounded-lg border border-cyan-500/10">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.timeline_display_title')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.timeline_display_desc')}</div>
+                      </div>
+                    </div>
+
+                    {isMatch(`${t('settings.timeline_action_layout')} Current Action Layout`) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{t('settings.timeline_action_layout')}</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(['scroll', 'wrap'] as const).map(layout => (
+                            <button
+                              key={layout}
+                              type="button"
+                              onClick={() => setSettings(s => ({ ...s, timelineActionLayout: layout }))}
+                              className={`px-3 py-2 rounded border text-[10px] font-black transition-colors ${
+                                (settings.timelineActionLayout || 'scroll') === layout
+                                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-200'
+                                  : 'bg-black/20 border-white/10 text-zinc-400 hover:bg-white/5'
+                              }`}
+                            >
+                              {layout === 'scroll' ? t('settings.timeline_action_layout_scroll') : t('settings.timeline_action_layout_wrap')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {isMatch(`${t('settings.timeline_icon_size')} Icon Size`) && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                          {t('settings.timeline_icon_size')} ({settings.timelineIconSize || 36}px)
+                        </label>
+                        <input
+                          type="range"
+                          min="24"
+                          max="44"
+                          step="2"
+                          value={settings.timelineIconSize || 36}
+                          onChange={e => setSettings(s => ({ ...s, timelineIconSize: parseInt(e.target.value) || 36 }))}
+                          className="w-full accent-cyan-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {[
                   t('spell_picker.fixed_palette.settings_title'),
                   t('spell_picker.fixed_palette.icon_size'),
                   t('spell_picker.fixed_palette.cols_setting'),
