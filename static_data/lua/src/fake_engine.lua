@@ -92,6 +92,75 @@ end
 ---@class fake_engine
 local M = {}
 
+local TIMELINE_PILE_NAMES = { "deck", "hand", "discarded" }
+
+local function timeline_get_pile(name)
+	if name == "deck" then return deck end
+	if name == "hand" then return hand end
+	if name == "discarded" then return discarded end
+	return {}
+end
+
+local function timeline_ensure_card(action)
+	if not action then return nil end
+	if not action.__twwe_timeline_uid then
+		M.timeline_card_seq = (M.timeline_card_seq or 0) + 1
+		action.__twwe_timeline_uid = M.timeline_card_seq
+		M.timeline_cards[action.__twwe_timeline_uid] = {
+			uid = action.__twwe_timeline_uid,
+			id = action.id,
+			slot = action.deck_index,
+			permanent = action.permanently_attached and true or nil,
+		}
+	end
+	return action.__twwe_timeline_uid
+end
+
+local function timeline_snapshot_pile(name)
+	local out = {}
+	for _, action in ipairs(timeline_get_pile(name) or {}) do
+		local uid = timeline_ensure_card(action)
+		if uid then table.insert(out, uid) end
+	end
+	return out
+end
+
+local function timeline_snapshot_piles()
+	local out = {}
+	for _, name in ipairs(TIMELINE_PILE_NAMES) do
+		out[name] = timeline_snapshot_pile(name)
+	end
+	return out
+end
+
+local function timeline_record(event_type, info)
+	if not M.timeline_events then return end
+	info = info or {}
+	M.timeline_seq = (M.timeline_seq or 0) + 1
+	local active_shot = M.active_shots and M.active_shots[#M.active_shots] or nil
+	local active_shot_info = active_shot and M.shot_refs_to_nums and M.shot_refs_to_nums[active_shot] or nil
+	local action_stack = M.timeline_action_stack or {}
+	local event = {
+		i = M.timeline_seq,
+		type = event_type,
+		cast = M.cur_cast_num,
+		action = action_stack[#action_stack],
+		shot = active_shot_info and active_shot_info.id_in_cast or nil,
+		info = info,
+		piles = timeline_snapshot_piles(),
+	}
+	table.insert(M.timeline_events, event)
+end
+
+function M.reset_timeline()
+	M.timeline_seq = 0
+	M.timeline_card_seq = 0
+	M.timeline_cards = {}
+	M.timeline_events = {}
+	M.timeline_action_stack = {}
+	M.timeline_draw_stack = {}
+end
+
 ---@param options options
 local function regenerate_translations(options)
 	-- print(ModTextFileGetContent("data/translations/common.csv"))
@@ -287,6 +356,59 @@ function M.initialise_engine(text_formatter, options)
 		M.pending_source = "draw"
 		return _play_action(action)
 	end
+	local _order_deck = order_deck
+	function order_deck(...)
+		local res = { _order_deck(...) }
+		timeline_record("deck_ordered", { shuffled = state_shuffled and true or false })
+		return unpack(res)
+	end
+	local _draw_action = draw_action
+	function draw_action(...)
+		local draw_context = M.timeline_draw_stack and M.timeline_draw_stack[#M.timeline_draw_stack] or nil
+		if draw_context then
+			draw_context.step = draw_context.step + 1
+		end
+		timeline_record("draw_start")
+		local res = { _draw_action(...) }
+		if draw_context and not res[1] then
+			draw_context.step = draw_context.step - 1
+		end
+		timeline_record("draw_end", { ok = res[1] })
+		return unpack(res)
+	end
+	local _draw_actions = draw_actions
+	function draw_actions(how_many, instant_reload_if_empty)
+		local draw_context = { total = how_many, step = 0 }
+		M.timeline_draw_stack = M.timeline_draw_stack or {}
+		table.insert(M.timeline_draw_stack, draw_context)
+		timeline_record("draw_many_start", {
+			how_many = how_many,
+			instant_reload_if_empty = instant_reload_if_empty and true or false,
+		})
+		local res = { _draw_actions(how_many, instant_reload_if_empty) }
+		timeline_record("draw_many_end", { how_many = how_many })
+		table.remove(M.timeline_draw_stack)
+		return unpack(res)
+	end
+	local _move_discarded_to_deck = move_discarded_to_deck
+	function move_discarded_to_deck(...)
+		local res = { _move_discarded_to_deck(...) }
+		timeline_record("discarded_to_deck")
+		return unpack(res)
+	end
+	local _move_hand_to_discarded = move_hand_to_discarded
+	function move_hand_to_discarded(...)
+		local res = { _move_hand_to_discarded(...) }
+		timeline_record("hand_to_discarded")
+		return unpack(res)
+	end
+	local original_handle_reload = _handle_reload
+	function _handle_reload(...)
+		timeline_record("reload_start")
+		local res = { original_handle_reload(...) }
+		timeline_record("reload_end", { reload_time = M.reload_time })
+		return unpack(res)
+	end
 	local _create_shot = create_shot
 	function create_shot(...)
 		local uv = { _create_shot(...) }
@@ -310,6 +432,7 @@ function M.initialise_engine(text_formatter, options)
 		M.shot_projectiles[v] = {}
 		M.cur_shot_num = M.cur_shot_num + 1
 		M.cur_shot_in_cast_num = M.cur_shot_in_cast_num + 1
+		timeline_record("shot_created", { id = M.shot_refs_to_nums[v].id_in_cast })
 		-- v.state.wand_tree_initial_mana = mana
 		-- TODO: find a way to do this in a garunteed safe way
 		return unpack(uv)
@@ -369,7 +492,10 @@ function M.initialise_engine(text_formatter, options)
 		local shot = args[1]
 		if not M.active_shots then M.active_shots = {} end
 		table.insert(M.active_shots, shot)
+		local shot_info = M.shot_refs_to_nums[shot]
+		timeline_record("shot_start", { id = shot_info and shot_info.id_in_cast or nil })
 		local res = { _draw_shot(...) }
+		timeline_record("shot_end", { id = shot_info and shot_info.id_in_cast or nil })
 		table.remove(M.active_shots)
 		return unpack(res)
 	end
@@ -400,7 +526,29 @@ function M.initialise_engine(text_formatter, options)
 				M.cur_node = new_node.children
 				M.cur_parent = new_node
 				table.insert(old_node, new_node)
+				local timeline_uid = timeline_ensure_card(clone)
+				local timeline_draw = source == "draw" and M.timeline_draw_stack and M.timeline_draw_stack[#M.timeline_draw_stack] or nil
+				table.insert(M.timeline_action_stack, v.id)
+				timeline_record("action_start", {
+					id = v.id,
+					uid = timeline_uid,
+					source = source,
+					slot = clone.deck_index,
+					iteration = iteration_val,
+					recursion = recursion_val,
+					draw_step = timeline_draw and timeline_draw.step or nil,
+					draw_total = timeline_draw and timeline_draw.total or nil,
+				})
 				local res = { _a(...) }
+				timeline_record("action_end", {
+					id = v.id,
+					uid = timeline_uid,
+					source = source,
+					slot = clone.deck_index,
+					iteration = iteration_val,
+					recursion = recursion_val,
+				})
+				table.remove(M.timeline_action_stack)
 				M.cur_node = old_node
 				return unpack(res)
 			end
@@ -433,7 +581,9 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	M.cur_node = M.cur_parent.children
 
 	local old_mana = mana
+	timeline_record("cast_start", { mana = mana })
 	_start_shot(mana)
+	timeline_record("cast_ready", { mana = mana })
 	for _, perk in ipairs(options.perks) do
 		_add_extra_modifier_to_shot(perk)
 	end
@@ -454,6 +604,7 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 		clone_action = function(...)
 			local res = { _clone_action(...) }
 			local dest = ({ ... })[2]
+			dest.deck_index = -k
 			local old_action = dest.action
 			dest.action = function(...)
 				local action_res = { old_action({ deck_index = -k })(...) }
@@ -483,6 +634,13 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	delay = math.max(delay, 1)
 	local recoil = shot_effects and shot_effects.recoil_knockback or 0
 	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana) .. ", Recoil: " .. recoil
+	timeline_record("cast_end", {
+		cast_delay = cast_delay,
+		recharge_time = recharge_time,
+		delay = delay,
+		mana_delta = old_mana - mana,
+		recoil = recoil,
+	})
 	mana = mana + delay * options.mana_charge / 60
 	return did_recharge
 end
@@ -494,6 +652,7 @@ end
 local function reset_wand(options, text_formatter, spells)
 	---@type node
 	M.calls = { name = "Wand", children = {} }
+	M.reset_timeline()
 	M.nodes_to_shot_ref = {}
 	M.shot_refs_to_nums = {}
 	M.lines_to_shot_nums = {}
@@ -523,6 +682,7 @@ local function reset_wand(options, text_formatter, spells)
 
 	ConfigGun_ReadToLua(options.spells_per_cast, false, options.reload_time, 66)
 	_set_gun()
+	timeline_record("initial_deck")
 	local data_module = require("src.data")
 	local data = {}
 	for k, v in pairs(data_module) do data[k] = v end

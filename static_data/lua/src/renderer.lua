@@ -301,6 +301,109 @@ local function render_json(src, engine_data, out)
 	table.insert(out, "]}")
 end
 
+local function json_escape(value)
+	value = tostring(value or "")
+	value = value:gsub("\\", "\\\\")
+	value = value:gsub("\"", "\\\"")
+	value = value:gsub("\n", "\\n")
+	value = value:gsub("\r", "\\r")
+	value = value:gsub("\t", "\\t")
+	return value
+end
+
+local function json_value(value, out)
+	local value_type = type(value)
+	if value_type == "number" then
+		table.insert(out, tostring(value))
+	elseif value_type == "boolean" then
+		table.insert(out, value and "true" or "false")
+	elseif value == nil then
+		table.insert(out, "null")
+	else
+		table.insert(out, "\"")
+		table.insert(out, json_escape(value))
+		table.insert(out, "\"")
+	end
+end
+
+local function render_number_array(values, out)
+	table.insert(out, "[")
+	for i, value in ipairs(values or {}) do
+		if i > 1 then table.insert(out, ",") end
+		table.insert(out, tostring(value))
+	end
+	table.insert(out, "]")
+end
+
+local function render_timeline(engine_data, out)
+	table.insert(out, ",\"timeline\":{\"cards\":[")
+	for uid = 1, engine_data.timeline_card_seq or 0 do
+		local card = engine_data.timeline_cards and engine_data.timeline_cards[uid]
+		if card then
+			if uid > 1 then table.insert(out, ",") end
+			table.insert(out, "{\"uid\":")
+			table.insert(out, tostring(card.uid))
+			table.insert(out, ",\"id\":\"")
+			table.insert(out, json_escape(card.id))
+			table.insert(out, "\"")
+			if card.slot ~= nil then
+				table.insert(out, ",\"slot\":")
+				table.insert(out, tostring(card.slot))
+			end
+			if card.permanent then
+				table.insert(out, ",\"permanent\":true")
+			end
+			table.insert(out, "}")
+		end
+	end
+	table.insert(out, "],\"events\":[")
+	for i, event in ipairs(engine_data.timeline_events or {}) do
+		if i > 1 then table.insert(out, ",") end
+		table.insert(out, "{\"i\":")
+		table.insert(out, tostring(event.i))
+		table.insert(out, ",\"type\":\"")
+		table.insert(out, json_escape(event.type))
+		table.insert(out, "\"")
+		if event.cast ~= nil then
+			table.insert(out, ",\"cast\":")
+			table.insert(out, tostring(event.cast))
+		end
+		if event.shot ~= nil then
+			table.insert(out, ",\"shot\":")
+			table.insert(out, tostring(event.shot))
+		end
+		if event.action ~= nil then
+			table.insert(out, ",\"action\":\"")
+			table.insert(out, json_escape(event.action))
+			table.insert(out, "\"")
+		end
+		table.insert(out, ",\"info\":{")
+		local first_info = true
+		for key, value in pairs(event.info or {}) do
+			if value ~= nil then
+				if not first_info then table.insert(out, ",") end
+				table.insert(out, "\"")
+				table.insert(out, json_escape(key))
+				table.insert(out, "\":")
+				json_value(value, out)
+				first_info = false
+			end
+		end
+		table.insert(out, "},\"piles\":{")
+		local first_pile = true
+		for _, pile_name in ipairs({ "deck", "hand", "discarded" }) do
+			if not first_pile then table.insert(out, ",") end
+			table.insert(out, "\"")
+			table.insert(out, pile_name)
+			table.insert(out, "\":")
+			render_number_array(event.piles and event.piles[pile_name] or {}, out)
+			first_pile = false
+		end
+		table.insert(out, "}}")
+	end
+	table.insert(out, "]}")
+end
+
 local function gather_state_modifications(state, first)
 	local default = require("src.data")
 	local diff = {}
@@ -471,7 +574,9 @@ local function render_combined_json(calls, engine_data, text_formatter)
 		table.insert(out, "}")
 		first_cast = false
 	end
-	table.insert(out, "}}")
+	table.insert(out, "}")
+	render_timeline(engine_data, out)
+	table.insert(out, "}")
 
 	return table.concat(out)
 end
