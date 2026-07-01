@@ -15,6 +15,22 @@ local function make_text(node, engine_data)
 	return build .. "]"
 end
 
+local function append_node_timeline_ids(list, node)
+	if type(node.timeline_ids) == "table" and #node.timeline_ids > 0 then
+		for _, id in ipairs(node.timeline_ids) do
+			table.insert(list, id)
+		end
+	elseif node.timeline_id then
+		table.insert(list, node.timeline_id)
+	end
+end
+
+local function assign_node_timeline_ids(node, ids)
+	if #ids == 0 then return end
+	node.timeline_id = ids[1]
+	node.timeline_ids = #ids > 1 and ids or nil
+end
+
 ---@param node node
 ---@param engine_data fake_engine
 local function fold(node, engine_data)
@@ -35,6 +51,7 @@ local function fold(node, engine_data)
 	local last = ""
 	local cur_c = 1
 	local index_set = {}
+	local timeline_ids = {}
 	while i <= #node.children do
 		local v = node.children[i]
 		fold(v, engine_data)
@@ -46,6 +63,7 @@ local function fold(node, engine_data)
 			elseif idx then
 				index_set[idx] = true
 			end
+			append_node_timeline_ids(timeline_ids, node.children[i])
 			cur_c = cur_c + 1
 			table.remove(node.children, i)
 		else
@@ -66,8 +84,11 @@ local function fold(node, engine_data)
 				index_set = {}
 				prev_node.count = cur_c
 				prev_node.index = indexes
+				assign_node_timeline_ids(prev_node, timeline_ids)
 				cur_c = 1
 			end
+			timeline_ids = {}
+			append_node_timeline_ids(timeline_ids, node.children[i])
 			i = i + 1
 		end
 	end
@@ -87,6 +108,7 @@ local function fold(node, engine_data)
 		index_set = {}
 		prev_node.count = cur_c
 		prev_node.index = indexes
+		assign_node_timeline_ids(prev_node, timeline_ids)
 		cur_c = 1
 	end
 end
@@ -112,6 +134,8 @@ end
 ---@field count integer?
 ---@field extra string?
 ---@field index (integer|integer[])?
+---@field timeline_id integer?
+---@field timeline_ids integer[]?
 
 ---@class (exact) bar
 ---@field start integer
@@ -275,6 +299,21 @@ local function render_json(src, engine_data, out)
 		table.insert(out, ",\"source\":\"")
 		table.insert(out, src.source)
 		table.insert(out, "\"")
+	end
+
+	if src.timeline_id then
+		table.insert(out, ",\"timeline_id\":")
+		table.insert(out, tostring(src.timeline_id))
+	end
+
+	if type(src.timeline_ids) == "table" and #src.timeline_ids > 0 then
+		table.insert(out, ",\"timeline_ids\":")
+		table.insert(out, "[")
+		for k, id in ipairs(src.timeline_ids) do
+			table.insert(out, tostring(id))
+			if k ~= #src.timeline_ids then table.insert(out, ",") end
+		end
+		table.insert(out, "]")
 	end
 
 	src.count = src.count or 1

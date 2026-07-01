@@ -155,6 +155,7 @@ end
 function M.reset_timeline()
 	M.timeline_seq = 0
 	M.timeline_card_seq = 0
+	M.timeline_execution_seq = 0
 	M.timeline_cards = {}
 	M.timeline_events = {}
 	M.timeline_action_stack = {}
@@ -512,6 +513,8 @@ function M.initialise_engine(text_formatter, options)
 				M.pending_source = nil
 				local recursion_val = select(1, ...)
 				local iteration_val = select(2, ...)
+				M.timeline_execution_seq = (M.timeline_execution_seq or 0) + 1
+				local timeline_id = M.timeline_execution_seq
 				local new_node = { 
 					name = v.id, 
 					children = {}, 
@@ -519,6 +522,7 @@ function M.initialise_engine(text_formatter, options)
 					source = source,
 					iteration = iteration_val,
 					recursion = (type(recursion_val) == "number" and recursion_val > 0) and recursion_val or nil,
+					timeline_id = timeline_id,
 				}
 				M.counts[v.id] = (M.counts[v.id] or 0) + 1
 				M.cast_counts[M.cur_cast_num] = M.cast_counts[M.cur_cast_num] or {}
@@ -531,6 +535,7 @@ function M.initialise_engine(text_formatter, options)
 				table.insert(M.timeline_action_stack, v.id)
 				timeline_record("action_start", {
 					id = v.id,
+					timeline_id = timeline_id,
 					uid = timeline_uid,
 					source = source,
 					slot = clone.deck_index,
@@ -542,6 +547,7 @@ function M.initialise_engine(text_formatter, options)
 				local res = { _a(...) }
 				timeline_record("action_end", {
 					id = v.id,
+					timeline_id = timeline_id,
 					uid = timeline_uid,
 					source = source,
 					slot = clone.deck_index,
