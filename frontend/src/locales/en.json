@@ -428,10 +428,11 @@
     "spell_marking_add_custom": "Add: {{value}}",
     "divide_chain": "Divide Chain",
     "cool_ui_mode": "Cool UI Mode",
-    "cool_ui_mode_desc": "Enable extreme visual aesthetics: 3D tilt, glassmorphism, and neon glows.",
+    "cool_ui_mode_desc": "Enable complete theme skins for color, material, interaction, and background.",
     "cool_ui_theme": "Theme Skin",
     "cool_ui_background": "Dynamic Background",
     "cool_ui_themes": {
+      "quietpaper": "Quiet Paper",
       "orionfire": "Orion Karma Fire",
       "pureprism": "World-Cleansing Mystic Prism",
       "horizondawn": "Firmament Daybreak",

@@ -1064,7 +1064,7 @@ export function SettingsModal({
                         return (
                           <div key={detail.spell.id} className="grid grid-cols-[minmax(180px,1fr)_64px_64px_64px_82px_120px] gap-2 items-center border-b border-white/5 px-3 py-2 text-xs">
                             <div className="flex min-w-0 items-center gap-2">
-                              <img src={getIconUrl(detail.spell.icon, isConnected)} className="h-6 w-6 image-pixelated rounded border border-white/10" alt="" />
+                              <img src={getIconUrl(detail.spell.icon, isConnected)} className="spell-icon-surface h-6 w-6 image-pixelated rounded border border-white/10" alt="" />
                               <div className="min-w-0">
                                 <div className="truncate font-bold text-zinc-200">{displayName}</div>
                                 <div className="truncate text-[9px] text-zinc-600">
@@ -1150,24 +1150,26 @@ export function SettingsModal({
                         </div>
 
                         {/* Background Selection */}
-                        <div className="space-y-2 pt-2">
-                          <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_background')}</label>
-                          <div className="flex flex-wrap gap-2">
-                            {Object.entries(t('settings.cool_ui_backgrounds', { returnObjects: true }) as Record<string, string>).map(([key, name]) => (
-                              <button
-                                key={key}
-                                onClick={() => setSettings(s => ({ ...s, coolUIBackground: key }))}
-                                className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-all border ${
-                                  settings.coolUIBackground === key
-                                  ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-purple-400/50 text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                                  : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10'
-                                }`}
-                              >
-                                {name}
-                              </button>
-                            ))}
+                        {settings.coolUITheme !== 'quietpaper' && (
+                          <div className="space-y-2 pt-2">
+                            <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_background')}</label>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(t('settings.cool_ui_backgrounds', { returnObjects: true }) as Record<string, string>).map(([key, name]) => (
+                                <button
+                                  key={key}
+                                  onClick={() => setSettings(s => ({ ...s, coolUIBackground: key }))}
+                                  className={`px-4 py-1.5 rounded-full text-[10px] font-bold transition-all border ${
+                                    settings.coolUIBackground === key
+                                    ? 'bg-gradient-to-r from-indigo-500/30 to-purple-500/30 border-purple-400/50 text-purple-100 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                                    : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/10'
+                                  }`}
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1814,7 +1816,7 @@ export function SettingsModal({
                                             return (
                                               <div key={alt} className="flex items-center gap-1 bg-white/5 border border-white/10 rounded px-1.5 py-0.5">
                                                 {info ? (
-                                                  <img src={getIconUrl(info.icon, isConnected)} className="w-4 h-4 image-pixelated" alt="" />
+                                                  <img src={getIconUrl(info.icon, isConnected)} className="spell-icon-surface w-4 h-4 image-pixelated" alt="" />
                                                 ) : (
                                                   <div className="w-4 h-4 rounded bg-zinc-700" />
                                                 )}
@@ -1882,7 +1884,7 @@ export function SettingsModal({
                                               className="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors shrink-0"
                                               title={tooltip}
                                             >
-                                              <img src={getIconUrl(spell.icon, isConnected)} className="w-7 h-7 image-pixelated" alt="" />
+                                              <img src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-7 h-7 image-pixelated" alt="" />
                                             </button>
                                           );
                                         })}

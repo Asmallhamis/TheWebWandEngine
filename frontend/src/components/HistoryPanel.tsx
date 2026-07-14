@@ -80,7 +80,7 @@ export function HistoryPanel({
                     {item.icons.slice(0, 15).map((sid, i) => {
                       const spell = spellDb[sid];
                       return spell ? (
-                        <img key={i} src={getIconUrl(spell.icon, isConnected)} className="w-5 h-5 image-pixelated border border-white/5 rounded-sm bg-black/40 shadow-sm" alt="" />
+                        <img key={i} src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-5 h-5 image-pixelated border border-white/5 rounded-sm bg-black/40 shadow-sm" alt="" />
                       ) : null;
                     })}
                     {item.icons.length > 15 && (
@@ -125,7 +125,7 @@ export function HistoryPanel({
                     {item.icons.slice(0, 15).map((sid, i) => {
                       const spell = spellDb[sid];
                       return spell ? (
-                        <img key={i} src={getIconUrl(spell.icon, isConnected)} className="w-4 h-4 image-pixelated border border-white/5 rounded-sm bg-black/40 grayscale group-hover/fitem:grayscale-0" alt="" />
+                        <img key={i} src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-4 h-4 image-pixelated border border-white/5 rounded-sm bg-black/40 grayscale group-hover/fitem:grayscale-0" alt="" />
                       ) : null;
                     })}
                   </div>

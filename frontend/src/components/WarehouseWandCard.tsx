@@ -145,7 +145,7 @@ export const WarehouseWandCard = React.memo(({
           {spellsList.map(({ spell, sid }, i) => (
             <div key={i} className="w-5 h-5 shrink-0 flex items-center justify-center relative">
               {spell ? (
-                <img src={getIconUrl(spell.icon, isConnected)} className="w-full h-full object-contain image-pixelated" alt="" />
+                <img src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-full h-full object-contain image-pixelated" alt="" />
               ) : sid ? (
                 <div className="w-full h-full bg-orange-500/10 border border-orange-500/30 rounded-sm flex items-center justify-center" title={(() => {
                   const info = getUnknownSpellInfo(sid);
@@ -208,7 +208,7 @@ export const WarehouseWandCard = React.memo(({
                     {wand.always_cast.map((sid, i) => {
                       const s = spellDb[sid];
                       const sDisplayName = s ? (i18n.language.startsWith('en') && s.en_name ? s.en_name : s.name) : sid;
-                      return s ? <img key={i} src={getIconUrl(s.icon, isConnected)} className="w-4 h-4" title={sDisplayName} /> : null;
+                      return s ? <img key={i} src={getIconUrl(s.icon, isConnected)} className="spell-icon-surface w-4 h-4" title={sDisplayName} /> : null;
                     })}
                   </div>
                 </div>

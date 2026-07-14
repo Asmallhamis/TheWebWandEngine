@@ -460,7 +460,7 @@ export function SpellPicker({
                         title={tooltip}
                       >
                         <div className="relative w-full h-full flex items-center justify-center">
-                          <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
+                          <img src={getIconUrl(s.icon, isConnected)} className="spell-icon-surface image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                           {idx < 9 && (
                             <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                               {idx + 1}
@@ -523,7 +523,7 @@ export function SpellPicker({
                             data-spell-id={s.id}
                           >
                             <div className="relative w-full h-full flex items-center justify-center">
-                              <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
+                              <img src={getIconUrl(s.icon, isConnected)} className="spell-icon-surface image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                               {!pickerSearch && idx < 9 && (
                                 <div className="absolute top-0 left-0 bg-black/60 text-[8px] text-white/50 px-0.5 rounded-br pointer-events-none">
                                   {idx + 1}
@@ -593,7 +593,7 @@ export function SpellPicker({
                             data-testid="spell-picker-item"
                             data-spell-id={s.id}
                           >
-                            <img src={getIconUrl(s.icon, isConnected)} className="image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
+                            <img src={getIconUrl(s.icon, isConnected)} className="spell-icon-surface image-pixelated transition-transform group-hover:scale-110" style={{ width: pickerIconInnerSize, height: pickerIconInnerSize }} alt="" />
                           </button>
                         );
                       })}

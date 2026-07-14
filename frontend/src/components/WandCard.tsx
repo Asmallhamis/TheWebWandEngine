@@ -352,7 +352,7 @@ export function WandCard({
                 >
                   <img
                     src={getIconUrl(spell.icon, isConnected)}
-                    className={`w-7 h-7 image-pixelated border rounded transition-all ${isMarked ? 'border-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110 z-10' : 'bg-black/20 border-white/10'} ${isGrayscale ? 'grayscale opacity-50' : ''}`}
+                    className={`spell-icon-surface w-7 h-7 image-pixelated border rounded transition-all ${isMarked ? 'border-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)] scale-110 z-10' : 'bg-black/20 border-white/10'} ${isGrayscale ? 'grayscale opacity-50' : ''}`}
                     alt={displayName}
                     title={`${idx}: ${displayName}${uses !== undefined ? ` (${t('evaluator.cast_stats')} x${uses})` : ''}`}
                   />

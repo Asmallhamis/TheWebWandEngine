@@ -116,6 +116,27 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
     const tileRight = tileX + width;
     const tileBottom = tileY + height;
+    const isQuietPaper = settings.coolUIMode && settings.coolUITheme === 'quietpaper';
+    const themeRoot = isQuietPaper
+      ? document.querySelector('.theme-cool-ui[data-theme="quietpaper"]') as HTMLElement | null
+      : null;
+    const themeStyles = themeRoot ? window.getComputedStyle(themeRoot) : null;
+    const readThemeColor = (name: string, fallback: string) =>
+      themeStyles?.getPropertyValue(name).trim() || fallback;
+    const treePalette = {
+      line: readThemeColor('--quiet-tree-line', 'rgba(255, 255, 255, 0.55)'),
+      castBg: readThemeColor('--quiet-accent-soft', 'rgba(99, 102, 241, 0.1)'),
+      castBorder: readThemeColor('--quiet-accent-border', 'rgba(99, 102, 241, 0.3)'),
+      castText: readThemeColor('--quiet-accent-ink', '#818cf8'),
+      spellBg: readThemeColor('--quiet-cell-filled', '#111114'),
+      spellHover: readThemeColor('--quiet-cell-filled-hover', 'rgba(99, 102, 241, 0.2)'),
+      spellBorder: readThemeColor('--quiet-cell-filled-border', 'rgba(255, 255, 255, 0.1)'),
+      spellText: readThemeColor('--quiet-surface-raised', '#a1a1aa'),
+      accent: readThemeColor('--quiet-accent', '#818cf8'),
+      muted: readThemeColor('--quiet-ink-muted', '#71717a'),
+      border: readThemeColor('--quiet-border', '#27272a'),
+      faint: readThemeColor('--quiet-ink-secondary', '#3f3f46'),
+    };
 
     // --- 绘制节点逻辑 ---
     function drawNode(cn: ComputedNode, ctx: CanvasRenderingContext2D) {
@@ -137,7 +158,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
       // 1. Connection lines to children
       if (cn.children.length > 0) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.strokeStyle = treePalette.line;
         ctx.lineWidth = 1;
 
         const startX = x + nodeW;
@@ -179,7 +200,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       ctx.save();
       if (isHovered) {
         ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(99, 102, 241, 0.4)';
+        ctx.shadowColor = isQuietPaper ? 'rgba(201, 100, 66, 0.2)' : 'rgba(99, 102, 241, 0.4)';
         ctx.translate(0, -2);
       }
 
@@ -187,18 +208,18 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
       // Background
       if (isCast) {
-        ctx.fillStyle = 'rgba(99, 102, 241, 0.1)';
-        ctx.strokeStyle = isMarked ? '#f59e0b' : 'rgba(99, 102, 241, 0.3)';
+        ctx.fillStyle = treePalette.castBg;
+        ctx.strokeStyle = isMarked ? '#f59e0b' : treePalette.castBorder;
         ctx.lineWidth = isMarked ? 2 : 1;
       } else {
-        ctx.fillStyle = '#111114'; // Zinc-900 like
-        ctx.strokeStyle = isMarked ? '#f59e0b' : 'rgba(255, 255, 255, 0.1)';
+        ctx.fillStyle = treePalette.spellBg;
+        ctx.strokeStyle = isMarked ? '#f59e0b' : treePalette.spellBorder;
         ctx.lineWidth = isMarked ? 2 : 1;
       }
 
       if (isHovered) {
-        ctx.strokeStyle = '#818cf8'; // Indigo-400
-        ctx.fillStyle = 'rgba(99, 102, 241, 0.2)';
+        ctx.strokeStyle = treePalette.accent;
+        ctx.fillStyle = isQuietPaper && isCast ? treePalette.castBg : treePalette.spellHover;
       }
 
       ctx.beginPath();
@@ -261,7 +282,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(img, currentX, y + (nodeH - ICON_SIZE) / 2, ICON_SIZE, ICON_SIZE);
           } else {
-            ctx.fillStyle = '#18181b';
+            ctx.fillStyle = treePalette.spellBg;
             ctx.fillRect(currentX, y + (nodeH - ICON_SIZE) / 2, ICON_SIZE, ICON_SIZE);
             img.onload = () => window.dispatchEvent(new CustomEvent('canvas-redraw'));
           }
@@ -304,7 +325,9 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       }
 
       // 4. Text and labels
-      ctx.fillStyle = isHovered ? '#fff' : (isCast ? '#818cf8' : '#a1a1aa');
+      ctx.fillStyle = isQuietPaper
+        ? (isCast ? treePalette.castText : treePalette.spellText)
+        : (isHovered ? '#fff' : (isCast ? '#818cf8' : '#a1a1aa'));
       ctx.font = 'bold 10px Inter, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -392,7 +415,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
         // 检查 Header 是否在此 Tile 中 (宽泛检查)
         if (hdrY >= tileY - CAST_HEADER_HEIGHT && hdrY <= tileBottom) {
           ctx.save();
-          ctx.fillStyle = '#71717a';
+          ctx.fillStyle = treePalette.muted;
           ctx.font = 'black 10px Inter, sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'bottom';
@@ -406,13 +429,13 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
           const countW = ctx.measureText(countText).width;
 
           ctx.beginPath();
-          ctx.strokeStyle = '#27272a';
+          ctx.strokeStyle = treePalette.border;
           ctx.lineWidth = 1;
           ctx.moveTo(r.x + nameW + 12, hdrY - 4);
           ctx.lineTo(tw - countW - 12, hdrY - 4);
           ctx.stroke();
 
-          ctx.fillStyle = '#3f3f46';
+          ctx.fillStyle = treePalette.faint;
           ctx.textAlign = 'right';
           ctx.fillText(countText, tw, hdrY);
           ctx.restore();
@@ -613,7 +636,7 @@ export const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({ data, sp
   return (
     <div
       ref={containerRef}
-      className="relative bg-black/40 rounded-xl border border-white/5 overflow-hidden"
+      className="eval-tree-canvas relative bg-black/40 rounded-xl border border-white/5 overflow-hidden"
       style={{ width: logicalWidth, height: logicalHeight, cursor: canJumpHoverNode ? 'pointer' : 'crosshair', minWidth: 'max-content' }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => { setHoverNode(null); onHover?.(null); }}

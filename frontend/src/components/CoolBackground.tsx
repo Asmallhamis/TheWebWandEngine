@@ -6,7 +6,7 @@ interface CoolBackgroundProps {
 }
 
 export function CoolBackground({ theme, type }: CoolBackgroundProps) {
-  if (type === 'blank') {
+  if (type === 'blank' || theme === 'quietpaper') {
     return <div className="fixed inset-0 -z-[100] bg-[rgba(var(--cool-bg-rgb),1)] transition-colors duration-500 pointer-events-none" />;
   }
 

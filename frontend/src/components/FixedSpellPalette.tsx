@@ -210,7 +210,7 @@ export function FixedSpellPalette({
       >
         <img
           src={getIconUrl(spell.icon, isConnected)}
-          className="image-pixelated transition-transform group-hover/palette-spell:scale-110"
+          className="spell-icon-surface image-pixelated transition-transform group-hover/palette-spell:scale-110"
           style={{ width: Math.max(18, iconSize - 8), height: Math.max(18, iconSize - 8) }}
           alt=""
           draggable={false}

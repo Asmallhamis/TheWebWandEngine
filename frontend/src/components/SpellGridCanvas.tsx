@@ -27,11 +27,13 @@ const CANVAS_PADDING_TOP = 20;
 // Colors
 const C = {
   bgNormal:       '#27272a',
+  bgFilled:       '#27272a',
   bgHover:        '#3f3f46',
   bgSelected:     'rgba(99,102,241,0.4)',
   bgDragSwap:     'rgba(99,102,241,0.3)',
   bgUnknown:      'rgba(124,45,18,0.3)',
   borderNormal:   'rgba(255,255,255,0.05)',
+  borderFilled:   'rgba(255,255,255,0.05)',
   borderHover:    'rgba(99,102,241,0.5)',
   borderSelected: '#6366f1',
   borderDragSwap: '#6366f1',
@@ -107,19 +109,40 @@ function resolveThemePalette(themeName: string | undefined): typeof C {
   };
 
   const isDeepAbyssal = themeName === 'pureprism' || themeName === 'blacktooth';
+  const isQuietPaper = themeName === 'quietpaper';
+  const readCssVar = (name: string, fallback: string) =>
+    computed.getPropertyValue(name).trim() || fallback;
+  const quietPaper = isQuietPaper ? {
+    empty: readCssVar('--quiet-cell-empty', C.bgNormal),
+    filled: readCssVar('--quiet-cell-filled', C.bgFilled),
+    hover: readCssVar('--quiet-surface-raised', C.bgHover),
+    unknown: readCssVar('--quiet-cell-unknown', C.bgUnknown),
+    border: readCssVar('--quiet-border', C.borderNormal),
+    filledBorder: readCssVar('--quiet-cell-filled-border', C.borderFilled),
+    unknownBorder: readCssVar('--quiet-cell-unknown-border', C.borderUnknown),
+    ink: readCssVar('--quiet-ink', C.usesBg),
+    inkSecondary: readCssVar('--quiet-ink-secondary', C.bgFilled),
+  } : null;
 
   const palette = {
     ...C,
-    bgNormal:       `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
-    bgHover:        `rgba(${bgRgb}, 0.8)`,
-    bgSelected:     hexToRgba(primary, 0.4),
+    bgNormal:       quietPaper?.empty ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
+    bgFilled:       quietPaper?.filled ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
+    bgHover:        quietPaper?.hover ?? `rgba(${bgRgb}, 0.8)`,
+    bgSelected:     hexToRgba(primary, isQuietPaper ? 0.18 : 0.4),
     bgDragSwap:     hexToRgba(primary, 0.3),
-    borderNormal:   isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)',
+    bgUnknown:      quietPaper?.unknown ?? C.bgUnknown,
+    borderNormal:   quietPaper?.border ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
+    borderFilled:   quietPaper?.filledBorder ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
+    borderUnknown:  quietPaper?.unknownBorder ?? C.borderUnknown,
     borderHover:    hexToRgba(primary, 0.6),
     borderSelected: primary,
     borderDragSwap: primary,
-    selectionGlow:  hexToRgba(primary, 0.4),
+    selectionGlow:  hexToRgba(primary, isQuietPaper ? 0.18 : 0.4),
     hoverLine:      primary,
+    plus:           quietPaper ? hexToRgba(quietPaper.inkSecondary, 0.45) : C.plus,
+    usesBg:         quietPaper?.ink ?? C.usesBg,
+    indexHidden:    quietPaper ? hexToRgba(quietPaper.ink, 0.08) : C.indexHidden,
   };
 
   themePaletteCache.themeName = themeName;
@@ -392,6 +415,8 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       ctx.fillStyle = palette.bgDragSwap;
     } else if (sid && !spell) {
       ctx.fillStyle = palette.bgUnknown;
+    } else if (spell) {
+      ctx.fillStyle = palette.bgFilled;
     } else {
       ctx.fillStyle = palette.bgNormal;
     }
@@ -403,6 +428,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       : isDragSwap ? palette.borderDragSwap
       : isHovered ? spellThemeColor
       : sid && !spell ? palette.borderUnknown
+      : spell ? palette.borderFilled
       : palette.borderNormal;
     ctx.lineWidth = isSelected || isDragSwap ? 2 : 1;
     ctx.stroke();

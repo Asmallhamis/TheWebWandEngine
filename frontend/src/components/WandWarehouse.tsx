@@ -1331,7 +1331,7 @@ export function WandWarehouse({
                         const spell = spellDb[sid];
                         return (
                           <div key={i} className="w-8 h-8 bg-black/40 border border-emerald-500/20 rounded flex items-center justify-center overflow-hidden" title={spell?.name}>
-                            {spell && <img src={getIconUrl(spell.icon, isConnected)} className="w-6 h-6 image-pixelated" alt="" />}
+                            {spell && <img src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-6 h-6 image-pixelated" alt="" />}
                           </div>
                         );
                       })}
@@ -1342,7 +1342,7 @@ export function WandWarehouse({
                             const spell = spellDb[sid];
                             return (
                               <div key={`exc-${i}`} className="w-8 h-8 bg-red-950/40 border border-red-500/30 rounded flex items-center justify-center overflow-hidden relative" title={spell?.name ? `✗ ${spell.name}` : ''}>
-                                {spell && <img src={getIconUrl(spell.icon, isConnected)} className="w-6 h-6 image-pixelated opacity-60" alt="" />}
+                                {spell && <img src={getIconUrl(spell.icon, isConnected)} className="spell-icon-surface w-6 h-6 image-pixelated opacity-60" alt="" />}
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                   <div className="w-6 h-[2px] bg-red-500/60 rotate-45" />
                                 </div>

@@ -1,0 +1,579 @@
+/* =========================================
+   EXCLUSIVE THEME: QUIET PAPER (静思纸页)
+   Claude-inspired editorial foundation
+   ========================================= */
+
+.theme-cool-ui[data-theme="quietpaper"] {
+  --cool-primary: #c96442;
+  --cool-secondary: #d97757;
+  --cool-bg-rgb: 232, 230, 220;
+  --cool-panel-bg: #f5f4ed;
+  --cool-text-primary: #141413;
+  --cool-glass-blur: none;
+  --cool-glass-border: #e8e6dc;
+  --cool-glow: none;
+  --cool-card-radius: 12px;
+
+  --quiet-canvas: #e8e6dc;
+  --quiet-surface: #f5f4ed;
+  --quiet-surface-raised: #faf9f5;
+  --quiet-surface-recessed: #eeece4;
+  --quiet-border: #d1cfc5;
+  --quiet-border-soft: #e8e6dc;
+  --quiet-ink: #141413;
+  --quiet-ink-secondary: #30302e;
+  --quiet-ink-muted: #5e5d59;
+  --quiet-accent: #c96442;
+  --quiet-accent-ink: #93412c;
+  --quiet-accent-soft: #f1dfd6;
+  --quiet-accent-border: #d7a08b;
+  --quiet-cell-filled: #5e5d59;
+  --quiet-cell-filled-hover: #696761;
+  --quiet-cell-filled-border: #7a7974;
+  --quiet-cell-empty: #f5f4ed;
+  --quiet-cell-unknown: #49332c;
+  --quiet-cell-unknown-border: #9b6a55;
+  --quiet-tree-line: #b5b2a8;
+  --quiet-success: #3f6b54;
+  --quiet-warning: #8c5d20;
+  --quiet-danger: #9b3b35;
+  --quiet-font-sans: "Inter", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  --quiet-font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Noto Serif SC", "Songti SC", Georgia, serif;
+
+  color: var(--quiet-ink);
+  color-scheme: light;
+  font-family: var(--quiet-font-sans);
+  background-color: var(--quiet-canvas);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] ::selection {
+  color: var(--quiet-ink);
+  background: rgba(201, 100, 66, 0.22);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(h1, h2, h3) {
+  color: var(--quiet-ink);
+  font-family: var(--quiet-font-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.font-black, .font-extrabold) {
+  font-weight: 600 !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.tracking-widest, .tracking-wider) {
+  letter-spacing: 0.04em !important;
+}
+
+/* Paper surfaces replace the shared glass and dark utility foundation. */
+.theme-cool-ui[data-theme="quietpaper"] :is(.glass, .glass-card, .glass-panel) {
+  color: var(--quiet-ink);
+  background-color: var(--quiet-surface) !important;
+  background-image: none !important;
+  border-color: var(--quiet-border-soft) !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 0 rgba(20, 20, 19, 0.05), 0 8px 24px rgba(48, 48, 46, 0.035) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .group\/wand {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border) !important;
+  box-shadow: 0 12px 36px rgba(48, 48, 46, 0.055) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-attributes-box {
+  background-color: var(--quiet-surface-raised) !important;
+  border: 1px solid var(--quiet-border-soft) !important;
+  box-shadow: 0 10px 28px rgba(48, 48, 46, 0.045) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .bg-zinc-950,
+  .bg-zinc-950\/30,
+  .bg-zinc-950\/80,
+  .bg-zinc-950\/95,
+  .bg-\[\#050505\]
+) {
+  background-color: var(--quiet-canvas) !important;
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .bg-zinc-900,
+  .bg-zinc-900\/20,
+  .bg-zinc-900\/40,
+  .bg-zinc-900\/50,
+  .bg-\[\#0a0a0c\],
+  .bg-\[\#0c0c0e\]
+) {
+  background-color: var(--quiet-surface) !important;
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .bg-zinc-800,
+  .bg-zinc-800\/80,
+  .bg-black,
+  .bg-black\/20,
+  .bg-black\/30,
+  .bg-black\/40,
+  .bg-black\/50,
+  .bg-black\/60,
+  .bg-black\/80,
+  .bg-white\/5,
+  .bg-white\/10
+) {
+  background-color: var(--quiet-surface-raised) !important;
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.bg-zinc-700, .bg-zinc-700\/80, .bg-white\/20) {
+  background-color: var(--quiet-border-soft) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .hover\:bg-zinc-900\/20:hover,
+  .hover\:bg-zinc-700:hover,
+  .hover\:bg-zinc-700\/80:hover,
+  .hover\:bg-black\/40:hover,
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/10:hover
+) {
+  background-color: #ebe9e0 !important;
+  background-image: none !important;
+}
+
+/* Editorial ink hierarchy. */
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300) {
+  color: var(--quiet-ink) !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-zinc-400, .text-zinc-500) {
+  color: var(--quiet-ink-muted) !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-zinc-600, .text-zinc-700, .text-white\/50) {
+  color: #7a7974 !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .text-indigo-300,
+  .text-indigo-400,
+  .text-indigo-500,
+  .text-purple-300,
+  .text-purple-400,
+  .text-cyan-300,
+  .text-cyan-400
+) {
+  color: var(--quiet-accent-ink) !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-emerald-300, .text-emerald-400) {
+  color: var(--quiet-success) !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-amber-200, .text-amber-300, .text-amber-400, .text-amber-500) {
+  color: var(--quiet-warning) !important;
+  text-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.text-red-300, .text-red-400) {
+  color: var(--quiet-danger) !important;
+  text-shadow: none !important;
+}
+
+/* Warm hairlines instead of luminous borders. */
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/20,
+  .border-zinc-700,
+  .border-zinc-800
+) {
+  border-color: var(--quiet-border-soft) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .border-indigo-400,
+  .border-indigo-500,
+  .border-indigo-500\/20,
+  .border-indigo-500\/30,
+  .border-indigo-500\/50,
+  .border-purple-400,
+  .border-purple-400\/50,
+  .border-purple-500\/20,
+  .border-purple-500\/50,
+  .ring-indigo-500
+) {
+  border-color: var(--quiet-accent-border) !important;
+  --tw-ring-color: rgba(201, 100, 66, 0.35) !important;
+}
+
+/* Brand actions use a restrained terracotta fill or wash. */
+.theme-cool-ui[data-theme="quietpaper"] :is(.bg-indigo-500, .bg-indigo-600, .bg-purple-500, .bg-purple-600) {
+  color: var(--quiet-canvas) !important;
+  background-color: var(--quiet-accent) !important;
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .bg-indigo-500\/10,
+  .bg-indigo-500\/20,
+  .bg-purple-500\/10,
+  .bg-purple-500\/20,
+  .bg-cyan-500\/10
+) {
+  background-color: var(--quiet-accent-soft) !important;
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .bg-gradient-to-br,
+.theme-cool-ui[data-theme="quietpaper"] .bg-gradient-to-r {
+  background-image: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .from-indigo-500,
+.theme-cool-ui[data-theme="quietpaper"] .from-purple-500,
+.theme-cool-ui[data-theme="quietpaper"] .from-purple-600 {
+  background-color: var(--quiet-accent) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .neo-button {
+  color: var(--quiet-ink-secondary);
+  border-color: var(--quiet-border-soft);
+  border-radius: 8px;
+  box-shadow: none !important;
+  letter-spacing: 0.02em;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .neo-button:hover {
+  color: var(--quiet-ink);
+  border-color: var(--quiet-border);
+  box-shadow: none !important;
+  transform: translateY(-1px);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .neo-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(input:not([type="range"]), textarea, select) {
+  color: var(--quiet-ink) !important;
+  background-color: var(--quiet-canvas) !important;
+  border-color: var(--quiet-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(input, textarea)::placeholder {
+  color: #7a7974 !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] input[type="range"] {
+  accent-color: var(--quiet-accent);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(button, input, textarea, select):focus-visible {
+  outline: 2px solid rgba(201, 100, 66, 0.48);
+  outline-offset: 2px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #b0aea5;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--quiet-surface);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.group\/cell, .group\/state, .group\/treeh) {
+  text-shadow: none !important;
+}
+
+/* Every DOM spell icon declares the same semantic surface; components do not
+   carry theme-specific background fixes. */
+.theme-cool-ui[data-theme="quietpaper"] .spell-icon-surface {
+  background-color: var(--quiet-cell-filled) !important;
+  outline: 1px solid rgba(20, 20, 19, 0.18);
+  outline-offset: -1px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] img.spell-icon-surface {
+  border-radius: 3px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-empty {
+  color: var(--quiet-ink-muted);
+  background-color: var(--quiet-cell-empty) !important;
+  border-color: #c9c6bc !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-empty:hover {
+  background-color: var(--quiet-surface-raised) !important;
+  border-color: var(--quiet-accent-border) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-empty .text-zinc-800 {
+  color: #7a7974 !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled {
+  background-color: var(--quiet-cell-filled) !important;
+  border-color: var(--quiet-cell-filled-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 5px rgba(20, 20, 19, 0.1) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled:hover {
+  background-color: var(--quiet-cell-filled-hover) !important;
+  border-color: var(--quiet-accent) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 3px 8px rgba(20, 20, 19, 0.12) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled .text-cyan-400 {
+  color: var(--quiet-canvas) !important;
+  text-shadow: 0 1px 2px var(--quiet-ink) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled .text-white\/5 {
+  color: rgba(250, 249, 245, 0.1) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-unknown {
+  background-color: var(--quiet-cell-unknown) !important;
+  border-color: var(--quiet-cell-unknown-border) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(
+  .group\/cell:hover,
+  .group\/state:hover,
+  .group\/treeh:hover
+) {
+  border-color: var(--quiet-accent-border) !important;
+  box-shadow: 0 4px 16px rgba(48, 48, 46, 0.06) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-selected {
+  background-color: var(--quiet-accent-soft) !important;
+  border-color: var(--quiet-accent) !important;
+  box-shadow: inset 0 0 0 1px rgba(201, 100, 66, 0.16) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .spell-cell-filled.spell-cell-selected {
+  background-color: var(--quiet-cell-filled) !important;
+  border-color: var(--quiet-accent) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(250, 249, 245, 0.14),
+    0 2px 5px rgba(20, 20, 19, 0.12) !important;
+}
+
+/* Timeline: editorial controls on distinct paper layers, without legacy gray
+   translucency mixing into the light theme. */
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-heading > h3 > span,
+.theme-cool-ui[data-theme="quietpaper"] .wand-eval-tree-heading > span {
+  background-color: var(--quiet-accent) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.wand-timeline-heading, .wand-eval-tree-heading) {
+  backdrop-filter: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-panel {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border) !important;
+  box-shadow: 0 10px 28px rgba(48, 48, 46, 0.045);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-toolbar {
+  background-color: var(--quiet-surface-raised) !important;
+  border-color: var(--quiet-border-soft) !important;
+  border-radius: 9px 9px 0 0;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-control {
+  color: var(--quiet-ink-secondary) !important;
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-control:hover {
+  color: var(--quiet-accent-ink) !important;
+  background-color: var(--quiet-accent-soft) !important;
+  border-color: var(--quiet-accent-border) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-play {
+  color: var(--quiet-accent-ink) !important;
+  background-color: var(--quiet-accent-soft) !important;
+  border-color: var(--quiet-accent-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-field {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-meta {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border-soft) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-stage {
+  background-color: var(--quiet-surface-recessed) !important;
+  border-radius: 0 0 9px 9px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-process {
+  background-color: var(--quiet-surface-raised) !important;
+  border-color: #dfc8a4 !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-pile {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border-soft) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.wand-timeline-card, .wand-timeline-process-card) {
+  background-color: var(--quiet-cell-filled) !important;
+  border-color: var(--quiet-cell-filled-border) !important;
+  box-shadow: 0 2px 5px rgba(20, 20, 19, 0.12) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-process-card {
+  border-color: #a9783f !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] :is(.wand-timeline-card, .wand-timeline-process-card) .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline-tooltip {
+  color: var(--quiet-surface-raised) !important;
+  background-color: var(--quiet-ink-secondary) !important;
+  border-color: var(--quiet-cell-filled-border) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline input[type="range"] {
+  height: 14px;
+  appearance: none;
+  background: transparent !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: #c4c1b8;
+  border-radius: 999px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline input[type="range"]::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  margin-top: -5px;
+  appearance: none;
+  background: var(--quiet-accent);
+  border: 2px solid var(--quiet-surface-raised);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(48, 48, 46, 0.2);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline input[type="range"]::-moz-range-track {
+  height: 3px;
+  background: #c4c1b8;
+  border-radius: 999px;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-timeline input[type="range"]::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  background: var(--quiet-accent);
+  border: 2px solid var(--quiet-surface-raised);
+  border-radius: 50%;
+}
+
+/* Execution tree: one material per node instead of a light card wrapped around
+   a dark icon tile. */
+.theme-cool-ui[data-theme="quietpaper"] .wand-eval-tree-group {
+  background-color: var(--quiet-surface) !important;
+  border-color: var(--quiet-border-soft) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-eval-tree-header {
+  background-color: var(--quiet-surface-raised) !important;
+  border-color: var(--quiet-border-soft) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .wand-eval-tree-body,
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-canvas {
+  background-color: var(--quiet-surface-recessed) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-line {
+  background: var(--quiet-tree-line) !important;
+  background-color: var(--quiet-tree-line) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-node {
+  --tw-ring-offset-color: var(--quiet-surface-recessed);
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-cast-node {
+  color: var(--quiet-accent-ink) !important;
+  background-color: var(--quiet-accent-soft) !important;
+  border-color: var(--quiet-accent-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-cast-node .text-zinc-400 {
+  color: var(--quiet-accent-ink) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-spell-node {
+  padding: 5px !important;
+  background-color: var(--quiet-cell-filled) !important;
+  border-color: var(--quiet-cell-filled-border) !important;
+  box-shadow: 0 2px 5px rgba(20, 20, 19, 0.12) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-spell-node:hover {
+  background-color: var(--quiet-cell-filled-hover) !important;
+  border-color: var(--quiet-accent) !important;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-spell-node .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+.theme-cool-ui[data-theme="quietpaper"] .eval-tree-spell-node :is(.text-zinc-400, .text-white) {
+  color: var(--quiet-surface-raised) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-cool-ui[data-theme="quietpaper"] *,
+  .theme-cool-ui[data-theme="quietpaper"] *::before,
+  .theme-cool-ui[data-theme="quietpaper"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

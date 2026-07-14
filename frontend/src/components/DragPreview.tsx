@@ -26,11 +26,10 @@ export const DragPreview = ({ spell, isConnected }: DragPreviewProps) => {
     >
       <img
         src={getIconUrl(spell.icon, isConnected)}
-        className="h-full w-full image-pixelated rounded border-2 border-indigo-500 bg-zinc-900/80 shadow-2xl"
+        className="spell-icon-surface h-full w-full image-pixelated rounded border-2 border-indigo-500 bg-zinc-900/80 shadow-2xl"
         alt=""
         draggable={false}
       />
     </div>
   );
 };
-

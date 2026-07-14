@@ -240,7 +240,7 @@ export function ModManagerPanel({
               <div className={`w-8 h-8 rounded border border-white/5 bg-black/40 flex items-center justify-center p-0.5 group-hover/spell:border-white/20 transition-colors`}>
                 <img
                   src={getIconUrl(spell.icon, isConnected)}
-                  className="w-full h-full image-pixelated"
+                  className="spell-icon-surface w-full h-full image-pixelated"
                   alt={spell.name}
                 />
               </div>
@@ -413,7 +413,7 @@ export function ModManagerPanel({
                         <img
                           key={i}
                           src={getIconUrl(s.icon, isConnected)}
-                          className="w-5 h-5 image-pixelated grayscale"
+                          className="spell-icon-surface w-5 h-5 image-pixelated grayscale"
                           alt=""
                         />
                       ))}

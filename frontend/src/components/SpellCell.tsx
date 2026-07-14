@@ -206,6 +206,7 @@ const SpellCellComponent = ({
         }}
         className={`
           w-full h-full rounded-lg border flex items-center justify-center relative group/cell spell-cell-hover-fx ${settings.coolUIMode ? `spell-theme-${settings.coolUITheme}` : ''} transition-all active:scale-95
+          ${spell ? 'spell-cell-filled' : sid ? 'spell-cell-unknown' : 'spell-cell-empty'}
           ${isLocked ? 'bg-black/40 border-transparent opacity-10' : `${sid && !spell ? 'bg-orange-950/30 border-orange-500/30 shadow-inner hover:bg-orange-900/30' : 'bg-zinc-800/80 border-white/5 shadow-inner hover:bg-zinc-700/80'} ${settings.editorDragMode === 'hand' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
           ${isSelected ? 'spell-cell-selected ring-2 ring-indigo-500 ring-inset bg-indigo-500/40 border-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] z-10 scale-[1.02]' : ''}
           ${isHovered && dragSource && settings.dragSpellMode === 'noita_swap' ? 'spell-cell-drag-swap border-indigo-500 bg-indigo-500/30 scale-105 z-20' : 'hover:border-indigo-500/50'}
@@ -232,7 +233,7 @@ const SpellCellComponent = ({
 
               return (
                 <>
-                  <img src={getIconUrl(spell.icon, isConnected)} className={`w-10 h-10 image-pixelated transition-transform group-hover/cell:scale-110 ${isGrayscale ? 'grayscale opacity-50' : ''}`} alt="" draggable="false" />
+                  <img src={getIconUrl(spell.icon, isConnected)} className={`spell-icon-surface w-10 h-10 image-pixelated transition-transform group-hover/cell:scale-110 ${isGrayscale ? 'grayscale opacity-50' : ''}`} alt="" draggable="false" />
 
                   {isMarked && (
                     <div className="absolute inset-0 border-2 border-amber-500 rounded-lg shadow-[0_0_10px_rgba(245,158,11,0.5)] z-10 pointer-events-none" />

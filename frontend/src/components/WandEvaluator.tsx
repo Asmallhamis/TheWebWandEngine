@@ -312,7 +312,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
               return (
                 <div key={id} data-testid={`eval-overall-count-item-${id}`} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0 rounded-md transition-all group/count min-h-[28px]">
                   {spell ? (
-                    <img src={getIconUrl(spell.icon, false)} alt={id} className="w-5 h-5 image-pixelated" />
+                    <img src={getIconUrl(spell.icon, false)} alt={id} className="spell-icon-surface w-5 h-5 image-pixelated" />
                   ) : (
                     <div className="w-5 h-5 bg-zinc-800 rounded flex items-center justify-center text-[8px] text-zinc-500 font-mono">?</div>
                   )}
@@ -448,9 +448,9 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 
       {/* Tree Flowchart Section */}
       {(renderMode === 'all' || renderMode === 'tree') && (
-        <section style={{ order: evaluatorSectionOrderMap.tree }}>
+        <section className="wand-eval-tree" style={{ order: evaluatorSectionOrderMap.tree }}>
           {!isCanvas && (
-            <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
+            <h3 className="wand-eval-tree-heading sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] rounded-full"></span>
               {t('evaluator.execution_flow')}
             </h3>
@@ -465,9 +465,9 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
               const isShowingAll = userShowAllCasts[group.start] ?? false;
 
               return (
-                <div key={group.start} className="bg-zinc-950/30 rounded-lg border border-white/5 overflow-hidden">
+                <div key={group.start} className="wand-eval-tree-group bg-zinc-950/30 rounded-lg border border-white/5 overflow-hidden">
                   <div
-                    className={`px-4 py-2 bg-white/5 flex items-center justify-between transition-colors group/treeh ${isCanvas ? '' : 'cursor-pointer hover:bg-white/10'}`}
+                    className={`wand-eval-tree-header px-4 py-2 bg-white/5 flex items-center justify-between transition-colors group/treeh ${isCanvas ? '' : 'cursor-pointer hover:bg-white/10'}`}
                     onClick={() => !isCanvas && setUserExpandedCasts(prev => ({ ...prev, [group.start]: !isVisible }))}
                   >
                     <div className="flex items-center gap-3">
@@ -498,7 +498,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
                 </div>
 
                 {isVisible && (
-                  <div className="p-6 space-y-12 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="wand-eval-tree-body p-6 space-y-12 animate-in fade-in slide-in-from-top-1 duration-200">
                     {(!isRange || !isShowingAll) ? (
                       // 预览模式或单轮：显示树
                       <div>
@@ -1006,12 +1006,12 @@ const WandTimelinePlayer: React.FC<{
       return (
         <div
           key={uid}
-          className="absolute rounded border border-white/10 bg-zinc-950/90 z-10 shadow-lg flex items-center justify-center"
+          className="wand-timeline-card absolute rounded border border-white/10 bg-zinc-950/90 z-10 shadow-lg flex items-center justify-center"
           style={{ transform: `translate(${x}px, ${y}px)`, opacity, width: timelineIconSize, height: timelineIconSize }}
           title={`${getSpellDisplay(card.id)}${card.slot !== undefined ? ` #${card.slot}` : ''}`}
         >
           {icon ? (
-            <img src={icon} alt={card.id} className="image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
+            <img src={icon} alt={card.id} className="spell-icon-surface image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
           ) : (
             <span className="font-mono text-zinc-500" style={{ fontSize: Math.max(9, Math.round(timelineIconSize * 0.31)) }}>?</span>
           )}
@@ -1045,11 +1045,11 @@ const WandTimelinePlayer: React.FC<{
         title={getSpellDisplay(item.id)}
       >
         <div
-          className="relative rounded border border-amber-400/30 bg-amber-500/10 shadow-lg flex items-center justify-center"
+          className="wand-timeline-process-card relative rounded border border-amber-400/30 bg-amber-500/10 shadow-lg flex items-center justify-center"
           style={{ width: timelineIconSize, height: timelineIconSize }}
         >
           {icon ? (
-            <img src={icon} alt={item.id} className="image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
+            <img src={icon} alt={item.id} className="spell-icon-surface image-pixelated" style={{ width: timelineImageSize, height: timelineImageSize }} />
           ) : (
             <span className="font-mono text-amber-300" style={{ fontSize: Math.max(9, Math.round(timelineIconSize * 0.31)) }}>?</span>
           )}
@@ -1080,8 +1080,8 @@ const WandTimelinePlayer: React.FC<{
   if (!currentFrame || !currentEvent) return null;
 
   return (
-    <section ref={sectionRef} className="space-y-3">
-      <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between gap-3">
+    <section ref={sectionRef} className="wand-timeline space-y-3">
+      <div className="wand-timeline-heading sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between gap-3">
         <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
           <span className="w-1.5 h-1.5 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)] rounded-full"></span>
           {t('evaluator.timeline')}
@@ -1092,25 +1092,25 @@ const WandTimelinePlayer: React.FC<{
         </div>
       </div>
 
-      <div className="relative border border-white/10 bg-zinc-950/45 rounded-lg overflow-visible">
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.03]">
-          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(0)} title={t('evaluator.timeline_first')}>
+      <div className="wand-timeline-panel relative border border-white/10 bg-zinc-950/45 rounded-lg overflow-visible">
+        <div className="wand-timeline-toolbar flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.03]">
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(0)} title={t('evaluator.timeline_first')}>
             <SkipBack size={14} />
           </button>
-          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(-1)} title={t('evaluator.timeline_prev_action')}>
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(-1)} title={t('evaluator.timeline_prev_action')}>
             <StepBack size={14} />
           </button>
-          <button className="w-9 h-8 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 flex items-center justify-center text-cyan-300" onClick={togglePlayback} title={isPlaying ? t('evaluator.timeline_pause') : t('evaluator.timeline_play')}>
+          <button className="wand-timeline-play w-9 h-8 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 flex items-center justify-center text-cyan-300" onClick={togglePlayback} title={isPlaying ? t('evaluator.timeline_pause') : t('evaluator.timeline_play')}>
             {isPlaying ? <Pause size={15} /> : <Play size={15} />}
           </button>
-          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(1)} title={t('evaluator.timeline_next_action')}>
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(1)} title={t('evaluator.timeline_next_action')}>
             <StepForward size={14} />
           </button>
-          <button className="w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(frames.length - 1)} title={t('evaluator.timeline_last')}>
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(frames.length - 1)} title={t('evaluator.timeline_last')}>
             <SkipForward size={14} />
           </button>
 
-          <div className="h-8 min-w-[210px] flex items-center gap-2 rounded border border-white/10 bg-zinc-950 px-2" title={t('evaluator.timeline_speed')}>
+          <div className="wand-timeline-field h-8 min-w-[210px] flex items-center gap-2 rounded border border-white/10 bg-zinc-950 px-2" title={t('evaluator.timeline_speed')}>
             <span className="w-8 text-right text-[10px] font-black text-cyan-300">{formatTimelineSpeed(speed)}x</span>
             <input
               type="range"
@@ -1143,7 +1143,7 @@ const WandTimelinePlayer: React.FC<{
           <div className="relative flex-1 min-w-[180px]">
             {hoverFrameIndex !== null && frames.length > 1 && (
               <div
-                className="pointer-events-none absolute -top-7 z-50 rounded bg-zinc-950/95 px-2 py-1 text-[10px] font-black text-white shadow-lg border border-white/10"
+                className="wand-timeline-tooltip pointer-events-none absolute -top-7 z-50 rounded bg-zinc-950/95 px-2 py-1 text-[10px] font-black text-white shadow-lg border border-white/10"
                 style={{ left: `${(hoverFrameIndex / Math.max(1, frames.length - 1)) * 100}%`, transform: 'translateX(-50%)' }}
               >
                 {hoverFrameIndex + 1}/{frames.length}
@@ -1183,7 +1183,7 @@ const WandTimelinePlayer: React.FC<{
           </div>
         </div>
 
-        <div className="px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2 text-[10px] font-mono">
+        <div className="wand-timeline-meta px-3 py-2 border-b border-white/10 flex flex-wrap items-center gap-2 text-[10px] font-mono">
           <span className="px-2 py-1 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-black uppercase">{currentEvent.type.replace(/_/g, ' ')}</span>
           {currentEvent.cast !== undefined && <span className="text-zinc-500">cast {currentEvent.cast}</span>}
           {currentEvent.shot !== undefined && <span className="text-zinc-500">shot {currentEvent.shot}</span>}
@@ -1191,9 +1191,9 @@ const WandTimelinePlayer: React.FC<{
           {typeof currentEvent.info?.id === 'string' && <span className="text-zinc-400">{currentEvent.info.id}</span>}
         </div>
 
-        <div ref={stageRef} className="relative overflow-hidden bg-black/20" style={{ height: stageHeight }}>
+        <div ref={stageRef} className="wand-timeline-stage relative overflow-hidden bg-black/20" style={{ height: stageHeight }}>
           <div
-            className="absolute left-3 top-3 right-3 rounded border border-amber-400/20 bg-amber-500/[0.04] overflow-hidden"
+            className="wand-timeline-process absolute left-3 top-3 right-3 rounded border border-amber-400/20 bg-amber-500/[0.04] overflow-hidden"
             style={{ height: processHeight }}
           >
             <div className="absolute left-2 top-1 text-[9px] font-black uppercase tracking-widest text-amber-300/70">{t('evaluator.timeline_processing')}</div>
@@ -1214,7 +1214,7 @@ const WandTimelinePlayer: React.FC<{
             return (
               <div
                 key={pileName}
-                className="absolute rounded border border-white/10 bg-white/[0.025]"
+                className="wand-timeline-pile absolute rounded border border-white/10 bg-white/[0.025]"
                 style={{ left: index * colW + 8, top: pileTop, width: Math.max(88, colW - 16), height: pileHeight }}
               >
                 <div className="absolute left-2 top-1 flex items-center gap-2">
@@ -1273,7 +1273,7 @@ const CastStatsPanel: React.FC<{ group: any, spellDb: Record<string, SpellInfo>,
             return (
               <div key={id} className="flex items-center gap-2 glass pl-1 pr-2 py-1 rounded transition-all hover:bg-white/10">
                 {spell ? (
-                  <img src={getIconUrl(spell.icon, false)} alt={id} className="w-6 h-6 image-pixelated" />
+                  <img src={getIconUrl(spell.icon, false)} alt={id} className="spell-icon-surface w-6 h-6 image-pixelated" />
                 ) : (
                   <div className="w-6 h-6 bg-zinc-800 rounded flex items-center justify-center text-[8px] text-zinc-500 font-mono">?</div>
                 )}
@@ -1379,7 +1379,7 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
           title={mainIconSpellId}
         >
           <div className={`relative w-10 h-10 rounded-md bg-zinc-900 border ${triggerStyle ? triggerStyle.border + ' ' + triggerStyle.bg : 'border-zinc-700'} shadow-2xl flex items-center justify-center p-1`}>
-            <img src={getIconUrl(mainIcon, false)} alt={mainIconSpellId || ''} className="w-7 h-7 image-pixelated" />
+            <img src={getIconUrl(mainIcon, false)} alt={mainIconSpellId || ''} className="spell-icon-surface w-7 h-7 image-pixelated" />
             
             {/* Filter: If we are showin the payload icon, the trigger badge goes on top */}
             {settings.triggerVisualizationMode === 'wanddbg' && triggerStyle && (
@@ -1416,7 +1416,7 @@ const ShotStateCard: React.FC<{ state: ShotState, spellDb?: Record<string, Spell
                       src={getIconUrl(spell.icon, false)}
                       alt={spellId}
                       title={spellId}
-                      className="w-7 h-7 image-pixelated"
+                      className="spell-icon-surface w-7 h-7 image-pixelated"
                     />
                   ) : (
                     <div key={`${spellId}-${i}`} className="w-7 h-7 bg-zinc-800 rounded flex items-center justify-center text-[9px] text-zinc-500 font-mono" title={spellId}>?</div>
@@ -1507,8 +1507,8 @@ const TreeNode: React.FC<{
               onTimelineNodeClick?.(node);
             }}
             className={`
-              group relative p-2 rounded border transition-all ${canJumpToTimeline ? 'cursor-pointer' : 'cursor-help'} shrink-0
-              ${isCast ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-900 border-white/10 shadow-xl'}
+              eval-tree-node group relative p-2 rounded border transition-all ${canJumpToTimeline ? 'cursor-pointer' : 'cursor-help'} shrink-0
+              ${isCast ? 'eval-tree-cast-node bg-indigo-500/10 border-indigo-500/30' : 'eval-tree-spell-node bg-zinc-900 border-white/10 shadow-xl'}
               ${isMarked ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-black scale-105 z-10 !border-amber-500/50' : ''}
               hover:scale-110 hover:z-20 hover:border-indigo-400 hover:bg-indigo-400/20
             `}
@@ -1553,7 +1553,7 @@ const TreeNode: React.FC<{
                 return (
                   <div className="relative flex items-center gap-1">
                     {currentIconUrl && (
-                      <img src={currentIconUrl} alt={currentSpellId} className="w-7 h-7 image-pixelated drop-shadow-md" title={currentDisplayName} />
+                      <img src={currentIconUrl} alt={currentSpellId} className="spell-icon-surface w-7 h-7 image-pixelated" title={currentDisplayName} />
                     )}
                     {showText && (
                       <span className="text-[10px] font-black font-mono text-zinc-400 px-1 whitespace-nowrap tracking-tighter">

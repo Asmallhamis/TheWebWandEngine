@@ -428,10 +428,11 @@
     "spell_marking_add_custom": "添加: {{value}}",
     "divide_chain": "一分链",
     "cool_ui_mode": "酷炫美学模式",
-    "cool_ui_mode_desc": "开启极致的视觉享受：3D 倾斜、玻璃拟态与流光溢彩。",
+    "cool_ui_mode_desc": "启用完整主题皮肤：统一调整配色、材质、交互与背景。",
     "cool_ui_theme": "主题皮肤",
     "cool_ui_background": "动态背景",
     "cool_ui_themes": {
+      "quietpaper": "静思纸页",
       "orionfire": "猎户业火",
       "pureprism": "净世玄棱",
       "horizondawn": "苍穹破晓",
