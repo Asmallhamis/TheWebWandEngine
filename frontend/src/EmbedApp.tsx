@@ -90,6 +90,7 @@ const DEFAULT_EMBED_SETTINGS: AppSettings = {
   moveExistingWandToTopOnDuplicatePaste: false,
   evaluatorSectionOrder: ['timeline', 'shot_states', 'tree'],
   showCastTimeline: true,
+  autoCalculateTimeline: false,
   timelineActionLayout: 'scroll',
   timelineIconSize: 36,
   coolUIMode: false,

@@ -2,22 +2,27 @@
 setlocal EnableExtensions DisableDelayedExpansion
 chcp 65001 >nul
 
-echo [1/5] 正在提取 Noita 静态资源...
+echo [1/6] 正在关闭旧的本地静态服务器...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$servers = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'python.exe' -and $_.CommandLine -match '(?i)-m\s+http\.server\s+15042(?:\s|$)' }); foreach ($server in $servers) { Write-Host ('  关闭旧服务器 PID ' + $server.ProcessId); Stop-Process -Id $server.ProcessId -Force -ErrorAction SilentlyContinue }; for ($attempt = 0; $attempt -lt 30; $attempt++) { if (-not (Get-NetTCPConnection -LocalPort 15042 -State Listen -ErrorAction SilentlyContinue)) { exit 0 }; Start-Sleep -Milliseconds 100 }; Write-Error '端口 15042 仍被其他程序占用，请手动关闭后重试。'; exit 1"
+if errorlevel 1 goto :failed
+
+echo.
+echo [2/6] 正在提取 Noita 静态资源...
 python prepare_static_assets.py
 if errorlevel 1 goto :failed
 
-echo [2/5] 正在安装前端依赖...
+echo [3/6] 正在安装前端依赖...
 pushd frontend
 if errorlevel 1 goto :failed
 call npm install
 if errorlevel 1 goto :failed
 
-echo [3/5] 正在构建生产环境版本 (静态模式)...
+echo [4/6] 正在构建生产环境版本 (静态模式)...
 set "VITE_STATIC_MODE=true"
 call npm run build
 if errorlevel 1 goto :failed
 
-echo [4/5] 正在同步到 ghpages 目录...
+echo [5/6] 正在同步到 ghpages 目录...
 rem 使用 robocopy 同步，并排除白名单文件/目录
 rem /MIR 镜像目录树（等同于 /E 加上 /PURGE）
 rem /XF 排除文件
@@ -26,7 +31,7 @@ robocopy dist ..\ghpages /MIR /XF auto_push.bat README.md LICENSE .gitignore CNA
 if errorlevel 8 goto :failed
 
 echo.
-echo [5/5] 启动本地静态服务器进行验证...
+echo [6/6] 启动本地静态服务器进行验证...
 echo.
 echo ======================================================
 echo [验证说明]

@@ -1,0 +1,104 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+<script type="module">
+const worker=new Worker(new URL('./src/lib/evaluator.worker.ts',import.meta.url),{type:'module'});
+const pending=new Map();
+worker.onmessage=(e)=>{const{id,type,data,error}=e.data;const p=pending.get(id);if(!p)return;pending.delete(id);p({type,data,error});};
+window.__held=null;
+window.__inspectStoredTimelinePage=async(index)=>{
+  const {loadTimelinePage}=await import('./src/lib/timeline.ts');
+  const page=await loadTimelinePage(window.__lastTimeline,index);
+  const events=page.events;
+  const stable=value=>Array.isArray(value)
+    ? value.map(stable)
+    : value&&typeof value==='object'
+      ? Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]))
+      : value;
+  return {
+    count:events.length,
+    first:events[0]?.i,
+    last:events[events.length-1]?.i,
+    missingPiles:events.filter(event=>!event.piles).length,
+    badActionEvents:events.filter(event=>
+      (event.type==='action_start'||event.type==='action_end')
+      && (typeof event.info?.id!=='string'||typeof event.info?.timeline_id!=='number')
+    ).length,
+    firstType:events[0]?.type,
+    lastType:events[events.length-1]?.type,
+    matchesInline:index===0
+      ? JSON.stringify(stable(events.slice(0,window.__lastTimeline.events.length)))
+        ===JSON.stringify(stable(window.__lastTimeline.events))
+      : undefined,
+  };
+};
+window.__hold=(spells,spellUses={},workerOptions={})=>new Promise((resolve)=>{
+  const id=Date.now();
+  pending.set(id,(r)=>{
+    if(r.type!=='RESULT'){resolve({ok:false,error:String(r.error).slice(0,200)});return;}
+    window.__held=r.data;  // 持有引用，模拟存进 React state
+    const ev=r.data.timeline.events;
+    const s=new Set(); for(const e of ev) s.add(e.piles);
+    resolve({
+      ok:true,
+      events:ev.length,
+      distinctPiles:s.size,
+      treeNodes:null,
+      truncated:r.data.timeline.truncated===true,
+      complete:r.data.timeline.complete===true,
+      totalEvents:r.data.timeline.total_events||ev.length,
+      storedChunks:r.data.timeline.storage?.chunks?.length||0,
+    });
+  });
+  worker.postMessage({type:'EVALUATE',id,
+    data:{mana_max:100000,mana_charge_speed:100000,reload_time:20,fire_rate_wait:10,deck_capacity:29,
+      shuffle_deck_when_empty:false,spread_degrees:0,speed_multiplier:1.0,actions_per_round:1,
+      spells,spell_uses:spellUses,always_cast:[],evaluation_seed:'1'},
+    options:{numCasts:3,unlimitedSpells:false,initialIfHalf:false,foldNodes:true,...workerOptions},
+    mod_appends:null,active_mods:null,vfs:null});
+});
+
+window.__runComplex=(spells,spellUses={},timeoutMs=30000,workerOptions={})=>new Promise((resolve)=>{
+  const isolatedWorker=new Worker(new URL('./src/lib/evaluator.worker.ts',import.meta.url),{type:'module'});
+  const id=Date.now()+Math.random();
+  const started=performance.now();
+  const finish=(result)=>{
+    isolatedWorker.terminate();
+    resolve({...result,durationMs:Math.round(performance.now()-started)});
+  };
+  const timer=setTimeout(()=>finish({ok:false,timedOut:true}),timeoutMs);
+  isolatedWorker.onmessage=(e)=>{
+    if(e.data.id!==id)return;
+    clearTimeout(timer);
+    if(e.data.type!=='RESULT'){
+      finish({ok:false,error:e.data.error||e.data.type});
+      return;
+    }
+    const data=e.data.data;
+    window.__lastTimeline=data.timeline;
+    const countTree=(node)=>node?1+(node.children||[]).reduce((sum,child)=>sum+countTree(child),0):0;
+    finish({
+      ok:true,
+      counts:data.counts,
+      castCounts:data.cast_counts,
+      treeJson:workerOptions.returnTreeJson?JSON.stringify(data.tree):undefined,
+      treeNodes:countTree(data.tree),
+      timelineEvents:data.timeline?.events?.length||0,
+      timelineTruncated:data.timeline?.truncated===true,
+      timelineTotalEvents:data.timeline?.total_events||data.timeline?.events?.length||0,
+      timelineComplete:data.timeline?.complete===true,
+      timelineStorage:data.timeline?.storage,
+      timelineDisabled:data.timeline_disabled===true,
+    });
+  };
+  isolatedWorker.onerror=(e)=>{
+    clearTimeout(timer);
+    finish({ok:false,error:e.message});
+  };
+  isolatedWorker.postMessage({type:'EVALUATE',id,
+    data:{mana_max:100000,mana_charge_speed:100000,reload_time:20,fire_rate_wait:10,deck_capacity:29,
+      shuffle_deck_when_empty:false,spread_degrees:0,speed_multiplier:1.0,actions_per_round:1,
+      spells,spell_uses:spellUses,always_cast:[],evaluation_seed:'1'},
+    options:{numCasts:3,unlimitedSpells:false,initialIfHalf:false,foldNodes:true,...workerOptions},
+    mod_appends:null,active_mods:null,vfs:null});
+});
+window.__ready=true;
+</script></body></html>

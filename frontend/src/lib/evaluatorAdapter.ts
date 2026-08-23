@@ -5,6 +5,7 @@ const compactAlwaysCast = (spells?: (string | null | undefined)[]) =>
   (spells || []).map(s => s || '').filter(Boolean);
 
 import { getActiveModBundle, ModBundle } from './modStorage';
+import { deleteTimelineStorage } from './timeline';
 let worker: Worker | null = null;
 let lastRequestId = 0;
 
@@ -197,7 +198,15 @@ export function wikiNameToSpritePath(wikiName: string): { sprite?: string; item_
 let cachedFilteredBundle: { appends: any, vfs: any, activeMods: string[], hasBundle: boolean } | null = null;
 let lastBundleVersion = 0;
 
-const pendingRequests = new Map<number, { resolve: (val: any) => void, reject: (err: any) => void }>();
+const pendingRequests = new Map<number, {
+  resolve: (val: any) => void;
+  reject: (err: any) => void;
+  targetKey: string;
+}>();
+const timelineStorageByTarget = new Map<
+  string,
+  NonNullable<NonNullable<EvalResponse['timeline']>['storage']>
+>();
 
 function ensureWorker() {
   if (!worker) {
@@ -211,6 +220,13 @@ function ensureWorker() {
       
       pendingRequests.delete(id);
       if (type === 'RESULT') {
+        const previousStorage = timelineStorageByTarget.get(pending.targetKey);
+        const nextStorage = data?.timeline?.storage;
+        if (previousStorage && previousStorage.file !== nextStorage?.file) {
+          void deleteTimelineStorage(previousStorage);
+        }
+        if (nextStorage) timelineStorageByTarget.set(pending.targetKey, nextStorage);
+        else timelineStorageByTarget.delete(pending.targetKey);
         pending.resolve({ data, id });
       } else if (type === 'ERROR') {
         pending.reject(error);
@@ -276,6 +292,7 @@ export async function evaluateWand(
           simulate_many_enemies: settings.simulateManyEnemies,
           simulate_many_projectiles: settings.simulateManyProjectiles,
           fold_nodes: settings.foldNodes,
+          timeline_enabled: settings.timelineEnabled !== false,
           evaluation_seed: wand.evaluation_seed !== undefined ? wand.evaluation_seed : settings.evaluationSeed,
           stop_at_recharge: settings.stopAtRecharge,
           perks: Object.entries((settings.perks || {}) as Record<string, number>).flatMap(([id, count]) =>
@@ -291,7 +308,13 @@ export async function evaluateWand(
       }
 
       const data = await res.json();
-      if (data.success) return { data: data.data, id: requestId };
+      if (data.success) {
+        if (settings.timelineEnabled === false) {
+          delete data.data.timeline;
+          data.data.timeline_disabled = true;
+        }
+        return { data: data.data, id: requestId };
+      }
       return null;
     } catch (e) {
       console.error("API Fetch failed:", e);
@@ -303,7 +326,7 @@ export async function evaluateWand(
   return new Promise((resolve, reject) => {
     try {
       const w = ensureWorker();
-      pendingRequests.set(requestId, { resolve, reject });
+      pendingRequests.set(requestId, { resolve, reject, targetKey: `${tabId}\u0000${slotId}` });
 
       getActiveModBundle().then(bundle => {
         // Simple cache for filtered bundle

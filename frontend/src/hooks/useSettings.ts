@@ -89,6 +89,7 @@ export const useSettings = () => {
       moveExistingWandToTopOnDuplicatePaste: false,
       evaluatorSectionOrder: ['timeline', 'shot_states', 'tree'],
       showCastTimeline: true,
+      autoCalculateTimeline: true,
       timelineActionLayout: 'scroll',
       timelineIconSize: isMobileDevice ? 30 : 36,
       coolUIMode: false,

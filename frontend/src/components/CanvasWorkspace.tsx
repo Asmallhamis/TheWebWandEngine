@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent, useControls } from 'react-zoom-pan-pinch';
-import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats, EvalNode, TimelineJumpRequest } from '../types';
+import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats, EvalNode, TimelineJumpRequest, EvaluationRequestOptions } from '../types';
 import { Activity, Frame, Navigation, Lock, Unlock, Pin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import WandEvaluator from './WandEvaluator';
@@ -32,7 +32,7 @@ interface CanvasWorkspaceProps {
   dragSource: SpellDragSource | null;
   clipboard: { type: 'wand'; data: WandData } | null;
   updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
+  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean, options?: EvaluationRequestOptions) => void;
   handleSlotMouseDown: (wandSlot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }, area?: SpellArea) => void;
   handleSlotMouseUp: (wandSlot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseEnter: (wandSlot: string, idx: number, area?: SpellArea) => void;
@@ -418,6 +418,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
                           renderMode="stats"
                           isCanvas={true}
                           externalTimelineJumpRequest={timelineJumpRequests[slot] || null}
+                          onCalculateTimeline={() => props.requestEvaluation(props.activeTab.id, slot, data, true, { timelineEnabled: true })}
                         />
                       ) : (
                         <div className="text-zinc-600 italic px-4 py-8">{t('canvas.no_evaluation_data')}</div>

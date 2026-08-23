@@ -1,0 +1,56 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><div id="root"></div>
+<script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import './src/index.css';
+import './src/i18n.ts';
+import WandEvaluator from './src/components/WandEvaluator.tsx';
+
+const root=createRoot(document.getElementById('root'));
+const settings={
+  autoHideThreshold:20,
+  evaluatorSectionOrder:['timeline','shot_states','tree'],
+  showCastTimeline:true,
+  timelineActionLayout:'scroll',
+  timelineIconSize:36,
+};
+const baseData={
+  tree:{name:'Wand',count:1,extra:'',index:[],children:[]},
+  states:[],
+  counts:{},
+  cast_counts:{},
+};
+const checkpoint={cast:0,timelineExecutionSeq:0,shots:[],actions:[],process:[],piles:{deck:[],hand:[],discarded:[]}};
+
+window.__renderStoredTimeline=(pageCount)=>{
+  const chunks=Array.from({length:pageCount},(_,index)=>({
+    offset:index,
+    length:1,
+    first_event:index+1,
+    event_count:1,
+    checkpoint,
+  }));
+  root.render(React.createElement(WandEvaluator,{
+    data:{...baseData,timeline:{
+      cards:[],
+      events:[{i:1,type:'initial_deck',info:{},piles:{deck:[],hand:[],discarded:[]}}],
+      total_events:pageCount,
+      complete:true,
+      storage:{kind:'opfs-compact-v1',directory:'test',file:'timeline.bin',chunks,total_events:pageCount,total_bytes:pageCount},
+    }},
+    spellDb:{},
+    settings,
+  }));
+};
+
+window.__manualTimelineClicks=0;
+window.__renderTimelineDisabled=()=>{
+  root.render(React.createElement(WandEvaluator,{
+    data:{...baseData,timeline_disabled:true},
+    spellDb:{},
+    settings,
+    onCalculateTimeline:()=>{window.__manualTimelineClicks+=1;},
+  }));
+};
+window.__ready=true;
+</script></body></html>

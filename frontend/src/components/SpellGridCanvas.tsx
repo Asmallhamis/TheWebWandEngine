@@ -24,6 +24,27 @@ const ICON_SIZE = 40;
 const BORDER_RADIUS = 8;
 const CANVAS_PADDING_TOP = 20;
 
+/**
+ * 单张 canvas 的物理像素预算。
+ * canvas 内存 = 物理宽 × 物理高 × 4 bytes，且本组件维护两张同尺寸 canvas
+ * （可见 + 离屏双缓冲），故实际占用是预算的 2 倍。
+ * 12M 像素 ≈ 48MB/张 ≈ 96MB/组件，作为大容量法杖的上限。
+ * 超出预算时降低 dpr（画质轻微下降，换取内存不爆）。
+ */
+const MAX_CANVAS_PIXELS = 12_000_000;
+
+/**
+ * 在像素预算内求可用的最大 dpr。
+ * 返回值不低于 1，保证大容量法杖仍可渲染（仅牺牲高分屏锐度）。
+ */
+function resolveCanvasDpr(cssW: number, cssH: number): number {
+  const rawDpr = window.devicePixelRatio || 1;
+  const area = Math.max(1, cssW * cssH);
+  if (area * rawDpr * rawDpr <= MAX_CANVAS_PIXELS) return rawDpr;
+  const fitted = Math.sqrt(MAX_CANVAS_PIXELS / area);
+  return Math.max(1, Math.min(rawDpr, fitted));
+}
+
 // Colors
 const C = {
   bgNormal:       '#27272a',
@@ -369,7 +390,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     let spellThemeColor = palette.borderSelected;
     let spellGlowColor = palette.selectionGlow;
     let spellSecColor = themePaletteCache.themeName === 'pureprism' ? 'rgba(217, 70, 239, 0.9)' : 'rgba(255, 0, 0, 0.8)';
-    
+
     if (spell && settings.spellTypes) {
       const tc = settings.spellTypes.find(t => t.id === spell.type);
       if (tc && tc.color) {
@@ -390,7 +411,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
           b = Math.min(255, Math.floor(b * boost));
           return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
-        
+
         spellThemeColor = getNeon(tc.color, 0.9);
         spellGlowColor = getNeon(tc.color, 0.4);
         spellSecColor = getNeon(tc.color, 0.7, 1.5);
@@ -453,17 +474,17 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       ctx.save();
       ctx.lineJoin = 'miter';
       ctx.miterLimit = 10;
-      
+
       // Draw geometric shattered shards breaking out of the box using spell type colors
-      ctx.translate(x + cellInner/2, y + cellInner/2); 
-      
+      ctx.translate(x + cellInner/2, y + cellInner/2);
+
       const drawShard = (angle: number, color: string, length: number, width: number, offset: number) => {
          ctx.save();
          ctx.rotate(angle);
-         ctx.translate(cellInner/2 + offset, 0); 
+         ctx.translate(cellInner/2 + offset, 0);
          ctx.beginPath();
          ctx.moveTo(0, -width/2);
-         ctx.lineTo(length, 0); 
+         ctx.lineTo(length, 0);
          ctx.lineTo(0, width/2);
          ctx.fillStyle = color;
          ctx.shadowColor = color;
@@ -481,10 +502,10 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       drawShard(Math.PI * 0.25, spellThemeColor, 16, 8, -2);
       drawShard(Math.PI * 0.15, spellSecColor, 10, 3, -1);
       drawShard(Math.PI * 0.35, colorTert, 14, 2, 0);
-      
+
       // Minor asymmetrical side shards
-      drawShard(Math.PI * 0.8, spellThemeColor, 6, 3, -1); 
-      drawShard(-Math.PI * 0.1, spellSecColor, 5, 2, 0); 
+      drawShard(Math.PI * 0.8, spellThemeColor, 6, 3, -1);
+      drawShard(-Math.PI * 0.1, spellSecColor, 5, 2, 0);
 
       ctx.restore();
     }
@@ -502,7 +523,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     // Hover indicator line
     if (isHovered && _hovered && !isDragSwap) {
       const lineX = _hovered.isRightHalf ? x + cellInner + _gap / 2 + 1 : x - _gap / 2 - 1;
-      
+
       if (isAbyssal) {
         ctx.save();
         ctx.shadowColor = spellThemeColor;
@@ -516,7 +537,7 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
         ctx.lineTo(lineX - 1.5, y + cellInner / 2);
         ctx.closePath();
         ctx.fill();
-        
+
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(lineX - 0.5, y, 1, cellInner);
         ctx.restore();
@@ -721,10 +742,10 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
     const { cols, rows, cellOuter, cellInner } = layout;
     const canvasW = cols * cellOuter;
     const canvasH = rows * cellOuter + CANVAS_PADDING_TOP;
+    const dpr = resolveCanvasDpr(canvasW, canvasH);
     const _gap = settings.editorSpellGap || 0;
 
     // Resize visible canvas if needed
@@ -864,6 +885,14 @@ export const SpellGridCanvas: React.FC<SpellGridCanvasProps> = React.memo(({
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
+      }
+      // 主动释放离屏缓冲：大容量法杖下这张 canvas 可达数十 MB，
+      // 归零尺寸可让浏览器立刻回收其像素缓冲，不必等 GC 回收整个元素。
+      const base = baseCanvasRef.current;
+      if (base) {
+        base.width = 0;
+        base.height = 0;
+        baseCanvasRef.current = null;
       }
     };
   }, []);

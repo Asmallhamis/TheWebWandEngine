@@ -10,9 +10,9 @@ export const useHistory = (
   const { t } = useTranslation();
 
   const performAction = useCallback((
-    action: (prevWands: Record<string, WandData>) => Record<string, WandData>, 
-    actionName = t('app.notification.unknown_action'), 
-    icons?: string[], 
+    action: (prevWands: Record<string, WandData>) => Record<string, WandData>,
+    actionName = t('app.notification.unknown_action'),
+    icons?: string[],
     saveHistory = true
   ) => {
     setTabs(prevTabs => prevTabs.map(t => {
@@ -23,7 +23,11 @@ export const useHistory = (
 
         const newItem: HistoryItem = {
           id: Math.random().toString(36).substr(2, 9),
-          wands: JSON.parse(JSON.stringify(t.wands)), // 记录旧状态以便回退
+          // 直接保存引用即可回退：所有 action 均为纯函数式更新（返回新对象，
+          // 从不原地修改 wands 或其嵌套字段），故旧状态永远不会被篡改。
+          // 相比深拷贝，未改动的法杖在各历史条目间共享结构，
+          // 内存从 O(历史条数 × 全部法杖) 降为 O(实际改动量)。
+          wands: t.wands,
           name: actionName,
           icons,
           timestamp: Date.now()
@@ -46,7 +50,7 @@ export const useHistory = (
         const lastAction = t.past[t.past.length - 1];
         const currentStateItem: HistoryItem = {
           id: 'redo-' + Date.now(),
-          wands: JSON.parse(JSON.stringify(t.wands)),
+          wands: t.wands, // 结构共享，见 performAction 说明
           name: lastAction.name,
           icons: lastAction.icons,
           timestamp: Date.now()
@@ -68,7 +72,7 @@ export const useHistory = (
         const nextAction = t.future[0];
         const currentStateItem: HistoryItem = {
           id: 'undo-' + Date.now(),
-          wands: JSON.parse(JSON.stringify(t.wands)),
+          wands: t.wands, // 结构共享，见 performAction 说明
           name: nextAction.name,
           icons: nextAction.icons,
           timestamp: Date.now()
@@ -91,7 +95,7 @@ export const useHistory = (
         const newFuture = [...t.past.slice(targetPastIndex + 1), ...(t.future || [])];
         const currentAsItem: HistoryItem = {
           id: 'jump-p-' + Date.now(),
-          wands: JSON.parse(JSON.stringify(t.wands)),
+          wands: t.wands, // 结构共享，见 performAction 说明
           name: t.past[t.past.length - 1].name,
           icons: t.past[t.past.length - 1].icons,
           timestamp: Date.now()
@@ -115,7 +119,7 @@ export const useHistory = (
         const transitionItems = t.future.slice(0, targetFutureIndex);
         const currentAsItem: HistoryItem = {
           id: 'jump-f-' + Date.now(),
-          wands: JSON.parse(JSON.stringify(t.wands)),
+          wands: t.wands, // 结构共享，见 performAction 说明
           name: targetItem.name,
           icons: targetItem.icons,
           timestamp: Date.now()

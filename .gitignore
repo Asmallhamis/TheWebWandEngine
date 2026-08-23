@@ -73,3 +73,7 @@ wand_eval_tree/single_test.lua
 
 # Backup / temporary script versions
 202*-*-* *.txt
+
+# e2e 内存/正确性测试夹具（仅本地使用，不进入构建）
+frontend/__memtest.html
+frontend/__evaltest.html

@@ -32,8 +32,21 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * 已解析的当前激活 bundle 缓存。
+ * getActiveModBundle 处于评估热路径上，而每次调用都会 getAll() 反序列化
+ * 全部历史 bundle（每个可达数 MB）只为取最新一条，造成反复的瞬时内存峰值。
+ * 写操作会失效该缓存。
+ */
+let activeBundleCache: { value: ModBundle | null } | null = null;
+
+export function invalidateModBundleCache(): void {
+  activeBundleCache = null;
+}
+
 export async function saveModBundle(bundle: ModBundle): Promise<void> {
   const db = await openDB();
+  invalidateModBundleCache();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
@@ -56,6 +69,7 @@ export async function getModBundles(): Promise<ModBundle[]> {
 
 export async function deleteModBundle(id: string): Promise<void> {
   const db = await openDB();
+  invalidateModBundleCache();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
@@ -66,8 +80,29 @@ export async function deleteModBundle(id: string): Promise<void> {
 }
 
 export async function getActiveModBundle(): Promise<ModBundle | null> {
-  const bundles = await getModBundles();
-  if (bundles.length === 0) return null;
-  // 目前简单起见，取最新的一个，以后可以加切换逻辑
-  return bundles.sort((a, b) => b.timestamp - a.timestamp)[0];
+  if (activeBundleCache) return activeBundleCache.value;
+
+  // 用游标按 timestamp 挑出最新一条，只保留该条记录的引用，
+  // 避免像 getAll() 那样把全部历史 bundle 同时读入内存。
+  const db = await openDB();
+  const latest = await new Promise<ModBundle | null>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.openCursor();
+    let best: ModBundle | null = null;
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        resolve(best);
+        return;
+      }
+      const row = cursor.value as ModBundle;
+      if (!best || row.timestamp > best.timestamp) best = row;
+      cursor.continue();
+    };
+    request.onerror = () => reject(request.error);
+  });
+
+  activeBundleCache = { value: latest };
+  return latest;
 }

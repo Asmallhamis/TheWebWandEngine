@@ -2285,6 +2285,25 @@ export function SettingsModal({
                     </button>
                   </div>
                 )}
+                {isMatch(t('settings.auto_calculate_timeline')) && (
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                        <Activity size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-zinc-200">{t('settings.auto_calculate_timeline')}</div>
+                        <div className="text-[10px] text-zinc-500">{t('settings.auto_calculate_timeline_desc')}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSettings(s => ({ ...s, autoCalculateTimeline: !(s.autoCalculateTimeline ?? true) }))}
+                      className={`shrink-0 w-10 h-5 rounded-full relative transition-colors ${(settings.autoCalculateTimeline ?? true) ? 'bg-cyan-600' : 'bg-zinc-700'}`}
+                    >
+                      <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${(settings.autoCalculateTimeline ?? true) ? 'left-6' : 'left-1'}`} />
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {isMatch(t('settings.simulate_low_hp')) && (
                     <div className="flex justify-between items-center bg-white/5 p-3 rounded-lg border border-white/5">

@@ -81,6 +81,7 @@ def evaluate_wand():
         "-nc", format_lua_arg(data.get("number_of_casts", 10)),
         "-u", "true" if data.get("unlimited_spells", True) else "false",
         "-e", "true" if data.get("initial_if_half", True) else "false",
+        "-tl", "true" if data.get("timeline_enabled", True) else "false",
     ]
 
     if data.get("stop_at_recharge"):

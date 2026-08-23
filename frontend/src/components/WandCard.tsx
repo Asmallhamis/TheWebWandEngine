@@ -2,7 +2,7 @@ import React from 'react';
 import { toPng } from 'html-to-image';
 import { createPortal } from 'react-dom';
 import { Wand2, Scissors, Clipboard, Trash2, ChevronUp, ChevronDown, Battery, Zap, Timer, RefreshCw, Activity, Monitor, Image as ImageIcon } from 'lucide-react';
-import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger, SpellStats } from '../types';
+import { WandData, Tab, SpellInfo, EvalResponse, AppSettings, SpellArea, SpellAreaSelection, HoveredSpellSlot, SpellDragSource, SpellPickerTrigger, SpellStats, EvaluationRequestOptions } from '../types';
 import { CompactStat } from './Common';
 import { WandEditor } from './WandEditor';
 import WandEvaluator from './WandEvaluator';
@@ -41,7 +41,7 @@ interface WandCardProps {
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   setMousePos: (pos: { x: number; y: number }) => void;
   evalData?: { data: EvalResponse; id: number; loading?: boolean };
-  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
+  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean, options?: EvaluationRequestOptions) => void;
   settings: any;
   onSaveToWarehouse: (wand: WandData) => void;
 }
@@ -546,6 +546,7 @@ export function WandCard({
                 markedSlots={data.marked_slots}
                 wandSpells={data.spells}
                 deckCapacity={data.deck_capacity}
+                onCalculateTimeline={() => requestEvaluation(activeTab.id, slot, data, true, { timelineEnabled: true })}
               />
             </div>
           )}

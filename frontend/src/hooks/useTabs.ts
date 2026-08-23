@@ -5,7 +5,7 @@ import { DEFAULT_WAND } from '../constants';
 
 export const useTabs = (settings: AppSettings, setSettings: (s: AppSettings) => void) => {
   const { t } = useTranslation();
-  
+
   const [tabs, setTabs] = useState<Tab[]>(() => {
     const saved = localStorage.getItem('twwe_tabs') || localStorage.getItem('wand2h_tabs');
     if (saved) {
@@ -34,13 +34,44 @@ export const useTabs = (settings: AppSettings, setSettings: (s: AppSettings) => 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId) || tabs[0], [tabs, activeTabId]);
 
   // Persistence
+  // 去抖：每次编辑都全量 JSON.stringify 所有 tab（含完整撤销历史）会产生
+  // 与历史等量的瞬时字符串峰值并阻塞主线程。合并连续改动为一次写入。
+  const persistTabs = useCallback((tabsToSave: Tab[]) => {
+    try {
+      const dataToSave = tabsToSave.map(t => ({
+        ...t,
+        expandedWands: Array.from(t.expandedWands)
+      }));
+      localStorage.setItem('twwe_tabs', JSON.stringify(dataToSave));
+    } catch (e) {
+      // 配额超限等情况下不应中断编辑流程
+      console.warn('Failed to persist tabs:', e);
+    }
+  }, []);
+
   useEffect(() => {
-    const dataToSave = tabs.map(t => ({
-      ...t,
-      expandedWands: Array.from(t.expandedWands)
-    }));
-    localStorage.setItem('twwe_tabs', JSON.stringify(dataToSave));
-  }, [tabs]);
+    const timer = setTimeout(() => persistTabs(tabs), 500);
+
+    // 去抖会留下一个「改动尚未落盘」的窗口，若用户此时刷新/关闭页面就会丢数据。
+    // 因此在页面隐藏或卸载前立即补写一次。
+    const flush = () => {
+      clearTimeout(timer);
+      persistTabs(tabs);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [tabs, persistTabs]);
 
   const addNewTab = useCallback(() => {
     const id = Date.now().toString();

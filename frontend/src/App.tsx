@@ -218,7 +218,11 @@ function App() {
     }, actionName, icons);
   }, [activeTab.isRealtime, performAction, syncWand, t]);
 
-  const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected, updateWand);
+  // 按内容而非引用记忆，避免每次 render 生成新数组导致清理 effect 反复触发
+  const liveTabIdsKey = tabs.map(t => t.id).join(',');
+  const liveTabIds = useMemo(() => liveTabIdsKey.split(','), [liveTabIdsKey]);
+
+  const { evalResults, requestEvaluation } = useWandEvaluator(activeTab, settings, isConnected, updateWand, liveTabIds);
 
   const setSelection = useUIStore(s => s.setSelection);
   const selection = useUIStore(s => s.selection);

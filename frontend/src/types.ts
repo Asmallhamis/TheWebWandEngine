@@ -190,6 +190,7 @@ export interface AppSettings {
   moveExistingWandToTopOnDuplicatePaste: boolean;
   evaluatorSectionOrder: Array<'timeline' | 'shot_states' | 'tree'>;
   showCastTimeline: boolean;
+  autoCalculateTimeline: boolean;
   timelineActionLayout: 'scroll' | 'wrap';
   timelineIconSize: number;
   coolUIMode: boolean;
@@ -227,6 +228,12 @@ export interface EvalResponse {
   counts: Record<string, number>;
   cast_counts: Record<string, Record<string, number>>;
   timeline?: EvalTimeline;
+  timeline_disabled?: boolean;
+}
+
+export interface EvaluationRequestOptions {
+  /** Override the persisted auto-timeline setting for this evaluation only. */
+  timelineEnabled?: boolean;
 }
 
 export interface EvalTimelineCard {
@@ -250,9 +257,60 @@ export interface EvalTimelineEvent {
   };
 }
 
+export interface EvalTimelineProcessItem {
+  id: string;
+  uid?: number;
+  slot?: number;
+  drawStep?: number;
+  drawTotal?: number;
+  copyStep?: number;
+}
+
+export interface EvalTimelineDecoderState {
+  cast: number;
+  timelineExecutionSeq: number;
+  shots: number[];
+  actions: Array<{
+    id: string;
+    timelineId: number;
+    uid?: number;
+    source: 'action' | 'draw';
+    slot?: number;
+    iteration?: number;
+    recursion?: number;
+    drawStep?: number;
+    drawTotal?: number;
+  }>;
+  process: EvalTimelineProcessItem[];
+  piles: EvalTimelineEvent['piles'];
+}
+
+export interface EvalTimelineStorageChunk {
+  offset: number;
+  length: number;
+  first_event: number;
+  event_count: number;
+  first_timeline_id?: number;
+  last_timeline_id?: number;
+  checkpoint: EvalTimelineDecoderState;
+}
+
+export interface EvalTimelineStorage {
+  kind: 'opfs-compact-v1';
+  directory: string;
+  file: string;
+  chunks: EvalTimelineStorageChunk[];
+  total_events: number;
+  total_bytes: number;
+}
+
 export interface EvalTimeline {
   cards: EvalTimelineCard[];
   events: EvalTimelineEvent[];
+  truncated?: boolean;
+  total_events?: number;
+  complete?: boolean;
+  storage?: EvalTimelineStorage;
 }
 
 export interface TimelineJumpRequest {

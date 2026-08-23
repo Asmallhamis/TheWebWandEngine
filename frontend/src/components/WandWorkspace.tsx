@@ -2,7 +2,7 @@ import React from 'react';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { WandCard } from './WandCard';
-import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats } from '../types';
+import { Tab, SpellDb, SpellArea, SpellDragSource, SpellAreaSelection, HoveredSpellSlot, WandData, AppSettings, EvalResponse, SpellStats, EvaluationRequestOptions } from '../types';
 
 interface WandWorkspaceProps {
   activeTab: Tab;
@@ -22,7 +22,7 @@ interface WandWorkspaceProps {
   copyLegacyWand: (slot: string) => void;
   pasteWand: (slot: string) => void;
   updateWand: (slot: string, updates: Partial<WandData> | ((prev: WandData) => Partial<WandData>), actionName?: string, icons?: string[]) => void;
-  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean) => void;
+  requestEvaluation: (tabId: string, slot: string, wand: WandData, force?: boolean, options?: EvaluationRequestOptions) => void;
   handleSlotMouseDown: (wandSlot: string, idx: number, isRightClick?: boolean, point?: { x: number; y: number }, area?: SpellArea) => void;
   handleSlotMouseUp: (wandSlot: string, idx: number, area?: SpellArea) => void;
   handleSlotMouseEnter: (wandSlot: string, idx: number, area?: SpellArea) => void;

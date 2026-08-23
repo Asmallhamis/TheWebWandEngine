@@ -1,8 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { EvalNode, ShotState, SpellInfo, AppSettings, EvalResponse, EvalTimeline, TimelineJumpRequest } from '../types';
+import {
+  EvalNode,
+  ShotState,
+  SpellInfo,
+  AppSettings,
+  EvalResponse,
+  EvalTimeline,
+  EvalTimelineProcessItem,
+  TimelineJumpRequest,
+} from '../types';
 import { ChevronRight, ChevronDown, Pause, Play, Search, SkipBack, SkipForward, StepBack, StepForward } from 'lucide-react';
 import { getIconUrl } from '../lib/evaluatorAdapter';
 import { useTranslation } from 'react-i18next';
+import { EvalTimelinePage, loadTimelinePage } from '../lib/timeline';
 import { TiltContainer } from './TiltContainer';
 
 interface Props {
@@ -11,7 +21,7 @@ interface Props {
     states: ShotState[];
     counts: Record<string, number>;
     cast_counts: Record<string, Record<string, number>>;
-  } & Pick<EvalResponse, 'timeline'>;
+  } & Pick<EvalResponse, 'timeline' | 'timeline_disabled'>;
   spellDb: Record<string, SpellInfo>;
   onHoverSlots?: (indices: number[] | null) => void;
   onHoverShotId?: (id: number | null) => void;
@@ -22,6 +32,7 @@ interface Props {
   isCanvas?: boolean;
   externalTimelineJumpRequest?: TimelineJumpRequest | null;
   settings: AppSettings;
+  onCalculateTimeline?: () => void;
 }
 
 interface ShotNode {
@@ -160,7 +171,7 @@ const ShotTree: React.FC<{
   );
 };
 
-const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity, renderMode = 'all', isCanvas = false, externalTimelineJumpRequest }) => {
+const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings, markedSlots = [], wandSpells, deckCapacity, renderMode = 'all', isCanvas = false, externalTimelineJumpRequest, onCalculateTimeline }) => {
   const { t, i18n } = useTranslation();
   const [userExpandedCasts, setUserExpandedCasts] = useState<Record<number, boolean>>({});
   const [userShowAllCasts, setUserShowAllCasts] = useState<Record<number, boolean>>({}); // 控制是否展开合并的每一轮
@@ -292,10 +303,16 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
     && (renderMode === 'all' || renderMode === 'stats')
     && !!data.timeline
     && data.timeline.events.length > 0;
+  const canCalculateTimeline = (settings.showCastTimeline ?? true)
+    && (renderMode === 'all' || renderMode === 'stats')
+    && data.timeline_disabled === true
+    && !!onCalculateTimeline;
   const timelineNodeClick = canRenderTimeline ? jumpTimelineToNode : undefined;
 
   return (
-    <div className={isCanvas ? "flex flex-col gap-6 eval-orionfire-region" : "mt-6 p-4 bg-black/40 border border-white/10 rounded-lg flex flex-col gap-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
+    <div className={isCanvas
+      ? `relative flex flex-col gap-6 eval-orionfire-region ${canCalculateTimeline ? 'pt-8' : ''}`
+      : "relative mt-6 p-4 bg-black/40 border border-white/10 rounded-lg flex flex-col gap-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
       {/* Overall Spell Counts Section */}
       {(renderMode === 'all' || renderMode === 'stats') && sortedOverallCounts.length > 0 && (
         <section data-testid="eval-overall-counts" style={{ order: -1 }}>
@@ -335,6 +352,18 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
         <div style={{ order: evaluatorSectionOrderMap.timeline }}>
           <WandTimelinePlayer timeline={data.timeline} spellDb={spellDb} absoluteToOrdinal={absoluteToOrdinal} settings={settings} jumpRequest={externalTimelineJumpRequest || timelineJumpRequest} />
         </div>
+      )}
+
+      {canCalculateTimeline && (
+        <button
+          type="button"
+          onClick={onCalculateTimeline}
+          title={t('evaluator.timeline_manual_desc')}
+          className={`wand-timeline-manual absolute z-50 flex h-7 items-center gap-1.5 rounded border border-cyan-400/30 bg-zinc-950/90 px-2 text-[9px] font-black uppercase tracking-wider text-cyan-200 shadow-lg backdrop-blur-sm transition-colors hover:bg-cyan-500/15 ${isCanvas ? 'right-0 top-0' : 'right-4 top-4'}`}
+        >
+          <Play size={11} />
+          {t('evaluator.timeline_calculate')}
+        </button>
       )}
 
       {/* Shot States Section */}
@@ -567,7 +596,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
 
 type TimelinePileName = 'discarded' | 'hand' | 'deck';
 type TimelinePileSet = Record<TimelinePileName, number[]>;
-type TimelineProcessItem = { id: string; uid?: number; slot?: number; drawStep?: number; drawTotal?: number; copyStep?: number };
+type TimelineProcessItem = EvalTimelineProcessItem;
 type TimelineCardPosition = { x: number; y: number; visible: boolean };
 type TimelineFrame = {
   event: EvalTimeline['events'][number];
@@ -659,9 +688,12 @@ const useGlobalTimelineSpeed = () => {
 const makeFrameKey = (event: EvalTimeline['events'][number], process: TimelineProcessItem[]) =>
   `${makePileKey(event.piles)}|process:${process.map(item => `${item.uid ?? item.id}:${item.drawStep ?? ''}/${item.drawTotal ?? ''}:${item.copyStep ?? ''}`).join('>')}`;
 
-const buildTimelineFrames = (events: EvalTimeline['events']): TimelineFrame[] => {
+const buildTimelineFrames = (
+  events: EvalTimeline['events'],
+  initialProcess: TimelineProcessItem[] = [],
+): TimelineFrame[] => {
   const frames: TimelineFrame[] = [];
-  const process: TimelineProcessItem[] = [];
+  const process: TimelineProcessItem[] = initialProcess.map(item => ({ ...item }));
   let lastKey = '';
 
   const pushFrame = (event: EvalTimeline['events'][number], rawIndex: number) => {
@@ -745,6 +777,13 @@ const WandTimelinePlayer: React.FC<{
   const sectionRef = React.useRef<HTMLElement | null>(null);
   const stageRef = React.useRef<HTMLDivElement | null>(null);
   const lastFrameRef = React.useRef<TimelineFrame | null>(null);
+  const [timelinePage, setTimelinePage] = useState<EvalTimelinePage>(() => ({
+    pageIndex: 0,
+    events: timeline.events || [],
+    initialProcess: [],
+  }));
+  const [pageLoading, setPageLoading] = useState(false);
+  const [pageError, setPageError] = useState('');
   const [stageWidth, setStageWidth] = useState(900);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -775,8 +814,14 @@ const WandTimelinePlayer: React.FC<{
     ? 'flex flex-wrap items-start gap-2.5 pr-1 pb-1'
     : 'flex w-max items-start gap-2.5 pb-2';
 
-  const events = timeline.events || [];
-  const frames = useMemo(() => buildTimelineFrames(events), [events]);
+  const storageChunks = useMemo(() => timeline.storage?.chunks || [], [timeline.storage]);
+  const pageCount = Math.max(1, storageChunks.length);
+  const pageIndex = Math.min(timelinePage.pageIndex, pageCount - 1);
+  const events = timelinePage.events;
+  const frames = useMemo(
+    () => buildTimelineFrames(events, timelinePage.initialProcess),
+    [events, timelinePage.initialProcess],
+  );
   const currentFrame = frames[currentIndex] || frames[0];
   const currentEvent = currentFrame?.event;
   const cardsByUid = useMemo(() => {
@@ -801,6 +846,52 @@ const WandTimelinePlayer: React.FC<{
     });
     return map;
   }, [frames]);
+
+  const openTimelinePage = async (
+    requestedIndex: number,
+    target: 'start' | 'end' | 'firstAction' | 'lastAction' = 'start',
+    targetTimelineId?: number,
+  ): Promise<boolean> => {
+    const nextPageIndex = Math.max(0, Math.min(pageCount - 1, requestedIndex));
+    setPageLoading(true);
+    setPageError('');
+    try {
+      const loaded = nextPageIndex === 0
+        ? { pageIndex: 0, events: timeline.events || [], initialProcess: [] }
+        : await loadTimelinePage(timeline, nextPageIndex);
+      const nextFrames = buildTimelineFrames(loaded.events, loaded.initialProcess);
+      let nextIndex = 0;
+      if (target === 'end') nextIndex = Math.max(0, nextFrames.length - 1);
+      if (target === 'firstAction') {
+        nextIndex = nextFrames.findIndex(frame => frame.event.type === 'action_start');
+        if (nextIndex < 0) nextIndex = 0;
+      }
+      if (target === 'lastAction') {
+        nextIndex = nextFrames.map((frame, index) => frame.event.type === 'action_start' ? index : -1)
+          .filter(index => index >= 0)
+          .pop() ?? Math.max(0, nextFrames.length - 1);
+      }
+      if (targetTimelineId !== undefined) {
+        const found = nextFrames.findIndex(frame =>
+          frame.event.type === 'action_start'
+          && frame.event.info?.timeline_id === targetTimelineId
+        );
+        if (found >= 0) nextIndex = found;
+      }
+      setTimelinePage(loaded);
+      setCurrentIndex(nextIndex);
+      setIsPlaying(false);
+      lastFrameRef.current = null;
+      setFromFrame(null);
+      setMotion(1);
+      return true;
+    } catch (error: any) {
+      setPageError(error?.message || String(error));
+      return false;
+    } finally {
+      setPageLoading(false);
+    }
+  };
 
   useEffect(() => {
     setSpeedText(formatTimelineSpeed(speed));
@@ -836,6 +927,9 @@ const WandTimelinePlayer: React.FC<{
   }, []);
 
   useEffect(() => {
+    setTimelinePage({ pageIndex: 0, events: timeline.events || [], initialProcess: [] });
+    setPageLoading(false);
+    setPageError('');
     setCurrentIndex(0);
     setIsPlaying(false);
     lastFrameRef.current = null;
@@ -845,17 +939,21 @@ const WandTimelinePlayer: React.FC<{
 
   useEffect(() => {
     if (!isPlaying || frames.length <= 1) return;
-    const timer = window.setInterval(() => {
-      setCurrentIndex(index => {
-        if (index >= frames.length - 1) {
-          setIsPlaying(false);
-          return index;
-        }
-        return index + 1;
-      });
+    const timer = window.setTimeout(() => {
+      if (currentIndex < frames.length - 1) {
+        setCurrentIndex(currentIndex + 1);
+        return;
+      }
+      if (pageIndex < pageCount - 1) {
+        void openTimelinePage(pageIndex + 1, 'start').then(loaded => {
+          if (loaded) setIsPlaying(true);
+        });
+        return;
+      }
+      setIsPlaying(false);
     }, Math.max(100, 700 / speed));
-    return () => window.clearInterval(timer);
-  }, [frames.length, isPlaying, speed]);
+    return () => window.clearTimeout(timer);
+  }, [currentIndex, frames.length, isPlaying, pageCount, pageIndex, speed]);
 
   useEffect(() => {
     if (!currentFrame) return;
@@ -917,11 +1015,18 @@ const WandTimelinePlayer: React.FC<{
   };
 
   const jumpAction = (direction: -1 | 1) => {
-    if (actionFrameIndices.length === 0) return;
     const target = direction > 0
       ? actionFrameIndices.find(index => index > currentIndex)
       : [...actionFrameIndices].reverse().find(index => index < currentIndex);
-    if (target !== undefined) jumpTo(target);
+    if (target !== undefined) {
+      jumpTo(target);
+      return;
+    }
+    if (direction > 0 && pageIndex < pageCount - 1) {
+      void openTimelinePage(pageIndex + 1, 'firstAction');
+    } else if (direction < 0 && pageIndex > 0) {
+      void openTimelinePage(pageIndex - 1, 'lastAction');
+    }
   };
 
   const jumpMatch = (direction: -1 | 1) => {
@@ -935,10 +1040,22 @@ const WandTimelinePlayer: React.FC<{
   useEffect(() => {
     if (!jumpRequest) return;
     const target = timelineIdToFrameIndex.get(jumpRequest.timelineId);
-    if (target === undefined) return;
-    jumpTo(target);
-    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [jumpRequest, timelineIdToFrameIndex]);
+    if (target !== undefined) {
+      jumpTo(target);
+      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    const targetPage = storageChunks.findIndex(chunk => {
+      if (chunk.first_timeline_id === undefined || chunk.last_timeline_id === undefined) return false;
+      return jumpRequest.timelineId >= chunk.first_timeline_id
+        && jumpRequest.timelineId <= chunk.last_timeline_id;
+    });
+    if (targetPage >= 0) {
+      void openTimelinePage(targetPage, 'start', jumpRequest.timelineId).then(() => {
+        sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }, [jumpRequest, timelineIdToFrameIndex, storageChunks]);
 
   const getSpellDisplay = (id?: string) => {
     const spell = id ? spellDb[id] : null;
@@ -1088,13 +1205,43 @@ const WandTimelinePlayer: React.FC<{
         </h3>
         <div className="text-[9px] font-mono text-zinc-500">
           {currentIndex + 1}/{frames.length}
-          <span className="text-zinc-700"> · raw {currentFrame.rawIndex + 1}/{events.length}</span>
+          <span className="text-zinc-700">
+            {' · '}raw {currentEvent.i.toLocaleString(i18n.language)}/{(timeline.total_events || events.length).toLocaleString(i18n.language)}
+          </span>
+          {pageCount > 1 && (
+            <span className="text-zinc-700"> · {pageIndex + 1}/{pageCount}</span>
+          )}
         </div>
       </div>
 
+      {timeline.complete && timeline.storage && pageCount > 1 && (
+        <div className="rounded border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[10px] font-mono text-emerald-200">
+          {t('evaluator.timeline_stored', {
+            total: (timeline.total_events || events.length).toLocaleString(i18n.language),
+            page: pageIndex + 1,
+            pages: pageCount,
+          })}
+        </div>
+      )}
+
+      {timeline.truncated && (
+        <div className="rounded border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[10px] font-mono text-amber-200">
+          {t('evaluator.timeline_truncated', {
+            shown: events.length.toLocaleString(i18n.language),
+            total: (timeline.total_events || events.length).toLocaleString(i18n.language),
+          })}
+        </div>
+      )}
+
+      {pageError && (
+        <div className="rounded border border-red-400/25 bg-red-500/10 px-3 py-2 text-[10px] font-mono text-red-200">
+          {t('evaluator.timeline_page_error', { error: pageError })}
+        </div>
+      )}
+
       <div className="wand-timeline-panel relative border border-white/10 bg-zinc-950/45 rounded-lg overflow-visible">
         <div className="wand-timeline-toolbar flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.03]">
-          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(0)} title={t('evaluator.timeline_first')}>
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300 disabled:opacity-40" disabled={pageLoading} onClick={() => void openTimelinePage(0, 'start')} title={t('evaluator.timeline_first')}>
             <SkipBack size={14} />
           </button>
           <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(-1)} title={t('evaluator.timeline_prev_action')}>
@@ -1106,9 +1253,31 @@ const WandTimelinePlayer: React.FC<{
           <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpAction(1)} title={t('evaluator.timeline_next_action')}>
             <StepForward size={14} />
           </button>
-          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300" onClick={() => jumpTo(frames.length - 1)} title={t('evaluator.timeline_last')}>
+          <button className="wand-timeline-control w-8 h-8 rounded border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-300 disabled:opacity-40" disabled={pageLoading} onClick={() => void openTimelinePage(pageCount - 1, 'end')} title={t('evaluator.timeline_last')}>
             <SkipForward size={14} />
           </button>
+
+          {pageCount > 1 && (
+            <div className="h-8 flex items-center rounded border border-white/10 bg-zinc-950 overflow-hidden">
+              <button
+                className="h-full px-2 text-[10px] font-mono text-zinc-300 hover:bg-white/10 disabled:opacity-30"
+                disabled={pageLoading || pageIndex <= 0}
+                onClick={() => void openTimelinePage(pageIndex - 1, 'end')}
+              >
+                {t('evaluator.timeline_prev_page')}
+              </button>
+              <span className="px-2 text-[10px] font-mono text-cyan-300 border-x border-white/10">
+                {pageLoading ? t('evaluator.timeline_loading') : `${pageIndex + 1}/${pageCount}`}
+              </span>
+              <button
+                className="h-full px-2 text-[10px] font-mono text-zinc-300 hover:bg-white/10 disabled:opacity-30"
+                disabled={pageLoading || pageIndex >= pageCount - 1}
+                onClick={() => void openTimelinePage(pageIndex + 1, 'start')}
+              >
+                {t('evaluator.timeline_next_page')}
+              </button>
+            </div>
+          )}
 
           <div className="wand-timeline-field h-8 min-w-[210px] flex items-center gap-2 rounded border border-white/10 bg-zinc-950 px-2" title={t('evaluator.timeline_speed')}>
             <span className="w-8 text-right text-[10px] font-black text-cyan-300">{formatTimelineSpeed(speed)}x</span>

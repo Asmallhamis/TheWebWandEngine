@@ -1,9 +1,20 @@
 import { LuaFactory } from 'wasmoon';
 import wasmoonWasmUrl from 'wasmoon/dist/glue.wasm?url';
+import {
+    advanceCompactTimelineState,
+    cloneTimelineDecoderState,
+    createTimelineDecoderState,
+    rehydrateTimelinePiles,
+} from './timeline';
+import { EvalTimelineCard, EvalTimelineStorage } from '../types';
 
 const factory = new LuaFactory(wasmoonWasmUrl);
+const DEFAULT_TIMELINE_EVENT_LIMIT = 10_000;
+const DEFAULT_TIMELINE_CHUNK_SIZE = 25_000;
+const TIMELINE_DIRECTORY = 'twwe-timelines';
 let lua: any = null;
 let VFS_CACHE: Record<string, string> | null = null;
+let timelineDirectoryPrepared = false;
 
 async function loadBundle() {
     if (VFS_CACHE) return;
@@ -13,7 +24,9 @@ async function loadBundle() {
         const bundlePath = isProd ? '../static_data/lua_bundle.json' : '../../static_data/lua_bundle.json';
         const url = new URL(bundlePath, import.meta.url).href;
 
-        const res = await fetch(url);
+        // 文件名没有内容哈希，静态部署更新后必须重新校验缓存，避免新版
+        // Worker 与浏览器/CDN 缓存中的旧 Lua 参数解析器混用。
+        const res = await fetch(url, { cache: 'no-cache' });
         if (res.ok) {
             VFS_CACHE = await res.json();
             console.log(`[Worker] Bundle loaded, ${Object.keys(VFS_CACHE || {}).length} files cached.`);
@@ -96,7 +109,7 @@ function io.open(filename, mode)
     local content = _REAL_BRIDGE_GET_CONTENT(filename)
     if content then
         return {
-            read = function(self, arg) 
+            read = function(self, arg)
                 if arg == "*a" or arg == "*all" then return content end
                 return content -- 简化版
             end,
@@ -112,7 +125,7 @@ end
 local function vfs_searcher(modname)
     local filename = modname:gsub("%.", "/") .. ".lua"
     local attempts = { filename, "src/" .. filename, "extra/" .. filename }
-    
+
     for _, path in ipairs(attempts) do
         local content = _REAL_BRIDGE_GET_CONTENT(path)
         if content and type(content) == "string" then
@@ -128,6 +141,142 @@ local searchers = package.searchers or package.loaders
 -- 放在第 1 位，确保最高优先级，防止被 Lua 默认搜索器截获并返回布尔值
 table.insert(searchers, 1, vfs_searcher)
 `;
+
+/**
+ * 释放 Lua state。
+ * wasmoon 的 WASM 堆只能增长、无法归还操作系统，因此每个未 close 的
+ * engine 都是永久泄漏（GC 无法回收 WASM 内部分配）。必须显式释放。
+ */
+function closeLuaEngine(engine: any) {
+    if (!engine) return;
+    try {
+        engine.global.close();
+    } catch (e) {
+        console.warn('[Worker] Failed to close Lua engine:', e);
+    }
+}
+
+class OpfsTimelineWriter {
+    private readonly encoder = new TextEncoder();
+    private readonly cards = new Map<number, EvalTimelineCard>();
+    private readonly decoderState = createTimelineDecoderState();
+    private readonly chunks: EvalTimelineStorage['chunks'] = [];
+    private offset = 0;
+    private failed = false;
+    private closed = false;
+
+    private constructor(
+        private readonly directory: any,
+        private readonly file: string,
+        private readonly access: any,
+    ) {}
+
+    static async create(requestId: number): Promise<OpfsTimelineWriter | null> {
+        try {
+            const storage = (navigator as any).storage;
+            if (!storage?.getDirectory) return null;
+            const root = await storage.getDirectory();
+            const directory = await root.getDirectoryHandle(TIMELINE_DIRECTORY, { create: true });
+            if (!timelineDirectoryPrepared) {
+                timelineDirectoryPrepared = true;
+                const staleBefore = Date.now() - 24 * 60 * 60 * 1000;
+                for await (const [name, entry] of directory.entries()) {
+                    if (entry.kind !== 'file') continue;
+                    const file = await entry.getFile();
+                    if (file.lastModified < staleBefore) await directory.removeEntry(name);
+                }
+            }
+            const suffix = typeof crypto.randomUUID === 'function'
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const file = `timeline-${requestId}-${suffix}.json`;
+            const handle = await directory.getFileHandle(file, { create: true });
+            const access = await handle.createSyncAccessHandle();
+            access.truncate(0);
+            return new OpfsTimelineWriter(directory, file, access);
+        } catch (error) {
+            console.warn('[Timeline] OPFS streaming is unavailable:', error);
+            return null;
+        }
+    }
+
+    addCard(uid: number, id: string, slot?: number, permanent?: boolean) {
+        this.cards.set(uid, {
+            uid,
+            id,
+            slot: typeof slot === 'number' ? slot : undefined,
+            permanent: permanent || undefined,
+        });
+    }
+
+    write(payload: string, firstEvent: number, eventCount: number): boolean {
+        if (this.failed || this.closed) return false;
+        try {
+            const compactEvents = JSON.parse(payload);
+            const checkpoint = cloneTimelineDecoderState(this.decoderState);
+            const advanced = advanceCompactTimelineState(
+                compactEvents,
+                this.cards,
+                this.decoderState,
+                firstEvent,
+                false,
+            );
+            const bytes = this.encoder.encode(payload);
+            let written = 0;
+            while (written < bytes.length) {
+                const count = this.access.write(bytes.subarray(written), { at: this.offset + written });
+                if (!Number.isFinite(count) || count <= 0) throw new Error('OPFS write returned no progress');
+                written += count;
+            }
+            this.chunks.push({
+                offset: this.offset,
+                length: bytes.length,
+                first_event: firstEvent,
+                event_count: eventCount,
+                first_timeline_id: advanced.firstTimelineId,
+                last_timeline_id: advanced.lastTimelineId,
+                checkpoint,
+            });
+            this.offset += bytes.length;
+            return true;
+        } catch (error) {
+            this.failed = true;
+            console.warn('[Timeline] Failed to stream a timeline chunk:', error);
+            return false;
+        }
+    }
+
+    finish(totalEvents: number): EvalTimelineStorage | null {
+        if (this.closed) return null;
+        this.closed = true;
+        try {
+            if (this.failed) return null;
+            this.access.flush();
+            return {
+                kind: 'opfs-compact-v1',
+                directory: TIMELINE_DIRECTORY,
+                file: this.file,
+                chunks: this.chunks,
+                total_events: totalEvents,
+                total_bytes: this.offset,
+            };
+        } finally {
+            this.access.close();
+        }
+    }
+
+    async abort() {
+        if (!this.closed) {
+            this.closed = true;
+            try { this.access.close(); } catch {}
+        }
+        try {
+            await this.directory.removeEntry(this.file);
+        } catch (error: any) {
+            if (error?.name !== 'NotFoundError') console.warn('[Timeline] Failed to discard timeline file:', error);
+        }
+    }
+}
 
 async function getNewLuaEngine(customVFS?: Record<string, string>) {
     await loadBundle();
@@ -168,6 +317,8 @@ self.onmessage = async (e: MessageEvent) => {
     const { type, data, options, id, mod_appends, active_mods, vfs } = e.data;
 
     if (type === 'EVALUATE') {
+        let timelineWriter: OpfsTimelineWriter | null = null;
+        let timelineCommitted = false;
         try {
             // 构造环境模拟逻辑 (和后端 server.py 保持一致)
             const activeModsList = active_mods || [];
@@ -376,7 +527,42 @@ self.onmessage = async (e: MessageEvent) => {
                 });
             }
 
+            // 释放上一次评估残留的引擎（防御性：正常路径已由 finally 释放）
+            if (lua) {
+                closeLuaEngine(lua);
+                lua = null;
+            }
             lua = await getNewLuaEngine(customVFS);
+            const timelineEnabled = (options as any).timelineEnabled !== false;
+            const requestedTimelineLimit = Number((options as any).timelineEventLimit ?? DEFAULT_TIMELINE_EVENT_LIMIT);
+            const timelineEventLimit = Number.isFinite(requestedTimelineLimit)
+                ? Math.max(0, Math.floor(requestedTimelineLimit))
+                : DEFAULT_TIMELINE_EVENT_LIMIT;
+            const requestedChunkSize = Number((options as any).timelineChunkSize ?? DEFAULT_TIMELINE_CHUNK_SIZE);
+            const timelineChunkSize = Number.isFinite(requestedChunkSize)
+                ? Math.max(100, Math.floor(requestedChunkSize))
+                : DEFAULT_TIMELINE_CHUNK_SIZE;
+            if (timelineEnabled && (options as any).timelineStream !== false) {
+                timelineWriter = await OpfsTimelineWriter.create(id);
+            }
+            lua.global.set('_TWWE_TIMELINE_EVENT_LIMIT', timelineEventLimit);
+            lua.global.set('_TWWE_TIMELINE_CHUNK_SIZE', timelineChunkSize);
+            if (timelineWriter) {
+                lua.global.set('_TWWE_TIMELINE_CARD', (
+                    uid: number,
+                    cardId: string,
+                    slot?: number,
+                    permanent?: boolean,
+                ) => {
+                    timelineWriter?.addCard(uid, cardId, slot, permanent);
+                });
+                lua.global.set('_TWWE_TIMELINE_FLUSH', (
+                    payload: string,
+                    firstEvent: number,
+                    eventCount: number,
+                ) => timelineWriter?.write(payload, firstEvent, eventCount) === true);
+            }
+            lua.global.set('_TWWE_INCREMENTAL_FOLD', (options as any).incrementalFold !== false);
 
             const formatLuaArg = (val: any) => {
                 try {
@@ -403,6 +589,7 @@ self.onmessage = async (e: MessageEvent) => {
                 '-nc', formatLuaArg(options.numCasts || 3),
                 '-u', options.unlimitedSpells ? 'true' : 'false',
                 '-e', options.initialIfHalf ? 'true' : 'false',
+                '-tl', timelineEnabled ? 'true' : 'false',
                 '-md', 'twwe_mock', // 启用 Mock Mod
             ];
 
@@ -505,11 +692,39 @@ self.onmessage = async (e: MessageEvent) => {
             }
 
             const result = JSON.parse(lastOutput);
+            if (!timelineEnabled) {
+                delete result.timeline;
+                result.timeline_disabled = true;
+            } else if (result.timeline) {
+                const totalEvents = Number(result.timeline.total_events || result.timeline.events?.length || 0);
+                const storage = result.timeline.streamed && timelineWriter
+                    ? timelineWriter.finish(totalEvents)
+                    : null;
+                if (storage) {
+                    result.timeline.storage = storage;
+                    result.timeline.complete = true;
+                    result.timeline.truncated = false;
+                    timelineCommitted = true;
+                } else {
+                    result.timeline.complete = !result.timeline.truncated
+                        && totalEvents <= (result.timeline.events?.length || 0);
+                }
+                delete result.timeline.streamed;
+            }
+            // 还原增量 piles。在 worker 侧做，让主线程拿到的结构与旧格式一致。
+            // 未变化的事件共享同一份 piles 引用，结构化克隆会保留这种别名关系，
+            // 因此不会在传递时被重新展开成多份副本。
+            rehydrateTimelinePiles(result);
             self.postMessage({ type: 'RESULT', data: result, id });
 
         } catch (err: any) {
             console.error('[Worker Error]', err);
             self.postMessage({ type: 'ERROR', error: err.message, id });
+        } finally {
+            // 关键：无论成功或失败都必须释放 Lua state，否则 WASM 堆单调增长
+            closeLuaEngine(lua);
+            lua = null;
+            if (timelineWriter && !timelineCommitted) await timelineWriter.abort();
         }
     }
 };
