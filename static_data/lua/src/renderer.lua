@@ -31,6 +31,83 @@ local function assign_node_timeline_ids(node, ids)
 	node.timeline_ids = #ids > 1 and ids or nil
 end
 
+local function append_node_indexes(set, node)
+	local index = node.index
+	if type(index) == "table" then
+		for _, value in ipairs(index) do set[value] = true end
+	elseif index ~= nil then
+		set[index] = true
+	end
+end
+
+local function sorted_set_values(set)
+	local values = {}
+	for value, _ in pairs(set) do table.insert(values, value) end
+	table.sort(values)
+	return values
+end
+
+-- 为已完成的子树分配结构 ID。比较语义与 make_text 一致，
+-- 但只引用子节点 ID，避免反复拼接整棵子树。
+local function intern_fold_signature(node, engine_data)
+	if engine_data.nodes_to_shot_ref[node] then return nil end
+
+	local parts = { node.name, "[" }
+	for _, child in ipairs(node.children) do
+		local child_id = child.__twwe_fold_signature_id
+		if not child_id then return nil end
+		parts[#parts + 1] = tostring(child.count or 1)
+		parts[#parts + 1] = ":"
+		parts[#parts + 1] = tostring(child_id)
+		parts[#parts + 1] = ","
+	end
+	parts[#parts + 1] = "]"
+
+	local key = table.concat(parts)
+	local existing = engine_data.fold_signature_ids[key]
+	if existing then return existing end
+
+	engine_data.fold_signature_seq = engine_data.fold_signature_seq + 1
+	local id = engine_data.fold_signature_seq
+	engine_data.fold_signature_ids[key] = id
+	return id
+end
+
+---在动作执行完成时折叠 parent_children 的最后一个节点。
+---只合并相邻、同构且不含 shot state 的子树，与最终 fold 保持一致。
+---@param parent_children node[]
+---@param node node
+---@param engine_data fake_engine
+function M.fold_completed_child(parent_children, node, engine_data)
+	node.count = 1
+	node.__twwe_fold_signature_id = intern_fold_signature(node, engine_data)
+
+	local node_index = #parent_children
+	local previous = parent_children[node_index - 1]
+	if
+		previous
+		and node.__twwe_fold_signature_id
+		and previous.__twwe_fold_signature_id == node.__twwe_fold_signature_id
+	then
+		previous.count = (previous.count or 1) + 1
+
+		local indexes = {}
+		append_node_indexes(indexes, previous)
+		append_node_indexes(indexes, node)
+		previous.index = sorted_set_values(indexes)
+
+		local timeline_ids = {}
+		append_node_timeline_ids(timeline_ids, previous)
+		append_node_timeline_ids(timeline_ids, node)
+		assign_node_timeline_ids(previous, timeline_ids)
+
+		parent_children[node_index] = nil
+		return previous
+	end
+
+	return node
+end
+
 ---@param node node
 ---@param engine_data fake_engine
 local function fold(node, engine_data)
@@ -374,6 +451,140 @@ local function render_number_array(values, out)
 	table.insert(out, "]")
 end
 
+local TIMELINE_EVENT_CODES = {
+	initial_deck = 0,
+	cast_start = 1,
+	cast_ready = 2,
+	cast_end = 3,
+	shot_created = 4,
+	shot_start = 5,
+	shot_end = 6,
+	deck_ordered = 7,
+	draw_start = 8,
+	draw_end = 9,
+	draw_many_start = 10,
+	draw_many_end = 11,
+	discarded_to_deck = 12,
+	hand_to_discarded = 13,
+	reload_start = 14,
+	reload_end = 15,
+	action_start = 16,
+	action_end = 17,
+}
+
+local function render_info_object(info, out)
+	table.insert(out, "{")
+	local first = true
+	for key, value in pairs(info or {}) do
+		if value ~= nil then
+			if not first then table.insert(out, ",") end
+			table.insert(out, "\"")
+			table.insert(out, json_escape(key))
+			table.insert(out, "\":")
+			json_value(value, out)
+			first = false
+		end
+	end
+	table.insert(out, "}")
+end
+
+local function render_compact_piles(piles, out)
+	if not piles then return end
+	table.insert(out, ",[")
+	render_number_array(piles.deck or {}, out)
+	table.insert(out, ",")
+	render_number_array(piles.hand or {}, out)
+	table.insert(out, ",")
+	render_number_array(piles.discarded or {}, out)
+	table.insert(out, "]")
+end
+
+---将 timeline 分块编码为紧凑、可独立落盘的无损 JSON。
+---事件序号、cast/shot/action 上下文由解码器从顺序恢复，避免重复字段名和字符串。
+---@param events table[]
+---@return string
+function M.render_timeline_chunk(events)
+	local out = { "[" }
+	for index, event in ipairs(events or {}) do
+		if index > 1 then table.insert(out, ",") end
+		local info = event.info or {}
+		local code = TIMELINE_EVENT_CODES[event.type]
+		table.insert(out, "[")
+		if code == 0 or code == 8 or code == 12 or code == 13 or code == 14 or code == 17 then
+			table.insert(out, tostring(code))
+		elseif code == 1 then
+			table.insert(out, "1,")
+			json_value(info.mana, out)
+			table.insert(out, ",")
+			json_value(event.cast, out)
+		elseif code == 2 then
+			table.insert(out, "2,")
+			json_value(info.mana, out)
+		elseif code == 3 then
+			table.insert(out, "3,")
+			json_value(info.cast_delay, out)
+			table.insert(out, ",")
+			json_value(info.recharge_time, out)
+			table.insert(out, ",")
+			json_value(info.delay, out)
+			table.insert(out, ",")
+			json_value(info.mana_delta, out)
+			table.insert(out, ",")
+			json_value(info.recoil, out)
+		elseif code == 4 or code == 5 or code == 6 then
+			table.insert(out, tostring(code))
+			table.insert(out, ",")
+			json_value(info.id, out)
+		elseif code == 7 then
+			table.insert(out, "7,")
+			table.insert(out, info.shuffled and "1" or "0")
+		elseif code == 9 then
+			table.insert(out, "9,")
+			if info.ok == nil then table.insert(out, "null") else table.insert(out, info.ok and "1" or "0") end
+		elseif code == 10 then
+			table.insert(out, "10,")
+			json_value(info.how_many, out)
+			table.insert(out, ",")
+			table.insert(out, info.instant_reload_if_empty and "1" or "0")
+		elseif code == 11 then
+			table.insert(out, "11,")
+			json_value(info.how_many, out)
+		elseif code == 15 then
+			table.insert(out, "15,")
+			json_value(info.reload_time, out)
+		elseif code == 16 then
+			table.insert(out, "16,")
+			json_value(info.uid or info.id, out)
+			table.insert(out, info.source == "draw" and ",1," or ",0,")
+			json_value(info.slot, out)
+			table.insert(out, ",")
+			json_value(info.iteration, out)
+			table.insert(out, ",")
+			json_value(info.recursion, out)
+			table.insert(out, ",")
+			json_value(info.draw_step, out)
+			table.insert(out, ",")
+			json_value(info.draw_total, out)
+		else
+			-- 未知扩展事件保留完整上下文，保证格式向前兼容且不丢信息。
+			table.insert(out, "99,\"")
+			table.insert(out, json_escape(event.type))
+			table.insert(out, "\",")
+			json_value(event.cast, out)
+			table.insert(out, ",")
+			json_value(event.shot, out)
+			table.insert(out, ",")
+			json_value(event.action, out)
+			table.insert(out, ",")
+			render_info_object(info, out)
+		end
+		render_compact_piles(event.piles, out)
+		table.insert(out, "]")
+	end
+	table.insert(out, "]")
+	return table.concat(out)
+end
+
 local function render_timeline(engine_data, out)
 	table.insert(out, ",\"timeline\":{\"cards\":[")
 	for uid = 1, engine_data.timeline_card_seq or 0 do
@@ -428,19 +639,36 @@ local function render_timeline(engine_data, out)
 				first_info = false
 			end
 		end
-		table.insert(out, "},\"piles\":{")
-		local first_pile = true
-		for _, pile_name in ipairs({ "deck", "hand", "discarded" }) do
-			if not first_pile then table.insert(out, ",") end
-			table.insert(out, "\"")
-			table.insert(out, pile_name)
-			table.insert(out, "\":")
-			render_number_array(event.piles and event.piles[pile_name] or {}, out)
-			first_pile = false
+		table.insert(out, "}")
+		-- piles 为增量：仅在牌堆相对上一条事件发生变化时才存在。
+		-- 缺省即表示「与上一条相同」，消费方需沿用上一次的状态。
+		-- 注意不能在这里补空数组，否则会被误解为「牌堆已清空」。
+		if event.piles then
+			table.insert(out, ",\"piles\":{")
+			local first_pile = true
+			for _, pile_name in ipairs({ "deck", "hand", "discarded" }) do
+				if not first_pile then table.insert(out, ",") end
+				table.insert(out, "\"")
+				table.insert(out, pile_name)
+				table.insert(out, "\":")
+				render_number_array(event.piles[pile_name] or {}, out)
+				first_pile = false
+			end
+			table.insert(out, "}")
 		end
-		table.insert(out, "}}")
+		table.insert(out, "}")
 	end
-	table.insert(out, "]}")
+	table.insert(out, "]")
+	if (engine_data.timeline_seq or 0) > #(engine_data.timeline_events or {}) then
+		table.insert(out, ",\"total_events\":")
+		table.insert(out, tostring(engine_data.timeline_seq or #(engine_data.timeline_events or {})))
+	end
+	if engine_data.timeline_stream_complete then
+		table.insert(out, ",\"streamed\":true")
+	elseif engine_data.timeline_truncated then
+		table.insert(out, ",\"truncated\":true")
+	end
+	table.insert(out, "}")
 end
 
 local function gather_state_modifications(state, first)
@@ -614,7 +842,7 @@ local function render_combined_json(calls, engine_data, text_formatter)
 		first_cast = false
 	end
 	table.insert(out, "}")
-	render_timeline(engine_data, out)
+	if engine_data.timeline_enabled ~= false then render_timeline(engine_data, out) end
 	table.insert(out, "}")
 
 	return table.concat(out)
@@ -626,7 +854,7 @@ end
 ---@param options options
 ---@return string
 function M.render(calls, engine_data, text_formatter, options)
-	if options.fold then fold(calls, engine_data) end
+	if options.fold and not engine_data.incremental_folded then fold(calls, engine_data) end
 	if options.json then return render_combined_json(calls, engine_data, text_formatter) end
 	pre_multiply(calls, 1)
 	local render = {

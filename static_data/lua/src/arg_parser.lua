@@ -37,6 +37,7 @@ local option_list = {
 	fe = "fuzz_end",
 	se = "seed",
 	sr = "stop_on_recharge",
+	tl = "timeline",
 	pk = "perks",
 }
 
@@ -88,6 +89,7 @@ local defaults = {
 	fuzz_end = nil,
 	seed = nil,
 	stop_on_recharge = false,
+	timeline = true,
 }
 
 for k, v in pairs(user_config) do
@@ -289,6 +291,7 @@ local help_order = {
 	"speed_multiplier",
 	"spread_degrees",
 	"number_of_casts",
+	"timeline",
 	"always_casts",
 	"perks",
 	"mods",
@@ -328,6 +331,7 @@ local help_defs = {
 	speed_multiplier = "the wands projectile speed multiplier",
 	spread_degrees = "the wands spread degrees",
 	number_of_casts = "the number of casts to calculate",
+	timeline = "whether to record the cast timeline",
 	always_casts = "the list of always casts",
 	perks = "the list of active perks (extra modifiers), e.g. lower_spread low_recoil",
 	mods = "the list of mods to load",
@@ -503,6 +507,7 @@ local M = {}
 ---@field reload_time integer
 ---@field cast_delay integer
 ---@field number_of_casts integer
+---@field timeline boolean
 ---@field always_casts spell[]
 ---@field mods string[]
 ---@field spells spell[]

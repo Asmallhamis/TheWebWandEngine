@@ -12,6 +12,8 @@ fake_engine.noita_path = options.noita_path
 fake_engine.make_fake_api(options)
 
 local renderer = require("src.renderer")
+fake_engine.incremental_fold_node = renderer.fold_completed_child
+fake_engine.render_timeline_chunk = renderer.render_timeline_chunk
 local text_formatter = require("src.text_formatter")
 ---@diagnostic disable-next-line: lowercase-global
 print_table = require("src.print")
@@ -24,5 +26,6 @@ fake_engine.initialise_engine(text_formatter, options)
 text_formatter.init_cols(options.colour_scheme, options.ansi)
 
 fake_engine.evaluate(options, text_formatter)
+fake_engine.finish_timeline()
 --image.render(fake_engine.calls, options.spells)
 print(renderer.render(fake_engine.calls, fake_engine, text_formatter, options))

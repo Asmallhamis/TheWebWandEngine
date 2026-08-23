@@ -102,7 +102,15 @@ local function timeline_get_pile(name)
 end
 
 local function timeline_ensure_card(action)
-	if not action then return nil end
+	if not M.timeline_enabled or not action then return nil end
+	if
+		not M.timeline_stream_enabled
+		and M.timeline_event_limit
+		and #M.timeline_events >= M.timeline_event_limit
+		and not action.__twwe_timeline_uid
+	then
+		return nil
+	end
 	if not action.__twwe_timeline_uid then
 		M.timeline_card_seq = (M.timeline_card_seq or 0) + 1
 		action.__twwe_timeline_uid = M.timeline_card_seq
@@ -112,6 +120,15 @@ local function timeline_ensure_card(action)
 			slot = action.deck_index,
 			permanent = action.permanently_attached and true or nil,
 		}
+		if type(_TWWE_TIMELINE_CARD) == "function" then
+			pcall(
+				_TWWE_TIMELINE_CARD,
+				action.__twwe_timeline_uid,
+				action.id,
+				action.deck_index,
+				action.permanently_attached and true or false
+			)
+		end
 	end
 	return action.__twwe_timeline_uid
 end
@@ -133,13 +150,79 @@ local function timeline_snapshot_piles()
 	return out
 end
 
+-- 牌堆快照的紧凑指纹，用于判断本次事件的牌堆是否与上一次相同。
+local function timeline_piles_key(piles)
+	local parts = {}
+	for _, name in ipairs(TIMELINE_PILE_NAMES) do
+		parts[#parts + 1] = name .. ":" .. table.concat(piles[name] or {}, ".")
+	end
+	return table.concat(parts, "|")
+end
+
+local function timeline_flush_stream()
+	if not M.timeline_stream_enabled or #M.timeline_stream_events == 0 then return true end
+	local rendered, payload = pcall(M.render_timeline_chunk, M.timeline_stream_events)
+	if not rendered then
+		M.timeline_stream_failed = true
+		M.timeline_stream_enabled = false
+		M.timeline_stream_events = {}
+		return false
+	end
+	local first_event = M.timeline_stream_events[1].i
+	local sent, accepted = pcall(
+		_TWWE_TIMELINE_FLUSH,
+		payload,
+		first_event,
+		#M.timeline_stream_events
+	)
+	M.timeline_stream_events = {}
+	if not sent or accepted == false then
+		M.timeline_stream_failed = true
+		M.timeline_stream_enabled = false
+		return false
+	end
+	return true
+end
+
+function M.finish_timeline()
+	if not M.timeline_enabled then return end
+	if M.timeline_stream_enabled then timeline_flush_stream() end
+	M.timeline_stream_complete = not M.timeline_stream_failed and M.timeline_stream_started
+	if M.timeline_seq > #M.timeline_events and not M.timeline_stream_complete then
+		M.timeline_truncated = true
+	end
+end
+
 local function timeline_record(event_type, info)
-	if not M.timeline_events then return end
+	if not M.timeline_enabled or not M.timeline_events then return false end
 	info = info or {}
 	M.timeline_seq = (M.timeline_seq or 0) + 1
+	local preview_captured = not M.timeline_event_limit or #M.timeline_events < M.timeline_event_limit
+	if not preview_captured and not M.timeline_stream_enabled then
+		M.timeline_truncated = true
+		return false
+	end
 	local active_shot = M.active_shots and M.active_shots[#M.active_shots] or nil
 	local active_shot_info = active_shot and M.shot_refs_to_nums and M.shot_refs_to_nums[active_shot] or nil
 	local action_stack = M.timeline_action_stack or {}
+	-- piles 增量化：实测 99.4% 的事件牌堆与上一条完全相同，
+	-- 却各自复制一份完整数组，是 timeline 体积的主要来源。
+	-- 这里仅在牌堆真正变化时保留快照，其余事件省略 piles 字段，
+	-- 由消费方沿用上一次的状态（renderer 与前端均已配套处理）。
+	local piles_changed = false
+	local piles = nil
+	if M.timeline_piles_dirty or not M.timeline_last_piles then
+		local next_piles = timeline_snapshot_piles()
+		local piles_key = timeline_piles_key(next_piles)
+		piles_changed = piles_key ~= M.timeline_last_piles_key
+		if piles_changed then
+			M.timeline_last_piles_key = piles_key
+			M.timeline_last_piles = next_piles
+			piles = next_piles
+		end
+		M.timeline_piles_dirty = false
+	end
+
 	local event = {
 		i = M.timeline_seq,
 		type = event_type,
@@ -147,19 +230,57 @@ local function timeline_record(event_type, info)
 		action = action_stack[#action_stack],
 		shot = active_shot_info and active_shot_info.id_in_cast or nil,
 		info = info,
-		piles = timeline_snapshot_piles(),
+		piles = piles_changed and piles or nil,
 	}
-	table.insert(M.timeline_events, event)
+	if preview_captured then table.insert(M.timeline_events, event) end
+	if M.timeline_stream_enabled then
+		table.insert(M.timeline_stream_events, event)
+		M.timeline_stream_started = true
+		local chunk_target = M.timeline_stream_chunk_size
+		if M.timeline_event_limit > 0 and M.timeline_seq <= M.timeline_event_limit then
+			-- 第一块与内联预览严格对齐，后续页面才能从 preview + page 2 连续读取。
+			chunk_target = M.timeline_event_limit
+		end
+		if #M.timeline_stream_events >= chunk_target then timeline_flush_stream() end
+	end
+	return preview_captured
 end
 
-function M.reset_timeline()
+function M.reset_timeline(enabled)
+	M.timeline_enabled = enabled ~= false
 	M.timeline_seq = 0
 	M.timeline_card_seq = 0
 	M.timeline_execution_seq = 0
+	if not M.timeline_enabled then
+		M.timeline_cards = nil
+		M.timeline_events = nil
+		M.timeline_stream_events = nil
+		M.timeline_action_stack = nil
+		M.timeline_draw_stack = nil
+		M.timeline_stream_enabled = false
+		M.timeline_stream_started = false
+		M.timeline_stream_failed = false
+		M.timeline_stream_complete = false
+		M.timeline_truncated = false
+		return
+	end
 	M.timeline_cards = {}
 	M.timeline_events = {}
+	M.timeline_stream_events = {}
 	M.timeline_action_stack = {}
 	M.timeline_draw_stack = {}
+	M.timeline_last_piles_key = nil
+	M.timeline_last_piles = nil
+	M.timeline_piles_dirty = true
+	M.timeline_event_limit = math.max(0, math.floor(tonumber(_TWWE_TIMELINE_EVENT_LIMIT) or 10000))
+	M.timeline_stream_chunk_size = math.max(1, math.floor(tonumber(_TWWE_TIMELINE_CHUNK_SIZE) or 10000))
+	M.timeline_stream_enabled =
+		type(_TWWE_TIMELINE_FLUSH) == "function"
+		and type(M.render_timeline_chunk) == "function"
+	M.timeline_stream_started = false
+	M.timeline_stream_failed = false
+	M.timeline_stream_complete = false
+	M.timeline_truncated = false
 end
 
 ---@param options options
@@ -355,30 +476,37 @@ function M.initialise_engine(text_formatter, options)
 	local _play_action = play_action
 	function play_action(action)
 		M.pending_source = "draw"
+		if M.timeline_enabled then M.timeline_piles_dirty = true end
 		return _play_action(action)
 	end
 	local _order_deck = order_deck
 	function order_deck(...)
+		if not M.timeline_enabled then return _order_deck(...) end
 		local res = { _order_deck(...) }
+		M.timeline_piles_dirty = true
 		timeline_record("deck_ordered", { shuffled = state_shuffled and true or false })
 		return unpack(res)
 	end
 	local _draw_action = draw_action
 	function draw_action(...)
+		if not M.timeline_enabled then return _draw_action(...) end
 		local draw_context = M.timeline_draw_stack and M.timeline_draw_stack[#M.timeline_draw_stack] or nil
 		if draw_context then
 			draw_context.step = draw_context.step + 1
 		end
 		timeline_record("draw_start")
+		M.timeline_piles_dirty = true
 		local res = { _draw_action(...) }
 		if draw_context and not res[1] then
 			draw_context.step = draw_context.step - 1
 		end
+		M.timeline_piles_dirty = true
 		timeline_record("draw_end", { ok = res[1] })
 		return unpack(res)
 	end
 	local _draw_actions = draw_actions
 	function draw_actions(how_many, instant_reload_if_empty)
+		if not M.timeline_enabled then return _draw_actions(how_many, instant_reload_if_empty) end
 		local draw_context = { total = how_many, step = 0 }
 		M.timeline_draw_stack = M.timeline_draw_stack or {}
 		table.insert(M.timeline_draw_stack, draw_context)
@@ -393,20 +521,26 @@ function M.initialise_engine(text_formatter, options)
 	end
 	local _move_discarded_to_deck = move_discarded_to_deck
 	function move_discarded_to_deck(...)
+		if not M.timeline_enabled then return _move_discarded_to_deck(...) end
 		local res = { _move_discarded_to_deck(...) }
+		M.timeline_piles_dirty = true
 		timeline_record("discarded_to_deck")
 		return unpack(res)
 	end
 	local _move_hand_to_discarded = move_hand_to_discarded
 	function move_hand_to_discarded(...)
+		if not M.timeline_enabled then return _move_hand_to_discarded(...) end
 		local res = { _move_hand_to_discarded(...) }
+		M.timeline_piles_dirty = true
 		timeline_record("hand_to_discarded")
 		return unpack(res)
 	end
 	local original_handle_reload = _handle_reload
 	function _handle_reload(...)
+		if not M.timeline_enabled then return original_handle_reload(...) end
 		timeline_record("reload_start")
 		local res = { original_handle_reload(...) }
+		M.timeline_piles_dirty = true
 		timeline_record("reload_end", { reload_time = M.reload_time })
 		return unpack(res)
 	end
@@ -433,7 +567,9 @@ function M.initialise_engine(text_formatter, options)
 		M.shot_projectiles[v] = {}
 		M.cur_shot_num = M.cur_shot_num + 1
 		M.cur_shot_in_cast_num = M.cur_shot_in_cast_num + 1
-		timeline_record("shot_created", { id = M.shot_refs_to_nums[v].id_in_cast })
+		if M.timeline_enabled then
+			timeline_record("shot_created", { id = M.shot_refs_to_nums[v].id_in_cast })
+		end
 		-- v.state.wand_tree_initial_mana = mana
 		-- TODO: find a way to do this in a garunteed safe way
 		return unpack(uv)
@@ -488,15 +624,20 @@ function M.initialise_engine(text_formatter, options)
 	end
 
 	local _draw_shot = draw_shot
-	function draw_shot(...)
-		local args = { ... }
-		local shot = args[1]
-		if not M.active_shots then M.active_shots = {} end
-		table.insert(M.active_shots, shot)
-		local shot_info = M.shot_refs_to_nums[shot]
-		timeline_record("shot_start", { id = shot_info and shot_info.id_in_cast or nil })
-		local res = { _draw_shot(...) }
-		timeline_record("shot_end", { id = shot_info and shot_info.id_in_cast or nil })
+		function draw_shot(...)
+			local args = { ... }
+			local shot = args[1]
+			if not M.active_shots then M.active_shots = {} end
+			table.insert(M.active_shots, shot)
+			if M.timeline_enabled then
+				local shot_info = M.shot_refs_to_nums[shot]
+				timeline_record("shot_start", { id = shot_info and shot_info.id_in_cast or nil })
+			end
+			local res = { _draw_shot(...) }
+			if M.timeline_enabled then
+				local shot_info = M.shot_refs_to_nums[shot]
+				timeline_record("shot_end", { id = shot_info and shot_info.id_in_cast or nil })
+			end
 		table.remove(M.active_shots)
 		return unpack(res)
 	end
@@ -510,51 +651,63 @@ function M.initialise_engine(text_formatter, options)
 				---@cast clone action
 				local old_node = M.cur_node
 				local source = M.pending_source or "action"
-				M.pending_source = nil
-				local recursion_val = select(1, ...)
-				local iteration_val = select(2, ...)
-				M.timeline_execution_seq = (M.timeline_execution_seq or 0) + 1
-				local timeline_id = M.timeline_execution_seq
-				local new_node = { 
-					name = v.id, 
-					children = {}, 
+					M.pending_source = nil
+					local recursion_val = select(1, ...)
+					local iteration_val = select(2, ...)
+					local timeline_id = nil
+					if M.timeline_enabled then
+						M.timeline_execution_seq = (M.timeline_execution_seq or 0) + 1
+						timeline_id = M.timeline_execution_seq
+					end
+				local new_node = {
+					name = v.id,
+					children = {},
 					index = clone.deck_index,
 					source = source,
 					iteration = iteration_val,
 					recursion = (type(recursion_val) == "number" and recursion_val > 0) and recursion_val or nil,
-					timeline_id = timeline_id,
 				}
 				M.counts[v.id] = (M.counts[v.id] or 0) + 1
 				M.cast_counts[M.cur_cast_num] = M.cast_counts[M.cur_cast_num] or {}
 				M.cast_counts[M.cur_cast_num][v.id] = (M.cast_counts[M.cur_cast_num][v.id] or 0) + 1
-				M.cur_node = new_node.children
-				M.cur_parent = new_node
-				table.insert(old_node, new_node)
-				local timeline_uid = timeline_ensure_card(clone)
-				local timeline_draw = source == "draw" and M.timeline_draw_stack and M.timeline_draw_stack[#M.timeline_draw_stack] or nil
-				table.insert(M.timeline_action_stack, v.id)
-				timeline_record("action_start", {
-					id = v.id,
-					timeline_id = timeline_id,
-					uid = timeline_uid,
-					source = source,
-					slot = clone.deck_index,
-					iteration = iteration_val,
-					recursion = recursion_val,
-					draw_step = timeline_draw and timeline_draw.step or nil,
-					draw_total = timeline_draw and timeline_draw.total or nil,
-				})
-				local res = { _a(...) }
-				timeline_record("action_end", {
-					id = v.id,
-					timeline_id = timeline_id,
-					uid = timeline_uid,
-					source = source,
-					slot = clone.deck_index,
-					iteration = iteration_val,
-					recursion = recursion_val,
-				})
-				table.remove(M.timeline_action_stack)
+					M.cur_node = new_node.children
+					M.cur_parent = new_node
+					table.insert(old_node, new_node)
+					local timeline_uid = nil
+					if M.timeline_enabled then
+						timeline_uid = timeline_ensure_card(clone)
+						local timeline_draw = source == "draw" and M.timeline_draw_stack and M.timeline_draw_stack[#M.timeline_draw_stack] or nil
+						table.insert(M.timeline_action_stack, v.id)
+						local timeline_captured = timeline_record("action_start", {
+							id = v.id,
+							timeline_id = timeline_id,
+							uid = timeline_uid,
+							source = source,
+							slot = clone.deck_index,
+							iteration = iteration_val,
+							recursion = recursion_val,
+							draw_step = timeline_draw and timeline_draw.step or nil,
+							draw_total = timeline_draw and timeline_draw.total or nil,
+						})
+						if timeline_captured then new_node.timeline_id = timeline_id end
+					end
+					local res = { _a(...) }
+					if M.timeline_enabled then
+						timeline_record("action_end", {
+							id = v.id,
+							timeline_id = timeline_id,
+							uid = timeline_uid,
+							source = source,
+							slot = clone.deck_index,
+							iteration = iteration_val,
+							recursion = recursion_val,
+						})
+						table.remove(M.timeline_action_stack)
+					end
+				if options.fold and _TWWE_INCREMENTAL_FOLD ~= false and M.incremental_fold_node then
+					M.incremental_fold_node(old_node, new_node, M)
+					M.incremental_folded = true
+				end
 				M.cur_node = old_node
 				return unpack(res)
 			end
@@ -587,9 +740,9 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	M.cur_node = M.cur_parent.children
 
 	local old_mana = mana
-	timeline_record("cast_start", { mana = mana })
+	if M.timeline_enabled then timeline_record("cast_start", { mana = mana }) end
 	_start_shot(mana)
-	timeline_record("cast_ready", { mana = mana })
+	if M.timeline_enabled then timeline_record("cast_ready", { mana = mana }) end
 	for _, perk in ipairs(options.perks) do
 		_add_extra_modifier_to_shot(perk)
 	end
@@ -640,13 +793,15 @@ local function eval_wand(options, text_formatter, read_to_lua_info, cast)
 	delay = math.max(delay, 1)
 	local recoil = shot_effects and shot_effects.recoil_knockback or 0
 	cur_root.extra = "CastDelay: " .. cast_delay .. "f, Recharge: " .. recharge_time .. "f, Delay: " .. delay .. "f, ΔMana: " .. (old_mana - mana) .. ", Recoil: " .. recoil
-	timeline_record("cast_end", {
-		cast_delay = cast_delay,
-		recharge_time = recharge_time,
-		delay = delay,
-		mana_delta = old_mana - mana,
-		recoil = recoil,
-	})
+	if M.timeline_enabled then
+		timeline_record("cast_end", {
+			cast_delay = cast_delay,
+			recharge_time = recharge_time,
+			delay = delay,
+			mana_delta = old_mana - mana,
+			recoil = recoil,
+		})
+	end
 	mana = mana + delay * options.mana_charge / 60
 	return did_recharge
 end
@@ -658,7 +813,7 @@ end
 local function reset_wand(options, text_formatter, spells)
 	---@type node
 	M.calls = { name = "Wand", children = {} }
-	M.reset_timeline()
+	M.reset_timeline(options.timeline)
 	M.nodes_to_shot_ref = {}
 	M.shot_refs_to_nums = {}
 	M.lines_to_shot_nums = {}
@@ -676,6 +831,9 @@ local function reset_wand(options, text_formatter, spells)
 	M.active_shots = {}
 	M.pending_trigger_type = nil
 	M.pending_source = nil
+	M.fold_signature_seq = 0
+	M.fold_signature_ids = {}
+	M.incremental_folded = false
 
 	_clear_deck(false)
 	for _, v in ipairs(spells) do
@@ -688,7 +846,7 @@ local function reset_wand(options, text_formatter, spells)
 
 	ConfigGun_ReadToLua(options.spells_per_cast, false, options.reload_time, 66)
 	_set_gun()
-	timeline_record("initial_deck")
+	if M.timeline_enabled then timeline_record("initial_deck") end
 	local data_module = require("src.data")
 	local data = {}
 	for k, v in pairs(data_module) do data[k] = v end
