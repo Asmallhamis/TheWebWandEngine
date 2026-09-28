@@ -1,16 +1,9 @@
 -- wand_sync/init.lua
-local WAND_EDITOR_PATH = "mods/wand_editor/"
 function ws_log(msg) print("[WandSync] " .. tostring(msg)) end
 
-package.cpath = package.cpath .. ";./" .. WAND_EDITOR_PATH .. "files/module/?.dll;./" .. WAND_EDITOR_PATH .. "files/module/socket/?.dll"
-package.path = package.path .. ";./" .. WAND_EDITOR_PATH .. "files/socket_lua/?.lua;./" .. WAND_EDITOR_PATH .. "files/socket_lua/socket/?.lua"
-
-local effil = require("effil")
-local Cpp = nil
-pcall(function() Cpp = require("WandEditorDll") end)
-
-local game_root = "."
-if Cpp and Cpp.CurrentPath then game_root = Cpp.CurrentPath() end
+local runtime = dofile_once("mods/wand_sync/files/runtime.lua")
+local effil = runtime.effil
+local game_root = runtime.game_root
 ws_log("Game root identified: " .. game_root)
 
 local sync_channel = effil.channel()

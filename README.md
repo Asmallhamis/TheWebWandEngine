@@ -115,7 +115,9 @@ TheWebWandEngine/
 2. 程序会自动在默认浏览器中打开 UI（默认端口 `17471`）。
 
 ### 3. 游戏内同步
-将插件文件夹 `wand_sync` 复制到 Noita 的 `mods` 目录下并在游戏中启用。
+将完整的插件文件夹 `wand_sync`（包括 `files` 中的 DLL、Lua 文件和第三方声明）复制到 Noita 的 `mods` 目录下，确保入口为 `Noita/mods/wand_sync/init.lua`，然后在游戏中启用。
+插件已自带 Windows 32 位通信运行库，**不需要安装或启用 Wand Editor**。从 Wand Editor / Spell Lab 导入仓库仍是可选功能，需要相应的存档数据。
+发布时可单独提供 `wand_sync.zip`；第三方来源与许可原文见 [插件第三方声明](./wand_sync/THIRD_PARTY_NOTICES.txt)。
 > [!IMPORTANT]
 > 必须在游戏设置中开启“**允许不安全脚本 (Enable unsafe mods)**”以支持 Socket 通信。
 
@@ -143,8 +145,10 @@ set TWWE_ALLOW_LAN=1
 python backend/server.py
 ```
 
+独立插件回归测试：`python scripts/test_wand_sync.py --lua <32位LuaJIT可执行文件>`。测试在临时目录运行真实插件和通信库，模拟 Noita 实体 API，覆盖无 Wand Editor、中文/空格路径、推送/拉取、空存档和依赖缺失；运行前需空出 `12345` 端口。不能使用用于后端评估的 64 位 LuaJIT 代替游戏的 32 位运行时。
+
 ### 3. 打包脚本
-- **`build_portable.bat`**: 生成单文件便携 EXE。
+- **`build_portable.bat`**: 生成单文件便携 EXE，以及可独立安装的 `dist/wand_sync/` 和 `dist/wand_sync.zip`。
 - **`build_gh_pages.bat`**: 构建 GitHub Pages 静态网页版。
 - **`verify_static_site.bat`**: 构建并启动本地静态服务器进行验证（模拟 GitHub Pages 环境）。
 

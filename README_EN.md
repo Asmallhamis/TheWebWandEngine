@@ -74,7 +74,9 @@ Download the latest green portable version from [GitHub Releases](https://github
 2. The program will automatically open the UI in your default browser (default port `17471`).
 
 ### 3. In-game Sync
-Copy the plugin folder `wand_sync` to Noita's `mods` directory and enable it in-game.
+Copy the entire `wand_sync` folder (including its DLLs, Lua files and third-party notices) to Noita's `mods` directory so the entry point is `Noita/mods/wand_sync/init.lua`, then enable it in-game.
+The plugin bundles its own 32-bit Windows communication runtime; **Wand Editor does not need to be installed or enabled**. Importing Wand Editor / Spell Lab depots remains optional and requires their saved data.
+Portable builds also produce `dist/wand_sync/` and `dist/wand_sync.zip` for separate installation. See the [third-party notices](./wand_sync/THIRD_PARTY_NOTICES.txt) for sources and license texts.
 > [!IMPORTANT]
 > You must enable "**Enable unsafe mods**" in the game settings to support Socket communication.
 

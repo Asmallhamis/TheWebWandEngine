@@ -25,6 +25,7 @@ MESSAGES = {
         "success": "[成功] 打包完成！",
         "output_win": "最终文件: dist/TheWebWandEngine.exe",
         "output_unix": "最终文件: dist/TheWebWandEngine",
+        "output_mod": "游戏插件 (Windows): dist/wand_sync/ 和 dist/wand_sync.zip",
         "error": "[错误]",
         "cmd": ">",
         "choose_lang": "请选择语言 / Choose language:\n1. 中文\n2. English\n> ",
@@ -44,6 +45,7 @@ MESSAGES = {
         "success": "[SUCCESS] Build completed!",
         "output_win": "Output file: dist/TheWebWandEngine.exe",
         "output_unix": "Output file: dist/TheWebWandEngine",
+        "output_mod": "Game plugin (Windows): dist/wand_sync/ and dist/wand_sync.zip",
         "error": "[ERROR]",
         "cmd": ">",
         "choose_lang": "Choose language / 请选择语言:\n1. 中文\n2. English\n> ",
@@ -148,6 +150,8 @@ run([
 
 info(msg("run_pyinstaller"))
 run(["pyinstaller", "--clean", "--noconfirm", "twwe.spec"])
+shutil.copytree("wand_sync", "dist/wand_sync", ignore=shutil.ignore_patterns("cache", "__pycache__"))
+shutil.make_archive("dist/wand_sync", "zip", "dist", "wand_sync")
 
 # ============================================================
 # Result
@@ -156,6 +160,7 @@ run(["pyinstaller", "--clean", "--noconfirm", "twwe.spec"])
 info("\n==========================================")
 info(msg("success"))
 info(msg("output_win") if IS_WINDOWS else msg("output_unix"))
+info(msg("output_mod"))
 info("==========================================\n")
 
 # 防止 Windows 下运行完直接闪退
