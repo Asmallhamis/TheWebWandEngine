@@ -32,7 +32,7 @@ export function HistoryPanel({
 
   return (
     <div
-      className="fixed inset-y-0 right-0 w-80 bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] z-[300] flex flex-col animate-in slide-in-from-right duration-300"
+      className="app-drawer app-drawer-right fixed inset-y-0 right-0 w-80 bg-zinc-900/95 backdrop-blur-xl border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] z-[300] flex flex-col animate-in slide-in-from-right duration-300"
       data-testid="history-panel"
     >
       <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/40">

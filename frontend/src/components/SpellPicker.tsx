@@ -186,7 +186,7 @@ export function SpellPicker({
     <div className="fixed inset-0 z-[700] overflow-hidden" onClick={handleBackdropClick}>
       <div
         data-testid="spell-picker"
-        className={`glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-200 overflow-hidden ${settings.mobilePickerMode
+        className={`spell-picker glass-card bg-zinc-900/95 border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-200 overflow-hidden ${settings.mobilePickerMode
             ? 'absolute rounded-xl'
             : 'absolute max-h-[600px]'
           }`}
@@ -238,7 +238,7 @@ export function SpellPicker({
         })()}
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-3 border-b border-white/5 flex items-center gap-2 bg-black/20">
+        <div className="spell-picker-search p-3 border-b border-white/5 flex items-center gap-2 bg-black/20">
           <Search size={14} className="text-zinc-500" />
           <input
             autoFocus={!settings.disablePickerAutoFocus}

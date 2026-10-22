@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { EvalNode, SpellDb, AppSettings } from '../types';
 import { getIconUrl } from '../lib/evaluatorAdapter';
+import { isPaperThemeActive } from '../lib/themeFamily';
 import { useInView } from 'react-intersection-observer';
 
 interface CanvasTreeRendererProps {
@@ -116,26 +117,27 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
     const tileRight = tileX + width;
     const tileBottom = tileY + height;
-    const isQuietPaper = settings.coolUIMode && settings.coolUITheme === 'quietpaper';
-    const themeRoot = isQuietPaper
-      ? document.querySelector('.theme-cool-ui[data-theme="quietpaper"]') as HTMLElement | null
+    const isPaper = isPaperThemeActive(settings);
+    const themeRoot = isPaper
+      ? document.querySelector('.theme-paper') as HTMLElement | null
       : null;
     const themeStyles = themeRoot ? window.getComputedStyle(themeRoot) : null;
     const readThemeColor = (name: string, fallback: string) =>
       themeStyles?.getPropertyValue(name).trim() || fallback;
+    // Paper themes publish their tree colors as CSS tokens (themes/paper/tokens.css).
     const treePalette = {
-      line: readThemeColor('--quiet-tree-line', 'rgba(255, 255, 255, 0.55)'),
-      castBg: readThemeColor('--quiet-accent-soft', 'rgba(99, 102, 241, 0.1)'),
-      castBorder: readThemeColor('--quiet-accent-border', 'rgba(99, 102, 241, 0.3)'),
-      castText: readThemeColor('--quiet-accent-ink', '#818cf8'),
-      spellBg: readThemeColor('--quiet-cell-filled', '#111114'),
-      spellHover: readThemeColor('--quiet-cell-filled-hover', 'rgba(99, 102, 241, 0.2)'),
-      spellBorder: readThemeColor('--quiet-cell-filled-border', 'rgba(255, 255, 255, 0.1)'),
-      spellText: readThemeColor('--quiet-surface-raised', '#a1a1aa'),
-      accent: readThemeColor('--quiet-accent', '#818cf8'),
-      muted: readThemeColor('--quiet-ink-muted', '#71717a'),
-      border: readThemeColor('--quiet-border', '#27272a'),
-      faint: readThemeColor('--quiet-ink-secondary', '#3f3f46'),
+      line: readThemeColor('--paper-tree-line', 'rgba(255, 255, 255, 0.55)'),
+      castBg: readThemeColor('--paper-tree-cast', 'rgba(99, 102, 241, 0.1)'),
+      castBorder: readThemeColor('--paper-tree-cast-line', 'rgba(99, 102, 241, 0.3)'),
+      castText: readThemeColor('--paper-accent-ink', '#818cf8'),
+      spellBg: readThemeColor('--paper-cell-filled', '#111114'),
+      spellHover: readThemeColor('--paper-cell-filled-hover', 'rgba(99, 102, 241, 0.2)'),
+      spellBorder: readThemeColor('--paper-cell-filled-line', 'rgba(255, 255, 255, 0.1)'),
+      spellText: readThemeColor('--paper-cell-label', '#a1a1aa'),
+      accent: readThemeColor('--paper-accent', '#818cf8'),
+      muted: readThemeColor('--paper-ink-3', '#71717a'),
+      border: readThemeColor('--paper-tree-frame', '#27272a'),
+      faint: readThemeColor('--paper-ink-2', '#3f3f46'),
     };
 
     // --- 绘制节点逻辑 ---
@@ -200,7 +202,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       ctx.save();
       if (isHovered) {
         ctx.shadowBlur = 15;
-        ctx.shadowColor = isQuietPaper ? 'rgba(201, 100, 66, 0.2)' : 'rgba(99, 102, 241, 0.4)';
+        ctx.shadowColor = isPaper ? 'rgba(201, 100, 66, 0.2)' : 'rgba(99, 102, 241, 0.4)';
         ctx.translate(0, -2);
       }
 
@@ -219,7 +221,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
 
       if (isHovered) {
         ctx.strokeStyle = treePalette.accent;
-        ctx.fillStyle = isQuietPaper && isCast ? treePalette.castBg : treePalette.spellHover;
+        ctx.fillStyle = isPaper && isCast ? treePalette.castBg : treePalette.spellHover;
       }
 
       ctx.beginPath();
@@ -325,7 +327,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       }
 
       // 4. Text and labels
-      ctx.fillStyle = isQuietPaper
+      ctx.fillStyle = isPaper
         ? (isCast ? treePalette.castText : treePalette.spellText)
         : (isHovered ? '#fff' : (isCast ? '#818cf8' : '#a1a1aa'));
       ctx.font = 'bold 10px Inter, sans-serif';
@@ -340,7 +342,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       // Multiplier xN
       if (node.count > 1) {
         if (primaryW > 0) currentX += 8;
-        ctx.fillStyle = '#6366f1';
+        ctx.fillStyle = isPaper ? treePalette.accent : '#6366f1';
         ctx.beginPath();
         ctx.roundRect(currentX, y + nodeH / 2 - 8, badgeW, 16, 3);
         ctx.fill();

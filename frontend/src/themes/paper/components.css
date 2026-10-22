@@ -1,0 +1,1053 @@
+/* =====================================================================
+   PAPER THEME FAMILY — components
+   Component-level editorial language. Hooks are theme-neutral semantic
+   classes declared by the components (e.g. `wand-card`, `app-header`);
+   only this file gives them a paper appearance.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Backdrop — laid paper with a faint warm light
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .paper-backdrop {
+  background-color: var(--paper-canvas);
+  background-image:
+    radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+    radial-gradient(90% 70% at 100% 100%, var(--paper-glow), transparent 60%);
+}
+
+:root[data-paper-theme="quietink"] .paper-backdrop {
+  background-image:
+    radial-gradient(110% 80% at 0% 0%, rgba(250, 249, 245, 0.025), transparent 55%),
+    radial-gradient(90% 70% at 100% 100%, var(--paper-glow), transparent 60%);
+}
+
+:root[data-paper-theme] .paper-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: var(--paper-grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-paper-theme="quietink"] .paper-backdrop::after {
+  mix-blend-mode: screen;
+}
+
+/* ---------------------------------------------------------------------
+   2. Header — masthead, tabs and actions
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .app-header {
+  position: relative;
+  z-index: 20;
+  min-height: 56px;
+  padding-top: 0 !important;
+  align-items: center;
+  background-color: rgba(var(--paper-surface-rgb), 0.82) !important;
+  border-bottom: 1px solid var(--paper-line) !important;
+  backdrop-filter: saturate(1.1) blur(12px);
+}
+
+:root[data-paper-theme] .app-brand {
+  gap: 10px;
+  margin-right: 20px;
+  padding-block: 0;
+}
+
+:root[data-paper-theme] .app-brand-button {
+  width: 34px;
+  height: 34px;
+  color: var(--paper-accent);
+  background: transparent !important;
+  background-image: none !important;
+  border-radius: var(--paper-radius-md);
+  box-shadow: none !important;
+  transition: background-color var(--paper-fast) var(--paper-ease), transform var(--paper-medium) var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .app-brand-button:hover {
+  background-color: var(--paper-hover) !important;
+  transform: none;
+}
+
+:root[data-paper-theme] .app-brand-button:hover .app-brand-mark {
+  transform: rotate(22.5deg);
+}
+
+:root[data-paper-theme] .app-brand-mark {
+  transition: transform 600ms var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .app-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+:root[data-paper-theme] .app-wordmark-title {
+  color: var(--paper-ink);
+  font-family: var(--paper-font-serif);
+  font-size: 20px;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+}
+
+:root[data-paper-theme] .app-wordmark-subtitle {
+  margin-top: 3px;
+  color: var(--paper-ink-3);
+  font-family: var(--paper-font-serif);
+  font-size: 11px;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+:root[data-paper-theme] .app-tabs {
+  gap: 2px;
+  align-self: stretch;
+  align-items: stretch;
+}
+
+:root[data-paper-theme] .app-tab {
+  height: 100%;
+  min-height: 56px;
+  padding-inline: 14px;
+  color: var(--paper-ink-3) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  transition: color var(--paper-fast) var(--paper-ease);
+}
+
+:root[data-paper-theme] .app-tab:hover {
+  color: var(--paper-ink) !important;
+}
+
+:root[data-paper-theme] .app-tab.app-tab-active {
+  color: var(--paper-ink) !important;
+}
+
+:root[data-paper-theme] .app-tab-indicator {
+  left: 14px !important;
+  right: 14px !important;
+  height: 2px !important;
+  background-color: var(--paper-accent) !important;
+  border-radius: 2px 2px 0 0;
+}
+
+:root[data-paper-theme] .app-tab-add {
+  align-self: center;
+  border-radius: var(--paper-radius-sm);
+  color: var(--paper-ink-4) !important;
+}
+
+:root[data-paper-theme] .app-tab-add:hover {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-hover);
+}
+
+:root[data-paper-theme] .app-header-actions {
+  gap: 6px;
+  padding-bottom: 0 !important;
+}
+
+:root[data-paper-theme] .app-header-action {
+  background-color: var(--paper-raised) !important;
+}
+
+:root[data-paper-theme] .app-header-action:hover {
+  background-color: var(--paper-raised) !important;
+  box-shadow: var(--paper-shadow-xs) !important;
+}
+
+:root[data-paper-theme] .app-header-primary {
+  color: var(--paper-on-button) !important;
+  background-color: var(--paper-button) !important;
+  border-color: var(--paper-button) !important;
+}
+
+:root[data-paper-theme] .app-header-primary:hover {
+  color: var(--paper-on-button) !important;
+  background-color: var(--paper-button-hover) !important;
+  border-color: var(--paper-button-hover) !important;
+}
+
+:root[data-paper-theme] .app-header-chip {
+  height: 26px;
+  padding-inline: 9px !important;
+  color: var(--paper-ink-2) !important;
+  font-family: var(--paper-font-mono);
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  background-color: var(--paper-sunken) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: 999px !important;
+}
+
+:root[data-paper-theme] .app-header-chip:hover {
+  color: var(--paper-ink) !important;
+  border-color: var(--paper-line-strong) !important;
+}
+
+:root[data-paper-theme] .app-header-icon {
+  border-radius: var(--paper-radius-sm);
+  color: var(--paper-ink-3) !important;
+  transition: background-color var(--paper-fast) var(--paper-ease), color var(--paper-fast) var(--paper-ease);
+}
+
+:root[data-paper-theme] .app-header-icon:hover {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-hover);
+}
+
+:root[data-paper-theme] .app-header-icon.text-emerald-400 {
+  color: var(--paper-accent-ink) !important;
+  background-color: var(--paper-accent-wash);
+}
+
+:root[data-paper-theme] .app-header-divider {
+  background-color: var(--paper-line) !important;
+}
+
+/* ---------------------------------------------------------------------
+   3. Footer & toast
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .app-footer {
+  padding: 6px 16px !important;
+  color: var(--paper-ink-3) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  background-color: rgba(var(--paper-surface-rgb), 0.9) !important;
+  border-top: 1px solid var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .app-footer-dot {
+  width: 7px !important;
+  height: 7px !important;
+  box-shadow: 0 0 0 3px rgba(var(--paper-accent-rgb), 0.12) !important;
+  animation: none !important;
+}
+
+:root[data-paper-theme] .app-footer-dot.bg-green-500 {
+  box-shadow: 0 0 0 3px rgba(120, 140, 93, 0.18) !important;
+}
+
+:root[data-paper-theme] .app-footer a {
+  color: var(--paper-ink-2) !important;
+  text-decoration-color: var(--paper-line-strong);
+  text-underline-offset: 3px;
+}
+
+:root[data-paper-theme] .app-footer a:hover {
+  color: var(--paper-accent-ink) !important;
+  text-decoration-color: currentColor;
+}
+
+:root[data-paper-theme] .app-toast {
+  gap: 10px !important;
+  padding: 11px 16px 11px 14px !important;
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--paper-shadow-lg) !important;
+  animation: paper-rise var(--paper-medium) var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .app-toast > span {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+:root[data-paper-theme] .app-toast-success svg { color: var(--paper-success); }
+:root[data-paper-theme] .app-toast-error svg { color: var(--paper-danger); }
+:root[data-paper-theme] .app-toast-info svg { color: var(--paper-accent); }
+
+/* ---------------------------------------------------------------------
+   4. Wand card
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .wand-card {
+  background-color: var(--paper-surface) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-xl) !important;
+  box-shadow: var(--paper-shadow-sm) !important;
+  transition: box-shadow var(--paper-medium) var(--paper-ease), border-color var(--paper-medium) var(--paper-ease);
+}
+
+:root[data-paper-theme] .wand-card:hover {
+  border-color: var(--paper-line-strong) !important;
+  box-shadow: var(--paper-shadow-md) !important;
+}
+
+:root[data-paper-theme] .wand-card-header {
+  padding: 12px 18px !important;
+  align-items: center !important;
+}
+
+:root[data-paper-theme] .wand-card-sprite {
+  width: 52px !important;
+  height: 44px !important;
+  background-color: var(--paper-sunken) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-md) !important;
+}
+
+:root[data-paper-theme] .wand-card-name {
+  color: var(--paper-ink) !important;
+  font-family: var(--paper-font-serif);
+  font-size: 17px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+}
+
+:root[data-paper-theme] .wand-card-name:hover {
+  color: var(--paper-accent-ink) !important;
+}
+
+:root[data-paper-theme] .wand-card-slot {
+  width: auto !important;
+  min-width: 24px;
+  padding: 2px 7px;
+  color: var(--paper-ink-3);
+  font-family: var(--paper-font-mono);
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  background-color: var(--paper-sunken);
+  border: 1px solid var(--paper-line);
+  border-radius: 999px;
+}
+
+:root[data-paper-theme] .wand-card-preview .spell-icon-surface {
+  width: 30px;
+  height: 30px;
+  padding: 1px;
+  border-radius: 6px !important;
+}
+
+:root[data-paper-theme] .wand-card-stats > div {
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .wand-stat-label {
+  margin-bottom: 5px !important;
+  color: var(--paper-ink-3) !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+}
+
+:root[data-paper-theme] .wand-stat-value {
+  color: var(--paper-ink);
+  font-family: var(--paper-font-serif) !important;
+  font-size: 17px !important;
+  font-weight: 500 !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Numbers are ink; only verdicts (good / bad / multicast) keep color. */
+:root[data-paper-theme] .wand-stat-value:is(.text-cyan-400, .text-indigo-400, .text-amber-300, .text-zinc-200) {
+  color: var(--paper-ink) !important;
+}
+
+:root[data-paper-theme] .wand-stat-value.text-emerald-400 { color: var(--paper-success) !important; }
+:root[data-paper-theme] .wand-stat-value.text-red-400 { color: var(--paper-danger) !important; }
+:root[data-paper-theme] .wand-stat-value.text-purple-400 { color: var(--paper-accent-ink) !important; }
+
+:root[data-paper-theme] .wand-stat-secondary {
+  color: var(--paper-ink-4) !important;
+  font-size: 10.5px !important;
+}
+
+:root[data-paper-theme] .wand-shuffle-chip {
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+}
+
+:root[data-paper-theme] .wand-shuffle-chip > div {
+  animation: none !important;
+}
+
+:root[data-paper-theme] .wand-card-actions {
+  gap: 1px;
+  padding: 3px !important;
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--paper-radius-md) !important;
+  box-shadow: var(--paper-shadow-xs);
+}
+
+:root[data-paper-theme] .wand-card-actions button,
+:root[data-paper-theme] .wand-card-actions > div:last-child {
+  color: var(--paper-ink-3) !important;
+  border-radius: 6px !important;
+}
+
+:root[data-paper-theme] .wand-card-actions button:not(:disabled):hover {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-hover-strong) !important;
+}
+
+:root[data-paper-theme] .wand-card-actions button.hover\:text-red-400:hover {
+  color: var(--paper-danger) !important;
+  background-color: rgba(163, 63, 54, 0.08) !important;
+}
+
+:root[data-paper-theme] .wand-card-actions button:disabled {
+  color: var(--paper-ink-4) !important;
+  opacity: 0.5;
+}
+
+:root[data-paper-theme] .paper-menu {
+  padding: 5px !important;
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--paper-shadow-lg) !important;
+  backdrop-filter: none !important;
+  animation: paper-rise var(--paper-fast) var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .paper-menu button {
+  padding: 7px 10px !important;
+  color: var(--paper-ink-2) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  border-radius: 7px !important;
+}
+
+:root[data-paper-theme] .paper-menu button:hover {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-hover-strong) !important;
+}
+
+/* ---------------------------------------------------------------------
+   5. Wand editor — attribute sheet and spell plates
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .wand-editor-root {
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .wand-attributes-box {
+  padding: 6px 10px 6px 6px !important;
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+  box-shadow: var(--paper-shadow-sm) !important;
+}
+
+:root[data-paper-theme] .wand-attributes-box > div {
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .prop-input-label {
+  margin-bottom: 4px !important;
+  color: var(--paper-ink-3) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+:root[data-paper-theme] .prop-input-value {
+  color: var(--paper-ink);
+  font-family: var(--paper-font-serif) !important;
+  font-size: 23px !important;
+  font-weight: 450 !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.015em;
+}
+
+:root[data-paper-theme] .prop-input-value:is(.text-cyan-400, .text-indigo-400, .text-white, .text-amber-300) {
+  color: var(--paper-ink) !important;
+}
+
+:root[data-paper-theme] .prop-input-value.text-emerald-400 { color: var(--paper-success) !important; }
+:root[data-paper-theme] .prop-input-value.text-red-400 { color: var(--paper-danger) !important; }
+:root[data-paper-theme] .prop-input-value.text-purple-400 { color: var(--paper-accent-ink) !important; }
+
+:root[data-paper-theme] .prop-input-secondary {
+  color: var(--paper-ink-4) !important;
+  font-size: 11px !important;
+}
+
+:root[data-paper-theme] .prop-input-rule {
+  height: 1px !important;
+  background-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .group\/prop:hover .prop-input-rule,
+:root[data-paper-theme] .group\/prop:focus-within .prop-input-rule {
+  background-color: var(--paper-accent) !important;
+}
+
+:root[data-paper-theme] .editor-section-label {
+  gap: 14px !important;
+}
+
+:root[data-paper-theme] .editor-section-label > div {
+  height: 1px;
+  background-image: none !important;
+  background-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .editor-section-label > span {
+  color: var(--paper-warning) !important;
+  font-family: var(--paper-font-serif);
+  font-size: 13.5px !important;
+  font-style: italic;
+  font-weight: 500 !important;
+}
+
+/* DOM spell cells */
+:root[data-paper-theme] .spell-icon-surface {
+  background-color: var(--paper-cell-filled) !important;
+  outline: 1px solid var(--paper-cell-filled-line);
+  outline-offset: -1px;
+}
+
+:root[data-paper-theme] img.spell-icon-surface {
+  border-radius: 5px;
+}
+
+:root[data-paper-theme] .spell-cell-empty {
+  color: var(--paper-ink-4);
+  background-color: var(--paper-cell-empty) !important;
+  border-color: var(--paper-cell-empty-line) !important;
+  box-shadow: inset 0 1px 1px rgba(20, 20, 19, 0.03) !important;
+}
+
+:root[data-paper-theme] .spell-cell-empty:hover {
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-accent-line) !important;
+}
+
+:root[data-paper-theme] .spell-cell-empty .text-zinc-800 {
+  color: var(--paper-ink-4) !important;
+}
+
+:root[data-paper-theme] .spell-cell-filled {
+  background-color: var(--paper-cell-filled) !important;
+  border-color: var(--paper-cell-filled-line) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 2px rgba(20, 20, 19, 0.14) !important;
+}
+
+:root[data-paper-theme] .spell-cell-filled:hover {
+  background-color: var(--paper-cell-filled-hover) !important;
+  border-color: var(--paper-accent) !important;
+}
+
+:root[data-paper-theme] .spell-cell-filled .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+:root[data-paper-theme] .spell-cell-filled :is(.text-cyan-400, .text-white) {
+  color: var(--paper-cell-label) !important;
+}
+
+:root[data-paper-theme] .spell-cell-filled .text-white\/5 {
+  color: rgba(250, 249, 245, 0.1) !important;
+}
+
+:root[data-paper-theme] .spell-cell-unknown {
+  background-color: var(--paper-cell-unknown) !important;
+  border-color: var(--paper-cell-unknown-line) !important;
+}
+
+:root[data-paper-theme] .spell-cell-selected {
+  background-color: var(--paper-accent-wash) !important;
+  border-color: var(--paper-accent) !important;
+  --tw-ring-color: rgba(var(--paper-accent-rgb), 0.35) !important;
+  box-shadow: 0 0 0 3px rgba(var(--paper-accent-rgb), 0.16) !important;
+}
+
+:root[data-paper-theme] .spell-cell-filled.spell-cell-selected {
+  background-color: var(--paper-cell-filled) !important;
+}
+
+/* ---------------------------------------------------------------------
+   6. Evaluator — sections read like chapters
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .eval-panel {
+  padding: 22px 24px !important;
+  background-color: var(--paper-sunken) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+  gap: 40px !important;
+}
+
+:root[data-paper-theme] :is(.eval-section-bar, .wand-timeline-heading, .wand-eval-tree-heading) {
+  margin-bottom: 14px !important;
+  padding-block: 8px !important;
+  background-color: rgba(243, 241, 234, 0.92) !important;
+  border-bottom: 1px solid var(--paper-line);
+  backdrop-filter: blur(8px) !important;
+}
+
+:root[data-paper-theme="quietink"] :is(.eval-section-bar, .wand-timeline-heading, .wand-eval-tree-heading) {
+  background-color: rgba(34, 33, 32, 0.92) !important;
+}
+
+:root[data-paper-theme] :is(.eval-section-title, .wand-timeline-heading > h3, .wand-eval-tree-heading) {
+  color: var(--paper-ink) !important;
+  font-family: var(--paper-font-serif);
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.005em !important;
+  gap: 10px !important;
+}
+
+:root[data-paper-theme] :is(.eval-section-title, .wand-timeline-heading > h3, .wand-eval-tree-heading) > span:first-child {
+  width: 7px !important;
+  height: 7px !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .eval-section-title > span.bg-amber-500 { background-color: var(--paper-warning) !important; }
+:root[data-paper-theme] .eval-section-title > span.bg-blue-500 { background-color: var(--paper-info) !important; }
+:root[data-paper-theme] :is(.wand-timeline-heading > h3, .wand-eval-tree-heading) > span:first-child {
+  background-color: var(--paper-accent) !important;
+}
+
+:root[data-paper-theme] .eval-count-chip {
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: 8px !important;
+}
+
+:root[data-paper-theme] .eval-count-chip .spell-icon-surface {
+  border-radius: 4px;
+}
+
+:root[data-paper-theme] .group\/state {
+  background-color: var(--paper-raised) !important;
+  border-radius: 12px !important;
+}
+
+/* Timeline */
+:root[data-paper-theme] .wand-timeline-panel {
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+  box-shadow: var(--paper-shadow-sm);
+  overflow: hidden;
+}
+
+:root[data-paper-theme] .wand-timeline-toolbar {
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-control {
+  color: var(--paper-ink-2) !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line-strong) !important;
+  border-radius: var(--paper-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .wand-timeline-control:hover {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-hover-strong) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-play {
+  color: var(--paper-on-button) !important;
+  background-color: var(--paper-button) !important;
+  border-color: var(--paper-button) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-play:hover {
+  color: var(--paper-on-button) !important;
+  background-color: var(--paper-button-hover) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-field {
+  background-color: var(--paper-sunken) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-sm) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-meta {
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-stage {
+  background-color: var(--paper-sunken) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-process {
+  background-color: var(--paper-raised) !important;
+  border-color: rgba(196, 136, 63, 0.35) !important;
+  border-radius: var(--paper-radius-md) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-pile {
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-md) !important;
+}
+
+:root[data-paper-theme] :is(.wand-timeline-card, .wand-timeline-process-card) {
+  background-color: var(--paper-cell-filled) !important;
+  border-color: var(--paper-cell-filled-line) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.16) !important;
+}
+
+:root[data-paper-theme] .wand-timeline-process-card {
+  border-color: #ad7432 !important;
+}
+
+:root[data-paper-theme] :is(.wand-timeline-card, .wand-timeline-process-card) .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+:root[data-paper-theme] .wand-timeline-tooltip {
+  color: var(--paper-on-button) !important;
+  background-color: var(--paper-button) !important;
+  border-color: transparent !important;
+  border-radius: 6px !important;
+}
+
+:root[data-paper-theme] .wand-timeline-manual {
+  color: var(--paper-ink-2) !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line-strong) !important;
+  border-radius: 999px !important;
+}
+
+:root[data-paper-theme] input[type="range"] {
+  height: 14px;
+  appearance: none;
+  background: transparent !important;
+}
+
+:root[data-paper-theme] input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--paper-track);
+  border-radius: 999px;
+}
+
+:root[data-paper-theme] input[type="range"]::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  appearance: none;
+  background: var(--paper-accent);
+  border: 2px solid var(--paper-raised);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.25);
+}
+
+:root[data-paper-theme] input[type="range"]::-moz-range-track {
+  height: 3px;
+  background: var(--paper-track);
+  border-radius: 999px;
+}
+
+:root[data-paper-theme] input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: var(--paper-accent);
+  border: 2px solid var(--paper-raised);
+  border-radius: 50%;
+}
+
+/* Execution tree */
+:root[data-paper-theme] .wand-eval-tree-group {
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+}
+
+:root[data-paper-theme] .wand-eval-tree-header {
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] :is(.wand-eval-tree-body, .eval-tree-canvas) {
+  background-color: var(--paper-sunken) !important;
+}
+
+:root[data-paper-theme] .eval-tree-line {
+  background: var(--paper-tree-line) !important;
+}
+
+:root[data-paper-theme] .eval-tree-node {
+  --tw-ring-offset-color: var(--paper-sunken);
+}
+
+:root[data-paper-theme] .eval-tree-cast-node {
+  color: var(--paper-accent-ink) !important;
+  background-color: var(--paper-accent-wash) !important;
+  border-color: var(--paper-accent-line) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .eval-tree-cast-node .text-zinc-400 {
+  color: var(--paper-accent-ink) !important;
+}
+
+:root[data-paper-theme] .eval-tree-spell-node {
+  padding: 5px !important;
+  background-color: var(--paper-cell-filled) !important;
+  border-color: var(--paper-cell-filled-line) !important;
+  border-radius: 7px !important;
+  box-shadow: 0 1px 3px rgba(20, 20, 19, 0.16) !important;
+}
+
+:root[data-paper-theme] .eval-tree-spell-node:hover {
+  background-color: var(--paper-cell-filled-hover) !important;
+  border-color: var(--paper-accent) !important;
+}
+
+:root[data-paper-theme] .eval-tree-spell-node .spell-icon-surface {
+  background-color: transparent !important;
+  outline-color: transparent;
+}
+
+:root[data-paper-theme] .eval-tree-spell-node :is(.text-zinc-400, .text-white) {
+  color: var(--paper-cell-label) !important;
+}
+
+/* ---------------------------------------------------------------------
+   7. Overlays — modals, settings, drawers
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .app-modal-backdrop {
+  background-color: var(--paper-backdrop) !important;
+  backdrop-filter: blur(2px) !important;
+  animation: paper-fade var(--paper-medium) var(--paper-ease);
+}
+
+:root[data-paper-theme] .app-modal {
+  background-color: var(--paper-surface) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-xl) !important;
+  box-shadow: var(--paper-shadow-lg) !important;
+  animation: paper-rise var(--paper-medium) var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .app-drawer {
+  background-color: rgba(var(--paper-surface-rgb), 0.97) !important;
+  border-color: var(--paper-line) !important;
+  box-shadow: var(--paper-shadow-lg) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+:root[data-paper-theme] .app-drawer-left { animation: paper-slide-left var(--paper-medium) var(--paper-ease-out); }
+:root[data-paper-theme] .app-drawer-right { animation: paper-slide-right var(--paper-medium) var(--paper-ease-out); }
+
+:root[data-paper-theme] .settings-sidebar {
+  background-color: var(--paper-sunken) !important;
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .settings-title {
+  color: var(--paper-ink) !important;
+  font-family: var(--paper-font-serif);
+  font-size: 22px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.015em !important;
+}
+
+:root[data-paper-theme] .settings-sidebar-head {
+  padding: 22px 18px 14px !important;
+  border-bottom: 0 !important;
+}
+
+:root[data-paper-theme] .settings-nav-item {
+  min-height: 34px;
+  color: var(--paper-ink-2) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border: 1px solid transparent;
+  border-radius: var(--paper-radius-sm) !important;
+}
+
+:root[data-paper-theme] .settings-nav-item svg {
+  color: var(--paper-ink-3);
+}
+
+:root[data-paper-theme] .settings-nav-item:hover {
+  background-color: var(--paper-hover) !important;
+}
+
+:root[data-paper-theme] .settings-nav-item.settings-nav-item-active {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line);
+  box-shadow: var(--paper-shadow-xs);
+}
+
+:root[data-paper-theme] .settings-nav-item.settings-nav-item-active svg {
+  color: var(--paper-accent);
+}
+
+:root[data-paper-theme] .settings-search-bar {
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .settings-search-bar input {
+  height: 34px;
+  font-size: 13px !important;
+}
+
+:root[data-paper-theme] .settings-modal label {
+  color: var(--paper-ink-2) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Theme section of settings */
+:root[data-paper-theme] .settings-theme-card {
+  background-color: var(--paper-raised) !important;
+  background-image: none !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+  box-shadow: var(--paper-shadow-xs) !important;
+}
+
+:root[data-paper-theme] .settings-theme-card > .absolute {
+  display: none;
+}
+
+:root[data-paper-theme] .settings-theme-card-title {
+  color: var(--paper-ink) !important;
+  background-image: none !important;
+  -webkit-text-fill-color: currentColor;
+  font-family: var(--paper-font-serif);
+  font-size: 17px !important;
+  font-weight: 500 !important;
+}
+
+:root[data-paper-theme] .settings-theme-card-desc {
+  color: var(--paper-ink-3) !important;
+  font-size: 12px !important;
+}
+
+:root[data-paper-theme] .settings-theme-card .border-t {
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .settings-switch-on {
+  background-image: none !important;
+  background-color: var(--paper-accent) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .theme-swatch {
+  color: var(--paper-ink-2) !important;
+  background-color: var(--paper-surface) !important;
+  border-color: var(--paper-line) !important;
+  border-radius: var(--paper-radius-md) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .theme-swatch:hover {
+  color: var(--paper-ink) !important;
+  border-color: var(--paper-line-strong) !important;
+  background-color: var(--paper-raised) !important;
+}
+
+:root[data-paper-theme] .theme-swatch.theme-swatch-active {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-accent) !important;
+  box-shadow: 0 0 0 3px rgba(var(--paper-accent-rgb), 0.14) !important;
+}
+
+:root[data-paper-theme] .theme-swatch-active > div {
+  background-color: var(--paper-accent) !important;
+  box-shadow: none !important;
+}
+
+:root[data-paper-theme] .theme-swatch-chip {
+  box-shadow: inset 0 0 0 1px rgba(20, 20, 19, 0.12) !important;
+}
+
+/* ---------------------------------------------------------------------
+   8. Floating drag-mode toggle — a segmented control
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .drag-mode-toggle {
+  padding: 4px !important;
+  background-color: rgba(var(--paper-surface-rgb), 0.94) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--paper-shadow-md) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+:root[data-paper-theme] .drag-mode-track {
+  gap: 2px !important;
+  padding: 3px !important;
+  background-color: var(--paper-sunken-strong) !important;
+  border-radius: 10px !important;
+}
+
+:root[data-paper-theme] .drag-mode-option {
+  width: 36px !important;
+  height: 36px !important;
+  color: var(--paper-ink-3) !important;
+  border-radius: 8px !important;
+  transition: background-color var(--paper-fast) var(--paper-ease), color var(--paper-fast) var(--paper-ease), box-shadow var(--paper-fast) var(--paper-ease);
+}
+
+:root[data-paper-theme] .drag-mode-option:hover {
+  color: var(--paper-ink) !important;
+  background-color: transparent !important;
+}
+
+:root[data-paper-theme] .drag-mode-option.drag-mode-option-active {
+  color: var(--paper-accent-ink) !important;
+  background-color: var(--paper-raised) !important;
+  box-shadow: var(--paper-shadow-sm) !important;
+}
+
+/* ---------------------------------------------------------------------
+   9. Canvas mode — a drafting table with a dotted grid
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .canvas-workspace {
+  background-color: var(--paper-canvas) !important;
+}
+/* ---------------------------------------------------------------------
+   10. Spell picker — a quiet index card
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .spell-picker {
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line) !important;
+  border-radius: var(--paper-radius-lg) !important;
+  box-shadow: var(--paper-shadow-lg) !important;
+  animation: paper-rise var(--paper-fast) var(--paper-ease-out);
+}
+
+:root[data-paper-theme] .spell-picker-search {
+  padding: 12px 14px !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line) !important;
+}
+
+:root[data-paper-theme] .spell-picker-search input {
+  font-size: 14px !important;
+}
+
+:root[data-paper-theme] .spell-picker [data-testid="spell-picker-item"] {
+  border-radius: 7px !important;
+}
+
+:root[data-paper-theme] .spell-picker .ring-white {
+  --tw-ring-color: var(--paper-accent) !important;
+}
+
+/* Category headers use gradient washes in the dark UI; paper uses a hairline. */
+:root[data-paper-theme] .spell-picker .bg-gradient-to-r {
+  background-image: none !important;
+  border-bottom: 1px solid var(--paper-line);
+}
+:root[data-paper-theme] .spell-picker-search span,
+:root[data-paper-theme] .spell-picker-search button {
+  white-space: nowrap;
+}

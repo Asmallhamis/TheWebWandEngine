@@ -14,8 +14,8 @@ export function ConflictModal({ conflict, activeTab, onResolve }: ConflictModalP
   if (!conflict) return null;
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
-      <div className="glass-card bg-zinc-900 border-indigo-500/30 w-full max-w-md p-6 shadow-2xl animate-in zoom-in duration-200">
+    <div className="app-modal-backdrop fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+      <div className="app-modal glass-card bg-zinc-900 border-indigo-500/30 w-full max-w-md p-6 shadow-2xl animate-in zoom-in duration-200">
         <div className="flex items-center gap-3 mb-4 text-amber-400">
           <RefreshCw className="animate-spin-slow" />
           <h2 className="text-sm font-black tracking-widest uppercase">{t('conflict.title')}</h2>

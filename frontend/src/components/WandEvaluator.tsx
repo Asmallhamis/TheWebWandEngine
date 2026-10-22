@@ -312,12 +312,12 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
   return (
     <div className={isCanvas
       ? `relative flex flex-col gap-6 eval-orionfire-region ${canCalculateTimeline ? 'pt-8' : ''}`
-      : "relative mt-6 p-4 bg-black/40 border border-white/10 rounded-lg flex flex-col gap-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
+      : "eval-panel relative mt-6 p-4 bg-black/40 border border-white/10 rounded-lg flex flex-col gap-12 animate-in fade-in slide-in-from-top-4 duration-500 eval-orionfire-region"}>
       {/* Overall Spell Counts Section */}
       {(renderMode === 'all' || renderMode === 'stats') && sortedOverallCounts.length > 0 && (
         <section data-testid="eval-overall-counts" style={{ order: -1 }}>
           {!isCanvas && (
-            <h3 className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
+            <h3 className="eval-section-bar eval-section-title sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm text-[10px] font-black text-zinc-500 mb-4 flex items-center gap-2 tracking-widest uppercase">
               <span className="w-1.5 h-1.5 bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] rounded-full"></span>
               {t('evaluator.overall_counts')}
             </h3>
@@ -327,7 +327,7 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
               const spell = spellDb[id];
               const displayName = spell ? (i18n.language.startsWith('en') && spell.en_name ? spell.en_name : spell.name) : id;
               return (
-                <div key={id} data-testid={`eval-overall-count-item-${id}`} className="flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0 rounded-md transition-all group/count min-h-[28px]">
+                <div key={id} data-testid={`eval-overall-count-item-${id}`} className="eval-count-chip flex items-center gap-2 bg-zinc-900/40 border border-white/5 pl-1 pr-3 py-0 rounded-md transition-all group/count min-h-[28px]">
                   {spell ? (
                     <img src={getIconUrl(spell.icon, false)} alt={id} className="spell-icon-surface w-5 h-5 image-pixelated" />
                   ) : (
@@ -370,8 +370,8 @@ const WandEvaluator: React.FC<Props> = ({ data, spellDb, onHoverSlots, settings,
       {(renderMode === 'all' || renderMode === 'stats') && (
         <section style={{ order: evaluatorSectionOrderMap.shot_states }}>
           {!isCanvas && (
-            <div className="sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between mb-4">
-              <h3 className="text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
+            <div className="eval-section-bar sticky top-0 z-40 py-2 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-between mb-4">
+              <h3 className="eval-section-title text-[10px] font-black text-zinc-500 flex items-center gap-2 tracking-widest uppercase">
                 <span className="w-1.5 h-1.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] rounded-full"></span>
                 {t('evaluator.shot_states')}
               </h3>

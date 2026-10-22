@@ -767,7 +767,7 @@ export function WandWarehouse({
   return (
     <div
       className={cn(
-        "fixed inset-y-0 left-0 bg-zinc-950/95 backdrop-blur-xl border-r border-white/10 shadow-2xl z-[400] flex flex-col transition-all duration-300",
+        "app-drawer app-drawer-left fixed inset-y-0 left-0 bg-zinc-950/95 backdrop-blur-xl border-r border-white/10 shadow-2xl z-[400] flex flex-col transition-all duration-300",
         isMaximized ? "w-full" : "w-[900px] max-w-full"
       )}
       data-testid="warehouse-panel"

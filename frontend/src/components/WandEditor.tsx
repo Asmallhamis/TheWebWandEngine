@@ -674,7 +674,7 @@ export function WandEditor({
   };
 
   return (
-    <div ref={wandRef} data-wand-editor-root data-wand-slot={slot} className={`px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
+    <div ref={wandRef} data-wand-editor-root data-wand-slot={slot} className={`wand-editor-root px-4 bg-transparent select-none ${hideAttributes ? 'py-2 space-y-3' : 'py-6 border-t border-white/5 space-y-8'}`}>
       {!hideAttributes && <div className="flex items-start gap-8 attributes-container">
         <button
           type="button"
@@ -731,7 +731,7 @@ export function WandEditor({
           <div className="px-6 py-2 border-r border-white/5 flex items-center h-16">
             <button
               onClick={() => updateWand(slot, (curr) => ({ shuffle_deck_when_empty: !curr.shuffle_deck_when_empty }))}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${data.shuffle_deck_when_empty ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}
+              className={`wand-shuffle-chip flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${data.shuffle_deck_when_empty ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'}`}
             >
               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
               <span className="text-[10px] font-black uppercase tracking-widest">{data.shuffle_deck_when_empty ? t('editor.shuffle') : t('editor.no_shuffle')}</span>
@@ -803,7 +803,7 @@ export function WandEditor({
       {hideSpells ? null : <div ref={spellsRef} className={hideAttributes ? "space-y-3" : "space-y-8"}>
         {!hideAlwaysCast && Array.isArray(data.always_cast) && data.always_cast.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
+            <div className="editor-section-label flex items-center gap-3">
               <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
               <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em]">{t('editor.always_cast_slots')}</span>
               <div className="h-px flex-1 bg-gradient-to-l from-amber-500/30 to-transparent" />

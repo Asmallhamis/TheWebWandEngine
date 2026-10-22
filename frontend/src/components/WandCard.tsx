@@ -93,10 +93,10 @@ export function WandCard({
     const secondary = settings.showStatsInFrames ? (frames / 60).toFixed(2) + 's' : frames;
     return (
       <div className="flex flex-col">
-        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
+        <span className="wand-stat-label text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
         <div className="flex items-baseline gap-1">
-          <span className={`text-[13px] font-mono font-bold leading-none ${colorClass}`}>{primary}</span>
-          <span className="text-[10px] font-mono text-zinc-600 leading-none">{secondary}</span>
+          <span className={`wand-stat-value text-[13px] font-mono font-bold leading-none ${colorClass}`}>{primary}</span>
+          <span className="wand-stat-secondary text-[10px] font-mono text-zinc-600 leading-none">{secondary}</span>
         </div>
       </div>
     );
@@ -104,8 +104,8 @@ export function WandCard({
 
   const StatItem = ({ label, value, colorClass }: { label: string, value: string | number, colorClass?: string }) => (
     <div className="flex flex-col">
-      <span className="text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
-      <span className={`text-[13px] font-mono font-bold leading-none ${colorClass || 'text-zinc-200'}`}>{value}</span>
+      <span className="wand-stat-label text-[9px] font-black text-zinc-500 uppercase tracking-wider leading-none mb-1">{label}</span>
+      <span className={`wand-stat-value text-[13px] font-mono font-bold leading-none ${colorClass || 'text-zinc-200'}`}>{value}</span>
     </div>
   );
 
@@ -256,7 +256,7 @@ export function WandCard({
         pixelRatio: 2,
         width: finalWidth,
         height: finalHeight,
-        backgroundColor: '#0c0c0e',
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--paper-canvas').trim() || '#0c0c0e',
         cacheBust: true,
         style: { width: `${finalWidth}px`, height: `${finalHeight}px` },
         filter: (node: Node) => !(node instanceof HTMLElement && node.classList.contains('export-ignore')),
@@ -279,13 +279,13 @@ export function WandCard({
   }, [ensureExpandedForExport, getWholeWandExportFilename]);
 
   return (
-    <div ref={rootRef} className={`glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+    <div ref={rootRef} className={`wand-card glass-card group/wand border-white/5 ${activeTab.expandedWands.has(slot) ? 'bg-zinc-900/40' : 'hover:bg-zinc-900/20 overflow-hidden'}`} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div
-        className="flex flex-wrap items-start px-4 py-2 cursor-pointer gap-3 md:gap-4 overflow-x-hidden"
+        className="wand-card-header flex flex-wrap items-start px-4 py-2 cursor-pointer gap-3 md:gap-4 overflow-x-hidden"
         onClick={() => toggleExpand(slot)}
       >
         <div className="flex items-center gap-2 shrink-0">
-          <div className="w-12 h-10 rounded bg-zinc-800 flex items-center justify-center border border-white/5 relative overflow-hidden">
+          <div className="wand-card-sprite w-12 h-10 rounded bg-zinc-800 flex items-center justify-center border border-white/5 relative overflow-hidden">
             {(() => {
               const spriteUrl = getWandSpriteUrl(data.appearance, isConnected);
               return spriteUrl ? (
@@ -316,7 +316,7 @@ export function WandCard({
             ) : (
               <button
                 type="button"
-                className="text-left text-[12px] font-bold text-zinc-200 truncate hover:text-indigo-300 transition-colors"
+                className="wand-card-name text-left text-[12px] font-bold text-zinc-200 truncate hover:text-indigo-300 transition-colors"
                 title={displayWandName}
                 onClick={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => { e.stopPropagation(); setIsEditingName(true); }}
@@ -325,9 +325,9 @@ export function WandCard({
               </button>
             )}
           </div>
-          <div className="text-[10px] font-black w-6 text-center">{slot}</div>
+          <div className="wand-card-slot text-[10px] font-black w-6 text-center">{slot}</div>
         </div>
-        <div className="flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
+        <div className="wand-card-preview flex-1 flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
           {Object.entries(data.spells || {})
             .sort(([a], [b]) => parseInt(a) - parseInt(b))
             .map(([idx, sid]) => {
@@ -376,10 +376,10 @@ export function WandCard({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-y-2 border-t border-white/5 md:border-t-0 md:border-l md:border-white/5 w-full md:w-auto md:shrink-0 pt-2 md:pt-0 md:pl-0 min-w-0">
+        <div className="wand-card-stats flex flex-wrap items-center gap-y-2 border-t border-white/5 md:border-t-0 md:border-l md:border-white/5 w-full md:w-auto md:shrink-0 pt-2 md:pt-0 md:pl-0 min-w-0">
           {/* Group 1: Shuffle */}
           <div className="px-3 h-full flex items-center border-r border-white/5 min-w-0">
-            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border ${data.shuffle_deck_when_empty ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
+            <div className={`wand-shuffle-chip flex items-center gap-1.5 px-2 py-0.5 rounded border ${data.shuffle_deck_when_empty ? 'bg-red-500/5 border-red-500/20 text-red-400' : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'}`}>
               <div className={`w-1 h-1 rounded-full ${data.shuffle_deck_when_empty ? 'bg-red-500' : 'bg-emerald-500'}`} />
               <span className="text-[9px] font-black uppercase tracking-wider whitespace-nowrap">
                 {data.shuffle_deck_when_empty ? t('editor.shuffle') : t('editor.no_shuffle')}
@@ -407,7 +407,7 @@ export function WandCard({
             <StatItem label={t('editor.speed')} value={(data.speed_multiplier || 1).toFixed(2) + 'x'} colorClass="text-indigo-400" />
           </div>
 
-          <div className="export-ignore flex items-center flex-wrap bg-black/40 rounded-md p-0.5 md:ml-2 w-full md:w-auto justify-end md:justify-start opacity-100 md:opacity-0 md:group-hover/wand:opacity-100 transition-opacity">
+          <div className="wand-card-actions export-ignore flex items-center flex-wrap bg-black/40 rounded-md p-0.5 md:ml-2 w-full md:w-auto justify-end md:justify-start opacity-100 md:opacity-0 md:group-hover/wand:opacity-100 transition-opacity">
             <div ref={exportMenuRef} className="relative">
               <button
                 ref={exportButtonRef}
@@ -425,7 +425,7 @@ export function WandCard({
                 createPortal(
                   <div
                     ref={exportMenuContentRef}
-                    className="fixed w-52 bg-zinc-950/95 border border-white/10 rounded-lg shadow-2xl z-[3000] p-1 backdrop-blur-md"
+                    className="paper-menu fixed w-52 bg-zinc-950/95 border border-white/10 rounded-lg shadow-2xl z-[3000] p-1 backdrop-blur-md"
                     style={exportMenuPos ? { top: exportMenuPos.top, left: exportMenuPos.left } : undefined}
                     onClick={(e) => e.stopPropagation()}
                   >

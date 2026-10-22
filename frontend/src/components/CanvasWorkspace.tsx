@@ -329,7 +329,7 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
   }, [wands, activeTab.id, activeTab.wands, evalResults, props]);
 
   return (
-    <div className="flex-1 relative overflow-hidden bg-[#050505] inset-0 absolute">
+    <div className="canvas-workspace flex-1 relative overflow-hidden bg-[#050505] inset-0 absolute">
       {(() => {
         const uiScale = (settings.uiScale || 100) / 100;
         const canvasScale = uiScale === 0 ? 1 : 1 / uiScale;

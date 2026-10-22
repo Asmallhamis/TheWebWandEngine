@@ -252,9 +252,9 @@ export function ModManagerPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8" onClick={onClose}>
+    <div className="app-modal-backdrop fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8" onClick={onClose}>
       <div
-        className="glass-card bg-[#0a0a0c] border-white/10 w-full max-w-5xl h-full flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200"
+        className="app-modal glass-card bg-[#0a0a0c] border-white/10 w-full max-w-5xl h-full flex flex-col overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

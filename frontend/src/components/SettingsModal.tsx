@@ -8,6 +8,7 @@ import {
 import { AppSettings, Tab, WandData, SpellTypeConfig, SpellGroupConfig, SpellInfo, SpellMarkingRule, WarehouseWand } from '../types';
 import { SPELL_GROUPS } from '../constants';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { isPaperTheme, THEME_SWATCHES } from '../lib/themeFamily';
 import { useTranslation } from 'react-i18next';
 import { getModBundles, deleteModBundle, saveModBundle, ModBundle } from '../lib/modStorage';
 import { getIconUrl } from '../lib/evaluatorAdapter';
@@ -829,23 +830,23 @@ export function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md px-4 py-8" onClick={onClose}>
+    <div className="app-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md px-4 py-8" onClick={onClose}>
       <div
-        className="glass-card bg-[#0c0c0e] border-white/10 w-full max-w-3xl h-full max-h-[600px] flex overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+        className="app-modal settings-modal glass-card bg-[#0c0c0e] border-white/10 w-full max-w-3xl h-full max-h-[600px] flex overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
         data-testid="settings-modal"
       >
         {/* Sidebar */}
-        <div className="w-40 bg-black/40 border-r border-white/5 flex flex-col shrink-0">
-          <div className="p-4 border-b border-white/5">
-            <h2 className="text-[10px] font-black tracking-widest uppercase text-indigo-500">{t('settings.title')}</h2>
+        <div className="settings-sidebar w-40 bg-black/40 border-r border-white/5 flex flex-col shrink-0">
+          <div className="settings-sidebar-head p-4 border-b border-white/5">
+            <h2 className="settings-title text-[10px] font-black tracking-widest uppercase text-indigo-500">{t('settings.title')}</h2>
           </div>
           <nav className="p-2 space-y-1 flex-1">
             {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => { setActiveCategory(cat.id as Category); setSearchQuery(''); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold transition-all ${activeCategory === cat.id && !searchQuery ? 'bg-indigo-500/10 text-white' : 'text-zinc-500 hover:bg-white/5'}`}
+                className={`settings-nav-item w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold transition-all ${activeCategory === cat.id && !searchQuery ? 'settings-nav-item-active bg-indigo-500/10 text-white' : 'text-zinc-500 hover:bg-white/5'}`}
               >
                 {cat.icon}
                 <span>{cat.name}</span>
@@ -856,7 +857,7 @@ export function SettingsModal({
           <div className="p-2 mt-auto border-t border-white/5">
             <button
               onClick={() => setShowHelp(true)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold text-zinc-500 hover:bg-white/5 transition-all"
+              className="settings-nav-item w-full flex items-center gap-3 px-3 py-2 rounded text-[11px] font-bold text-zinc-500 hover:bg-white/5 transition-all"
             >
               <HelpCircle size={14} className="text-amber-500" />
               <span>{t('guide.button')}</span>
@@ -866,7 +867,7 @@ export function SettingsModal({
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="p-4 border-b border-white/5 flex items-center gap-4 bg-black/20">
+          <div className="settings-search-bar p-4 border-b border-white/5 flex items-center gap-4 bg-black/20">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600" size={14} />
               <input
@@ -1108,19 +1109,19 @@ export function SettingsModal({
               <div className="space-y-6">
                 {/* COOL UI SETTINGS */}
                 {isMatch(t('settings.cool_ui_mode')) && (
-                  <div className="space-y-4 bg-purple-500/10 p-4 rounded-xl border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] relative overflow-hidden transition-all duration-500">
+                  <div className="settings-theme-card space-y-4 bg-purple-500/10 p-4 rounded-xl border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)] relative overflow-hidden transition-all duration-500">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent mix-blend-overlay pointer-events-none" />
 
                     <div className="flex justify-between items-center relative z-10">
                       <div className="pr-4">
-                        <div className="text-[13px] font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]">
+                        <div className="settings-theme-card-title text-[13px] font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]">
                           {t('settings.cool_ui_mode')}
                         </div>
-                        <div className="text-[10px] text-purple-200/70 mt-1">{t('settings.cool_ui_mode_desc')}</div>
+                        <div className="settings-theme-card-desc text-[10px] text-purple-200/70 mt-1">{t('settings.cool_ui_mode_desc')}</div>
                       </div>
                       <button
                         onClick={() => setSettings(s => ({ ...s, coolUIMode: !s.coolUIMode }))}
-                        className={`shrink-0 w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner ${settings.coolUIMode ? 'bg-gradient-to-r from-purple-600 to-pink-600 shadow-[0_0_10px_rgba(236,72,153,0.5)]' : 'bg-black/50 border border-white/10'}`}
+                        className={`shrink-0 w-12 h-6 rounded-full relative transition-all duration-300 shadow-inner ${settings.coolUIMode ? 'settings-switch-on bg-gradient-to-r from-purple-600 to-pink-600 shadow-[0_0_10px_rgba(236,72,153,0.5)]' : 'bg-black/50 border border-white/10'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-md ${settings.coolUIMode ? 'left-7' : 'left-1'}`} />
                       </button>
@@ -1132,25 +1133,41 @@ export function SettingsModal({
                         <div className="space-y-2">
                           <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_theme')}</label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {Object.entries(t('settings.cool_ui_themes', { returnObjects: true }) as Record<string, string>).map(([key, name]) => (
-                               <button
-                                 key={key}
-                                 onClick={() => setSettings(s => ({ ...s, coolUITheme: key }))}
-                                 className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all border text-left flex justify-between items-center ${
-                                   settings.coolUITheme === key
-                                   ? 'bg-purple-500/20 border-purple-400 text-purple-100 shadow-[0_0_8px_rgba(192,132,252,0.4)]'
-                                   : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'
-                                 }`}
-                               >
-                                 <span className="truncate">{name}</span>
-                                 {settings.coolUITheme === key && <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_5px_#c084fc] shrink-0" />}
-                               </button>
-                            ))}
+                            {Object.entries(t('settings.cool_ui_themes', { returnObjects: true }) as Record<string, string>).map(([key, name]) => {
+                              const isActive = settings.coolUITheme === key;
+                              const swatch = THEME_SWATCHES[key];
+                              return (
+                                <button
+                                  key={key}
+                                  onClick={() => setSettings(s => ({ ...s, coolUITheme: key }))}
+                                  data-testid={`theme-swatch-${key}`}
+                                  className={`theme-swatch pl-2 pr-3 py-2 rounded-lg text-[10px] font-bold transition-all border text-left flex items-center gap-2.5 ${
+                                    isActive
+                                    ? 'theme-swatch-active bg-purple-500/20 border-purple-400 text-purple-100 shadow-[0_0_8px_rgba(192,132,252,0.4)]'
+                                    : 'bg-black/40 border-white/5 text-zinc-400 hover:bg-white/5 hover:border-white/10'
+                                  }`}
+                                >
+                                  {swatch && (
+                                    <span
+                                      className="theme-swatch-chip relative w-8 h-6 shrink-0 rounded-md overflow-hidden border border-white/10"
+                                      style={{ background: swatch[0] }}
+                                      aria-hidden="true"
+                                    >
+                                      <span className="absolute left-1 right-1 top-1.5 bottom-0 rounded-t-sm" style={{ background: swatch[1] }} />
+                                      <span className="absolute left-2 top-[11px] w-3 h-[2px] rounded-full" style={{ background: swatch[3] }} />
+                                      <span className="absolute right-2 top-[10px] w-1.5 h-1.5 rounded-full" style={{ background: swatch[2] }} />
+                                    </span>
+                                  )}
+                                  <span className="truncate flex-1">{name}</span>
+                                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_5px_#c084fc] shrink-0" />}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
 
                         {/* Background Selection */}
-                        {settings.coolUITheme !== 'quietpaper' && (
+                        {!isPaperTheme(settings.coolUITheme) && (
                           <div className="space-y-2 pt-2">
                             <label className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">{t('settings.cool_ui_background')}</label>
                             <div className="flex flex-wrap gap-2">

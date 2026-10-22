@@ -28,6 +28,7 @@ import { buildSpellStats, useSpellSearch } from './hooks/useSpellSearch';
 import { useWarehouse } from './hooks/useWarehouse';
 import { useWandActions } from './hooks/useWandActions';
 import { useHistory } from './hooks/useHistory';
+import { isPaperThemeActive } from './lib/themeFamily';
 
 function App() {
   const { t } = useTranslation();
@@ -424,6 +425,16 @@ function App() {
   };
 
   const uiScale = settings.uiScale || 100;
+  const isPaper = isPaperThemeActive(settings);
+
+  // Paper tokens live on <html> so portals rendered into document.body
+  // (menus, tooltips) inherit the same palette as the app root.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isPaper) root.dataset.paperTheme = settings.coolUITheme;
+    else delete root.dataset.paperTheme;
+    return () => { delete root.dataset.paperTheme; };
+  }, [isPaper, settings.coolUITheme]);
 
 
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -480,7 +491,7 @@ function App() {
 
   return (
     <div
-      className={`flex flex-col overflow-hidden text-zinc-100 ${settings.coolUIMode ? 'theme-cool-ui selection:bg-[rgba(var(--cool-primary),0.3)]' : 'bg-zinc-950 selection:bg-purple-500/30'}`}
+      className={`flex flex-col overflow-hidden text-zinc-100 ${settings.coolUIMode ? 'theme-cool-ui selection:bg-[rgba(var(--cool-primary),0.3)]' : 'bg-zinc-950 selection:bg-purple-500/30'}${isPaper ? ' theme-paper' : ''}`}
       data-theme={settings.coolUIMode ? settings.coolUITheme : undefined}
       style={uiScale !== 100 ? {
         zoom: `${uiScale}%`,

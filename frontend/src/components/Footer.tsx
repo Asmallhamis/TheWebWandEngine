@@ -13,10 +13,10 @@ interface FooterProps {
 export function Footer({ isConnected, activeTab, tabsCount, notification }: FooterProps) {
   return (
     <>
-      <footer className="px-3 py-1.5 bg-zinc-900 border-t border-white/10 flex justify-between items-center text-[9px] font-bold text-zinc-600 uppercase tracking-tighter">
+      <footer className="app-footer px-3 py-1.5 bg-zinc-900 border-t border-white/10 flex justify-between items-center text-[9px] font-bold text-zinc-600 uppercase tracking-tighter">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 animate-pulse'}`} />
+            <div className={`app-footer-dot w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 animate-pulse'}`} />
             {isConnected ? 'Sync: Connected' : 'Sync: Offline'}
           </div>
           <div className="w-px h-3 bg-white/10" />
@@ -41,7 +41,7 @@ export function Footer({ isConnected, activeTab, tabsCount, notification }: Foot
       {/* Floating Notification */}
       {notification && (
         <div className="fixed bottom-12 right-6 z-[500] animate-in slide-in-from-bottom-4 fade-in duration-300">
-          <div className={`px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 ${notification.type === 'success'
+          <div className={`app-toast app-toast-${notification.type || 'info'} px-4 py-3 rounded-lg shadow-2xl border flex items-center gap-3 ${notification.type === 'success'
               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
               : notification.type === 'error'
                 ? 'bg-red-500/10 border-red-500/20 text-red-400'

@@ -17,6 +17,7 @@ import { getCachedIcon, preloadIcons } from '../hooks/useSpellIconCache';
 import { useUIStore } from '../store/useUIStore';
 import { getUnknownSpellInfo } from '../hooks/useSpellDb';
 import { type PatternMatch } from '../lib/spellPatterns';
+import { isPaperTheme } from '../lib/themeFamily';
 
 // ─── constants ──────────────────────────────────────────────────────
 const BASE_CELL = 48;
@@ -130,40 +131,42 @@ function resolveThemePalette(themeName: string | undefined): typeof C {
   };
 
   const isDeepAbyssal = themeName === 'pureprism' || themeName === 'blacktooth';
-  const isQuietPaper = themeName === 'quietpaper';
+  const isPaper = isPaperTheme(themeName);
   const readCssVar = (name: string, fallback: string) =>
     computed.getPropertyValue(name).trim() || fallback;
-  const quietPaper = isQuietPaper ? {
-    empty: readCssVar('--quiet-cell-empty', C.bgNormal),
-    filled: readCssVar('--quiet-cell-filled', C.bgFilled),
-    hover: readCssVar('--quiet-surface-raised', C.bgHover),
-    unknown: readCssVar('--quiet-cell-unknown', C.bgUnknown),
-    border: readCssVar('--quiet-border', C.borderNormal),
-    filledBorder: readCssVar('--quiet-cell-filled-border', C.borderFilled),
-    unknownBorder: readCssVar('--quiet-cell-unknown-border', C.borderUnknown),
-    ink: readCssVar('--quiet-ink', C.usesBg),
-    inkSecondary: readCssVar('--quiet-ink-secondary', C.bgFilled),
+  // Paper themes publish dedicated spell-plate tokens (themes/paper/tokens.css).
+  const paper = isPaper ? {
+    empty: readCssVar('--paper-cell-empty', C.bgNormal),
+    filled: readCssVar('--paper-cell-filled', C.bgFilled),
+    hover: readCssVar('--paper-raised', C.bgHover),
+    unknown: readCssVar('--paper-cell-unknown', C.bgUnknown),
+    border: readCssVar('--paper-cell-empty-line', C.borderNormal),
+    filledBorder: readCssVar('--paper-cell-filled-line', C.borderFilled),
+    unknownBorder: readCssVar('--paper-cell-unknown-line', C.borderUnknown),
+    ink: readCssVar('--paper-ink', '#141413'),
+    faint: readCssVar('--paper-ink-4', '#9c9a92'),
+    label: readCssVar('--paper-cell-label', '#faf9f5'),
   } : null;
 
   const palette = {
     ...C,
-    bgNormal:       quietPaper?.empty ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
-    bgFilled:       quietPaper?.filled ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
-    bgHover:        quietPaper?.hover ?? `rgba(${bgRgb}, 0.8)`,
-    bgSelected:     hexToRgba(primary, isQuietPaper ? 0.18 : 0.4),
+    bgNormal:       paper?.empty ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
+    bgFilled:       paper?.filled ?? `rgba(${bgRgb}, ${isDeepAbyssal ? 0.3 : 0.5})`,
+    bgHover:        paper?.hover ?? `rgba(${bgRgb}, 0.8)`,
+    bgSelected:     hexToRgba(primary, isPaper ? 0.18 : 0.4),
     bgDragSwap:     hexToRgba(primary, 0.3),
-    bgUnknown:      quietPaper?.unknown ?? C.bgUnknown,
-    borderNormal:   quietPaper?.border ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
-    borderFilled:   quietPaper?.filledBorder ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
-    borderUnknown:  quietPaper?.unknownBorder ?? C.borderUnknown,
+    bgUnknown:      paper?.unknown ?? C.bgUnknown,
+    borderNormal:   paper?.border ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
+    borderFilled:   paper?.filledBorder ?? (isDeepAbyssal ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.15)'),
+    borderUnknown:  paper?.unknownBorder ?? C.borderUnknown,
     borderHover:    hexToRgba(primary, 0.6),
     borderSelected: primary,
     borderDragSwap: primary,
-    selectionGlow:  hexToRgba(primary, isQuietPaper ? 0.18 : 0.4),
+    selectionGlow:  hexToRgba(primary, isPaper ? 0.18 : 0.4),
     hoverLine:      primary,
-    plus:           quietPaper ? hexToRgba(quietPaper.inkSecondary, 0.45) : C.plus,
-    usesBg:         quietPaper?.ink ?? C.usesBg,
-    indexHidden:    quietPaper ? hexToRgba(quietPaper.ink, 0.08) : C.indexHidden,
+    plus:           paper ? hexToRgba(paper.faint, 0.75) : C.plus,
+    indexVisible:   paper ? hexToRgba(paper.label, 0.82) : C.indexVisible,
+    indexHidden:    paper ? hexToRgba(paper.ink, 0.08) : C.indexHidden,
   };
 
   themePaletteCache.themeName = themeName;

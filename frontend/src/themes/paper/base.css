@@ -1,0 +1,306 @@
+/* =====================================================================
+   PAPER THEME FAMILY — base
+   Typography, materials and controls shared by every component.
+   Scope: :root[data-paper-theme] (tokens.css).
+   ===================================================================== */
+
+:root[data-paper-theme] body {
+  color: var(--paper-ink);
+  background-color: var(--paper-canvas);
+}
+
+:root[data-paper-theme] .theme-paper {
+  color: var(--paper-ink);
+  font-family: var(--paper-font-sans);
+  font-feature-settings: "cv11", "ss03";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--paper-medium) var(--paper-ease), color var(--paper-medium) var(--paper-ease);
+}
+
+:root[data-paper-theme] ::selection {
+  color: inherit;
+  background: rgba(var(--paper-accent-rgb), 0.22);
+}
+
+/* ---------------------------------------------------------------------
+   Typography — serif for reading moments, sans for working moments.
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] :is(h1, h2, h3) {
+  font-family: var(--paper-font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  font-optical-sizing: auto;
+}
+
+:root[data-paper-theme] :is(.font-black, .font-extrabold, .font-bold) {
+  font-weight: 600 !important;
+}
+
+/* The dark UI shouts in tracked capitals; paper speaks in sentence case. */
+:root[data-paper-theme] .uppercase {
+  text-transform: none !important;
+}
+
+:root[data-paper-theme] :is(.tracking-widest, .tracking-wider, .tracking-wide, .tracking-\[0\.3em\], .tracking-\[0\.2em\]) {
+  letter-spacing: 0.005em !important;
+}
+
+:root[data-paper-theme] .tracking-tighter {
+  letter-spacing: -0.005em !important;
+}
+
+/* Italic notes read as marginalia. */
+:root[data-paper-theme] .italic:not(.font-mono) {
+  font-family: var(--paper-font-serif);
+  font-size: 1.08em;
+  letter-spacing: 0;
+}
+
+:root[data-paper-theme] :is(.font-mono, code, kbd, pre) {
+  font-family: var(--paper-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Micro type is nudged up half a step for comfortable reading. */
+:root[data-paper-theme] .text-\[8px\] { font-size: 9px !important; }
+:root[data-paper-theme] .text-\[9px\] { font-size: 10px !important; }
+:root[data-paper-theme] .text-\[10px\] { font-size: 10.5px !important; }
+
+/* Luminous effects have no place on paper. */
+:root[data-paper-theme] :is([class*="drop-shadow-"], [class*="text-shadow"]) {
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+:root[data-paper-theme] .theme-paper * {
+  text-shadow: none;
+}
+
+/* ---------------------------------------------------------------------
+   Materials
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] :is(.glass, .glass-card, .glass-panel) {
+  color: var(--paper-ink);
+  background-color: var(--paper-surface);
+  background-image: none;
+  border-color: var(--paper-line) !important;
+  backdrop-filter: none !important;
+  box-shadow: var(--paper-shadow-sm) !important;
+}
+
+:root[data-paper-theme] .glass-card {
+  border-radius: var(--paper-radius-lg);
+}
+
+:root[data-paper-theme] .glass-panel {
+  border-radius: var(--paper-radius-lg);
+  box-shadow: var(--paper-shadow-lg) !important;
+}
+
+:root[data-paper-theme] :is(.glow-border, .hover\:glow-border:hover) {
+  border-color: var(--paper-line-strong) !important;
+  box-shadow: var(--paper-shadow-md) !important;
+}
+
+:root[data-paper-theme] .glow-border-active {
+  border-color: var(--paper-accent-line) !important;
+  box-shadow: 0 0 0 3px rgba(var(--paper-accent-rgb), 0.12), var(--paper-shadow-md) !important;
+}
+
+:root[data-paper-theme] .cyber-grid {
+  background-image:
+    radial-gradient(circle, var(--paper-track) 1.3px, transparent 1.7px);
+  background-size: 24px 24px;
+}
+
+/* Shadows: soft, warm, never black halos. */
+:root[data-paper-theme] .shadow-sm { --tw-shadow: var(--paper-shadow-xs) !important; }
+:root[data-paper-theme] :is(.shadow, .shadow-md) { --tw-shadow: var(--paper-shadow-sm) !important; }
+:root[data-paper-theme] :is(.shadow-lg, .shadow-xl) { --tw-shadow: var(--paper-shadow-md) !important; }
+:root[data-paper-theme] .shadow-2xl { --tw-shadow: var(--paper-shadow-lg) !important; }
+:root[data-paper-theme] .shadow-inner { --tw-shadow: inset 0 1px 2px rgba(20, 20, 19, 0.06) !important; }
+:root[data-paper-theme] [class*="shadow-[0_0_"],
+:root[data-paper-theme] [class*="shadow-[0_0_"]:hover {
+  --tw-shadow: 0 0 #0000 !important;
+}
+:root[data-paper-theme] [class*="shadow-indigo-"],
+:root[data-paper-theme] [class*="shadow-amber-"],
+:root[data-paper-theme] [class*="shadow-purple-"] {
+  --tw-shadow-color: rgba(20, 20, 19, 0.08) !important;
+}
+
+/* Blur is reserved for sticky bars and overlays; panels are opaque paper. */
+:root[data-paper-theme] .theme-paper :is(.backdrop-blur, .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-xl, .backdrop-blur-2xl) {
+  --tw-backdrop-blur: blur(10px);
+}
+
+:root[data-paper-theme] .grayscale-\[0\.5\] {
+  --tw-grayscale: grayscale(0.25);
+}
+
+/* ---------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------- */
+:root[data-paper-theme] .neo-button {
+  height: 32px;
+  padding-inline: 12px;
+  color: var(--paper-ink-2);
+  font-size: 12.5px;
+  font-weight: 500 !important;
+  letter-spacing: 0;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--paper-radius-sm);
+  box-shadow: none !important;
+  transition:
+    background-color var(--paper-fast) var(--paper-ease),
+    border-color var(--paper-fast) var(--paper-ease),
+    color var(--paper-fast) var(--paper-ease),
+    transform var(--paper-fast) var(--paper-ease);
+}
+
+:root[data-paper-theme] .neo-button:hover {
+  color: var(--paper-ink);
+  border-color: var(--paper-line-strong);
+}
+
+:root[data-paper-theme] .neo-button:active {
+  transform: scale(0.98);
+}
+
+:root[data-paper-theme] .hover\:bg-zinc-700:hover,
+:root[data-paper-theme] .hover\:bg-zinc-700\/80:hover {
+  background-color: var(--paper-hover-strong) !important;
+}
+
+:root[data-paper-theme] .hover\:bg-zinc-800:hover {
+  background-color: var(--paper-hover) !important;
+}
+
+/* Solid accent fills always carry light ink. :where() keeps these at the
+   lowest paper specificity so component rules can refine them. */
+:root[data-paper-theme] :where(
+  .bg-indigo-500, .bg-indigo-600, .bg-violet-500, .bg-violet-600,
+  .bg-purple-500, .bg-purple-600, .bg-fuchsia-600,
+  .bg-blue-500, .bg-blue-600, .bg-sky-600, .bg-cyan-600, .bg-teal-600,
+  .bg-emerald-500, .bg-emerald-600, .bg-green-500, .bg-green-600,
+  .bg-red-500, .bg-red-600, .bg-rose-500, .bg-amber-500, .bg-amber-600,
+  .hover\:bg-indigo-600:hover, .hover\:bg-purple-600:hover, .hover\:bg-emerald-600:hover,
+  .hover\:bg-red-500:hover, .hover\:bg-red-600:hover, .hover\:bg-amber-500:hover, .hover\:bg-purple-500:hover
+) {
+  color: var(--paper-on-accent) !important;
+}
+
+:root[data-paper-theme] :where(
+  .bg-indigo-500, .bg-indigo-600, .bg-purple-500, .bg-purple-600, .bg-blue-600,
+  .bg-emerald-600, .bg-red-600, .bg-amber-600, .bg-cyan-600, .bg-sky-600
+) :where(.text-white, .text-zinc-100, .text-zinc-200, .text-zinc-300) {
+  color: var(--paper-on-accent) !important;
+}
+
+/* Toggle switches: warm track, paper knob. */
+:root[data-paper-theme] .rounded-full.bg-zinc-700 {
+  background-color: var(--paper-track) !important;
+}
+
+:root[data-paper-theme] .rounded-full.bg-white {
+  background-color: var(--paper-knob) !important;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.22), 0 0 0 0.5px rgba(20, 20, 19, 0.06);
+}
+
+/* Bordered fields become quiet paper inputs; inline editors stay bare. */
+:root[data-paper-theme] :is(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, select)[class*="border"]:not(.border-none):not(.border-0):not(.bg-transparent) {
+  color: var(--paper-ink) !important;
+  background-color: var(--paper-raised) !important;
+  border-color: var(--paper-line-strong) !important;
+  box-shadow: var(--paper-shadow-xs);
+  transition: border-color var(--paper-fast) var(--paper-ease), box-shadow var(--paper-fast) var(--paper-ease);
+}
+
+:root[data-paper-theme] :is(input, textarea, select)[class*="border"]:not(.border-none):not(.border-0):focus {
+  border-color: var(--paper-accent-line) !important;
+  box-shadow: 0 0 0 3px rgba(var(--paper-accent-rgb), 0.12) !important;
+}
+
+:root[data-paper-theme] :is(input, textarea)::placeholder {
+  color: var(--paper-ink-4) !important;
+  opacity: 1;
+}
+
+:root[data-paper-theme] :is(input[type="range"], input[type="checkbox"], input[type="radio"], progress) {
+  accent-color: var(--paper-accent);
+}
+
+:root[data-paper-theme] :is(button, a, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--paper-accent) !important;
+  outline-offset: 2px;
+}
+
+/* Text fields signal focus through their own border/ring (see above). */
+:root[data-paper-theme] :is(input, textarea):focus-visible {
+  outline: none !important;
+}
+
+/* Scrollbars: a pencil line, not a rail. */
+:root[data-paper-theme] .theme-paper ::-webkit-scrollbar,
+:root[data-paper-theme] .custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:root[data-paper-theme] .theme-paper ::-webkit-scrollbar-track,
+:root[data-paper-theme] .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:root[data-paper-theme] .theme-paper ::-webkit-scrollbar-thumb,
+:root[data-paper-theme] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--paper-line-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+:root[data-paper-theme] .theme-paper ::-webkit-scrollbar-thumb:hover,
+:root[data-paper-theme] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--paper-ink-4);
+}
+
+:root[data-paper-theme] .theme-paper ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------
+   Motion
+   --------------------------------------------------------------------- */
+@keyframes paper-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes paper-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes paper-slide-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes paper-slide-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-paper-theme] *,
+  :root[data-paper-theme] *::before,
+  :root[data-paper-theme] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

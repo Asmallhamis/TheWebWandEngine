@@ -1,6 +1,8 @@
 @import url('./themes/pureprism.css');
 @import url('./themes/orionfire.css');
-@import url('./themes/quietpaper.css');
+@import url('./themes/paper/tokens.css');
+@import url('./themes/paper/base.css');
+@import url('./themes/paper/components.css');
 
 /* src/themes.css - 19 Themes for Cool UI Mode */
 
@@ -190,51 +192,53 @@
 }
 
 
-/* Theme Overrides for Tailwind Utility Classes */
-.theme-cool-ui .glass-card,
-.theme-cool-ui .bg-black\/20,
-.theme-cool-ui .bg-black\/40,
-.theme-cool-ui .bg-zinc-900\/40,
-.theme-cool-ui .bg-zinc-900\/20,
-.theme-cool-ui .bg-black\/30,
-.theme-cool-ui .bg-zinc-800 {
+/* Theme Overrides for Tailwind Utility Classes
+   Paper themes remap the palette through --tw-c-* tokens instead, so they are
+   excluded here. :where() keeps the original specificity. */
+.theme-cool-ui:where(:not(.theme-paper)) .glass-card,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-black\/20,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-black\/40,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-zinc-900\/40,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-zinc-900\/20,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-black\/30,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-zinc-800 {
   background: var(--cool-panel-bg) !important;
   backdrop-filter: var(--cool-glass-blur) !important;
   border-color: var(--cool-glass-border) !important;
 }
 
-.theme-cool-ui .text-indigo-400,
-.theme-cool-ui .text-indigo-500,
-.theme-cool-ui .text-zinc-500 {
+.theme-cool-ui:where(:not(.theme-paper)) .text-indigo-400,
+.theme-cool-ui:where(:not(.theme-paper)) .text-indigo-500,
+.theme-cool-ui:where(:not(.theme-paper)) .text-zinc-500 {
   color: var(--cool-text-primary) !important;
 }
-.theme-cool-ui .text-emerald-400,
-.theme-cool-ui .text-cyan-400 {
+.theme-cool-ui:where(:not(.theme-paper)) .text-emerald-400,
+.theme-cool-ui:where(:not(.theme-paper)) .text-cyan-400 {
   color: var(--cool-primary) !important;
 }
-.theme-cool-ui .text-amber-300,
-.theme-cool-ui .text-amber-400 {
+.theme-cool-ui:where(:not(.theme-paper)) .text-amber-300,
+.theme-cool-ui:where(:not(.theme-paper)) .text-amber-400 {
   color: var(--cool-secondary) !important;
 }
 
-.theme-cool-ui .bg-indigo-500,
-.theme-cool-ui .bg-indigo-600 {
+.theme-cool-ui:where(:not(.theme-paper)) .bg-indigo-500,
+.theme-cool-ui:where(:not(.theme-paper)) .bg-indigo-600 {
   background-color: var(--cool-primary) !important;
 }
 
-.theme-cool-ui .border-indigo-400,
-.theme-cool-ui .border-indigo-500,
-.theme-cool-ui .ring-indigo-500 {
+.theme-cool-ui:where(:not(.theme-paper)) .border-indigo-400,
+.theme-cool-ui:where(:not(.theme-paper)) .border-indigo-500,
+.theme-cool-ui:where(:not(.theme-paper)) .ring-indigo-500 {
   border-color: var(--cool-primary) !important;
   --tw-ring-color: var(--cool-primary) !important;
 }
 
-.theme-cool-ui .bg-zinc-800\/80 {
+.theme-cool-ui:where(:not(.theme-paper)) .bg-zinc-800\/80 {
   background-color: var(--cool-panel-bg) !important;
   backdrop-filter: var(--cool-glass-blur) !important;
 }
-.theme-cool-ui .bg-zinc-700\/80,
-.theme-cool-ui .hover\:bg-zinc-700\/80:hover {
+.theme-cool-ui:where(:not(.theme-paper)) .bg-zinc-700\/80,
+.theme-cool-ui:where(:not(.theme-paper)) .hover\:bg-zinc-700\/80:hover {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 

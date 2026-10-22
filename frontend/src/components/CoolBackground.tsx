@@ -1,4 +1,5 @@
 import React from 'react';
+import { isPaperTheme } from '../lib/themeFamily';
 
 interface CoolBackgroundProps {
   theme: string;
@@ -6,7 +7,12 @@ interface CoolBackgroundProps {
 }
 
 export function CoolBackground({ theme, type }: CoolBackgroundProps) {
-  if (type === 'blank' || theme === 'quietpaper') {
+  if (isPaperTheme(theme)) {
+    // Static laid-paper backdrop; dynamic backgrounds do not apply to paper themes.
+    return <div className="paper-backdrop fixed inset-0 -z-[100] pointer-events-none" />;
+  }
+
+  if (type === 'blank') {
     return <div className="fixed inset-0 -z-[100] bg-[rgba(var(--cool-bg-rgb),1)] transition-colors duration-500 pointer-events-none" />;
   }
 

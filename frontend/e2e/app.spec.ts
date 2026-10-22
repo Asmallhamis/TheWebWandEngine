@@ -9,7 +9,7 @@ test.describe('TWWE Base Functionality', () => {
 
     test('should load the application and show the header', async ({ page }) => {
         await expect(page.locator('header')).toBeVisible();
-        await expect(page.getByText('TWWE')).toBeVisible();
+        await expect(page.getByText('TWWE', { exact: true })).toBeVisible();
     });
 
     test('should open and close the settings modal', async ({ page }) => {

@@ -44,7 +44,7 @@ export function PropInput({ label, value, onChange, colorClass, secondaryValue }
 
   return (
     <div className="flex flex-col group/prop">
-      <label className="text-[10px] font-black text-zinc-500 mb-1 uppercase tracking-wider transition-colors group-hover/prop:text-zinc-400">{label}</label>
+      <label className="prop-input-label text-[10px] font-black text-zinc-500 mb-1 uppercase tracking-wider transition-colors group-hover/prop:text-zinc-400">{label}</label>
       <div className="flex items-baseline gap-2 relative">
         <input
           type="text"
@@ -55,18 +55,18 @@ export function PropInput({ label, value, onChange, colorClass, secondaryValue }
             setIsFocused(false);
             setInputValue((value ?? "").toString());
           }}
-          className={`bg-transparent font-mono text-xl font-bold w-24 focus:outline-none transition-opacity ${colorClass || 'text-white'} ${isFocused ? 'opacity-100' : 'opacity-0'}`}
+          className={`prop-input-value bg-transparent font-mono text-xl font-bold w-24 focus:outline-none transition-opacity ${colorClass || 'text-white'} ${isFocused ? 'opacity-100' : 'opacity-0'}`}
         />
         {!isFocused && (
-          <div className={`absolute inset-0 flex items-baseline gap-2 pointer-events-none font-mono text-xl font-bold ${colorClass || 'text-white'}`}>
+          <div className={`prop-input-value absolute inset-0 flex items-baseline gap-2 pointer-events-none font-mono text-xl font-bold ${colorClass || 'text-white'}`}>
             {value}
           </div>
         )}
         {secondaryValue && (
-          <span className="text-xs font-mono text-zinc-600 italic whitespace-nowrap">{secondaryValue}</span>
+          <span className="prop-input-secondary text-xs font-mono text-zinc-600 italic whitespace-nowrap">{secondaryValue}</span>
         )}
       </div>
-      <div className="h-0.5 w-full bg-white/5 group-hover/prop:bg-indigo-500/30 transition-colors mt-1" />
+      <div className="prop-input-rule h-0.5 w-full bg-white/5 group-hover/prop:bg-indigo-500/30 transition-colors mt-1" />
     </div>
   );
 }

@@ -110,7 +110,7 @@ export function FloatingDragModeToggle({ settings, setSettings }: FloatingDragMo
   return (
     <div 
       ref={containerRef}
-      className="fixed z-[5000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-2xl select-none"
+      className="drag-mode-toggle fixed z-[5000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-white/10 rounded-xl p-1 shadow-2xl select-none"
       style={initialStyle}
     >
       <div 
@@ -121,13 +121,13 @@ export function FloatingDragModeToggle({ settings, setSettings }: FloatingDragMo
         <GripVertical size={16} />
       </div>
 
-      <div className="flex bg-black/40 rounded-lg p-1 gap-1">
+      <div className="drag-mode-track flex bg-black/40 rounded-lg p-1 gap-1">
         <button
           onClick={() => setSettings(prev => ({ ...prev, editorDragMode: 'cursor' }))}
           className={`
-            flex items-center justify-center w-10 h-10 rounded-md transition-all
+            drag-mode-option flex items-center justify-center w-10 h-10 rounded-md transition-all
             ${settings.editorDragMode === 'cursor' 
-              ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+              ? 'drag-mode-option-active bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
               : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}
           `}
           title={t('settings.drag_mode_cursor')}
@@ -137,9 +137,9 @@ export function FloatingDragModeToggle({ settings, setSettings }: FloatingDragMo
         <button
           onClick={() => setSettings(prev => ({ ...prev, editorDragMode: 'hand' }))}
           className={`
-            flex items-center justify-center w-10 h-10 rounded-md transition-all
+            drag-mode-option flex items-center justify-center w-10 h-10 rounded-md transition-all
             ${settings.editorDragMode === 'hand' 
-              ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
+              ? 'drag-mode-option-active bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' 
               : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}
           `}
           title={t('settings.drag_mode_hand')}
