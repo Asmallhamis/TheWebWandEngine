@@ -83,6 +83,65 @@ interface CanvasTileProps {
   absoluteToOrdinal: Record<number, number> | null | undefined;
 }
 
+let cachedTreePaletteKey = '';
+let cachedTreePalette: {
+  line: string;
+  castBg: string;
+  castBorder: string;
+  castText: string;
+  spellBg: string;
+  spellHover: string;
+  spellBorder: string;
+  spellText: string;
+  accent: string;
+  muted: string;
+  border: string;
+  faint: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  badgeWarn: string;
+  badgeSuccess: string;
+} | null = null;
+
+function getTreeThemePalette(settings: AppSettings) {
+  const isPaper = isPaperThemeActive(settings);
+  const key = isPaper ? `paper:${settings.coolUITheme || 'quietpaper'}` : 'default';
+  if (cachedTreePalette && cachedTreePaletteKey === key) {
+    return cachedTreePalette;
+  }
+  const themeRoot = isPaper
+    ? (document.querySelector('.theme-paper') || document.documentElement) as HTMLElement | null
+    : null;
+  const themeStyles = themeRoot ? window.getComputedStyle(themeRoot) : null;
+  const readThemeColor = (name: string, fallback: string) =>
+    themeStyles?.getPropertyValue(name).trim() || fallback;
+  const palette = {
+    line: readThemeColor('--paper-tree-line', 'rgba(255, 255, 255, 0.55)'),
+    castBg: readThemeColor('--paper-tree-cast', 'rgba(99, 102, 241, 0.1)'),
+    castBorder: readThemeColor('--paper-tree-cast-line', 'rgba(99, 102, 241, 0.3)'),
+    castText: readThemeColor('--paper-accent-ink', '#818cf8'),
+    spellBg: readThemeColor('--paper-cell-filled', '#111114'),
+    spellHover: readThemeColor('--paper-cell-filled-hover', 'rgba(99, 102, 241, 0.2)'),
+    spellBorder: readThemeColor('--paper-cell-filled-line', 'rgba(255, 255, 255, 0.1)'),
+    spellText: readThemeColor('--paper-cell-label', '#a1a1aa'),
+    accent: readThemeColor('--paper-accent', '#818cf8'),
+    muted: readThemeColor('--paper-ink-3', '#71717a'),
+    border: readThemeColor('--paper-tree-frame', '#27272a'),
+    faint: readThemeColor('--paper-ink-2', '#3f3f46'),
+    badgeBg: readThemeColor('--paper-raised', '#ffffff'),
+    badgeBorder: readThemeColor('--paper-line-strong', 'rgba(20, 20, 19, 0.16)'),
+    badgeText: readThemeColor('--paper-ink', '#141413'),
+    badgeWarn: readThemeColor('--paper-warning', '#8a5a1e'),
+    badgeSuccess: readThemeColor('--paper-success', '#5a6e3e'),
+  };
+  if (!isPaper || palette.line !== 'rgba(255, 255, 255, 0.55)') {
+    cachedTreePaletteKey = key;
+    cachedTreePalette = palette;
+  }
+  return palette;
+}
+
 const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
   tileX, tileY, width, height, dpr, computedLayout, data, spellDb, settings,
   hoverNode, markedSlots, showIndices, absoluteToOrdinal
@@ -118,27 +177,7 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
     const tileRight = tileX + width;
     const tileBottom = tileY + height;
     const isPaper = isPaperThemeActive(settings);
-    const themeRoot = isPaper
-      ? document.querySelector('.theme-paper') as HTMLElement | null
-      : null;
-    const themeStyles = themeRoot ? window.getComputedStyle(themeRoot) : null;
-    const readThemeColor = (name: string, fallback: string) =>
-      themeStyles?.getPropertyValue(name).trim() || fallback;
-    // Paper themes publish their tree colors as CSS tokens (themes/paper/tokens.css).
-    const treePalette = {
-      line: readThemeColor('--paper-tree-line', 'rgba(255, 255, 255, 0.55)'),
-      castBg: readThemeColor('--paper-tree-cast', 'rgba(99, 102, 241, 0.1)'),
-      castBorder: readThemeColor('--paper-tree-cast-line', 'rgba(99, 102, 241, 0.3)'),
-      castText: readThemeColor('--paper-accent-ink', '#818cf8'),
-      spellBg: readThemeColor('--paper-cell-filled', '#111114'),
-      spellHover: readThemeColor('--paper-cell-filled-hover', 'rgba(99, 102, 241, 0.2)'),
-      spellBorder: readThemeColor('--paper-cell-filled-line', 'rgba(255, 255, 255, 0.1)'),
-      spellText: readThemeColor('--paper-cell-label', '#a1a1aa'),
-      accent: readThemeColor('--paper-accent', '#818cf8'),
-      muted: readThemeColor('--paper-ink-3', '#71717a'),
-      border: readThemeColor('--paper-tree-frame', '#27272a'),
-      faint: readThemeColor('--paper-ink-2', '#3f3f46'),
-    };
+    const treePalette = getTreeThemePalette(settings);
 
     // --- 绘制节点逻辑 ---
     function drawNode(cn: ComputedNode, ctx: CanvasRenderingContext2D) {
@@ -374,36 +413,92 @@ const CanvasTile: React.FC<CanvasTileProps> = React.memo(({
       ctx.textBaseline = 'middle';
       if (settings.recursionIterationDisplay !== 'none') {
         if (node.iteration !== undefined) {
-          ctx.fillStyle = '#a78bfa';
-          ctx.font = 'black 10px Inter';
-          ctx.textAlign = 'right';
           const itText = settings.recursionIterationDisplay === 'labeled' ? `i${node.iteration}` : node.iteration.toString();
-          ctx.fillText(itText, x + nodeW + 2 - (node.shot_id ? shotIdW - 2 : 0), y);
+          ctx.font = 'bold 9.5px monospace';
+          const rightAnchor = x + nodeW + 4 - (node.shot_id ? shotIdW : 0);
+          if (isPaper) {
+            const itW = Math.max(14, ctx.measureText(itText).width + 7);
+            const itH = 14;
+            const itX = rightAnchor - itW;
+            const itY = y - 7;
+            ctx.fillStyle = treePalette.badgeBg;
+            ctx.strokeStyle = treePalette.badgeBorder;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(itX, itY, itW, itH, 3.5);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = treePalette.castText;
+            ctx.textAlign = 'center';
+            ctx.fillText(itText, itX + itW / 2, itY + itH / 2 + 0.5);
+          } else {
+            ctx.fillStyle = '#a78bfa';
+            ctx.font = 'black 10px Inter';
+            ctx.textAlign = 'right';
+            ctx.fillText(itText, x + nodeW + 2 - (node.shot_id ? shotIdW - 2 : 0), y);
+          }
         }
         if (node.recursion !== undefined) {
-          ctx.fillStyle = '#34d399';
-          ctx.font = 'black 10px Inter';
-          ctx.textAlign = 'left';
           const reText = settings.recursionIterationDisplay === 'labeled' ? `r${node.recursion}` : node.recursion.toString();
-          ctx.fillText(reText, x - 2, y);
+          if (isPaper) {
+            ctx.font = 'bold 9.5px monospace';
+            const reW = Math.max(14, ctx.measureText(reText).width + 7);
+            const reH = 14;
+            const reX = x - 4;
+            const reY = y - 7;
+            ctx.fillStyle = treePalette.badgeBg;
+            ctx.strokeStyle = treePalette.badgeBorder;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(reX, reY, reW, reH, 3.5);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = treePalette.badgeSuccess;
+            ctx.textAlign = 'center';
+            ctx.fillText(reText, reX + reW / 2, reY + reH / 2 + 0.5);
+          } else {
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'black 10px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText(reText, x - 2, y);
+          }
         }
       }
 
       // Indices
       if (showIndices && node.index && node.index.length > 0) {
-        ctx.font = 'black 10px Inter';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 3;
         const idxValues = node.index
           .map((idx: number) => absoluteToOrdinal?.[idx])
           .filter((value): value is number => typeof value === 'number' && value > 0);
         const isAlwaysCastNode = idxValues.length === 0;
         const idxText = (isAlwaysCastNode ? node.index : idxValues).join(',');
-        ctx.fillStyle = isAlwaysCastNode ? '#f59e0b' : '#22d3ee';
-        ctx.fillText(idxText, x + nodeW + 4, y + nodeH);
-        ctx.shadowBlur = 0;
+        if (isPaper) {
+          ctx.font = 'bold 9.5px monospace';
+          const pillW = Math.max(14, ctx.measureText(idxText).width + 7);
+          const pillH = 14;
+          const pillX = x + nodeW + 5 - pillW;
+          const pillY = y + nodeH - 9;
+          ctx.fillStyle = treePalette.badgeBg;
+          ctx.strokeStyle = treePalette.badgeBorder;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(pillX, pillY, pillW, pillH, 3.5);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = isAlwaysCastNode ? treePalette.badgeWarn : treePalette.badgeText;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(idxText, pillX + pillW / 2, pillY + pillH / 2 + 0.5);
+        } else {
+          ctx.font = 'black 10px Inter';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 3;
+          ctx.fillStyle = isAlwaysCastNode ? '#f59e0b' : '#22d3ee';
+          ctx.fillText(idxText, x + nodeW + 4, y + nodeH);
+          ctx.shadowBlur = 0;
+        }
       }
 
       ctx.restore();

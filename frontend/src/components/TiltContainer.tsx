@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTilt } from '../hooks/useTilt';
 import { useSettings } from '../hooks/useSettings';
+import { isPaperThemeActive } from '../lib/themeFamily';
 
 interface TiltContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -23,9 +24,10 @@ export const TiltContainer = React.forwardRef<HTMLDivElement, TiltContainerProps
   ...props
 }, externalRef) => {
   const { settings } = useSettings();
+  const isPaper = isPaperThemeActive(settings);
   
-  // Only enable tilt if Cool UI is active and explicitly not dragging.
-  const isTiltEnabled = settings.coolUIMode && !disabled && !isDragging;
+  // Only enable tilt if Cool UI is active (excluding flat Paper skins) and explicitly not dragging.
+  const isTiltEnabled = settings.coolUIMode && !isPaper && !disabled && !isDragging;
   
   const { ref: tiltRef, style: tiltStyle, glareStyle } = useTilt<HTMLDivElement>({
     disabled: !isTiltEnabled,
@@ -47,7 +49,7 @@ export const TiltContainer = React.forwardRef<HTMLDivElement, TiltContainerProps
     [tiltRef, externalRef]
   );
 
-  if (!settings.coolUIMode) {
+  if (!settings.coolUIMode || isPaper) {
     return (
       <div ref={externalRef} className={className} style={propStyle} {...props}>
         {children}

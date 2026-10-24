@@ -614,8 +614,10 @@ const TIMELINE_SPEED_EVENT = 'twwe:timeline-speed';
 const MIN_TIMELINE_SPEED = 0.1;
 const MAX_TIMELINE_SPEED = 8;
 
-const makePileKey = (piles: TimelinePileSet) =>
-  TIMELINE_PILE_LABELS.map(name => `${name}:${(piles[name] || []).join('.')}`).join('|');
+const EMPTY_PILES: TimelinePileSet = { discarded: [], hand: [], deck: [] };
+
+const makePileKey = (piles?: TimelinePileSet) =>
+  TIMELINE_PILE_LABELS.map(name => `${name}:${(piles?.[name] || []).join('.')}`).join('|');
 
 const isDivideAction = (id?: string) => /^DIVIDE_\d+$/.test(id || '');
 
@@ -695,8 +697,11 @@ const buildTimelineFrames = (
   const frames: TimelineFrame[] = [];
   const process: TimelineProcessItem[] = initialProcess.map(item => ({ ...item }));
   let lastKey = '';
+  let lastPiles: TimelinePileSet = EMPTY_PILES;
 
-  const pushFrame = (event: EvalTimeline['events'][number], rawIndex: number) => {
+  const pushFrame = (rawEvent: EvalTimeline['events'][number], rawIndex: number) => {
+    if (rawEvent.piles) lastPiles = rawEvent.piles;
+    const event = rawEvent.piles ? rawEvent : { ...rawEvent, piles: lastPiles };
     const key = makeFrameKey(event, process);
     const shouldKeep = frames.length === 0 || rawIndex === events.length - 1 || key !== lastKey || event.type === 'cast_end';
     if (!shouldKeep) return;
@@ -1748,7 +1753,7 @@ const TreeNode: React.FC<{
 
               {node.iteration !== undefined && settings.recursionIterationDisplay !== 'none' && (
                 <div
-                  className="absolute -top-1.5 font-black z-30"
+                  className="eval-tree-iter-badge absolute -top-1.5 font-black z-30"
                   style={{
                     right: node.shot_id ? '18px' : '-2px',
                     color: '#a78bfa',
@@ -1763,7 +1768,7 @@ const TreeNode: React.FC<{
 
               {node.recursion !== undefined && settings.recursionIterationDisplay !== 'none' && (
                 <div
-                  className="absolute -top-1.5 font-black z-30"
+                  className="eval-tree-rec-badge absolute -top-1.5 font-black z-30"
                   style={{
                     left: '-2px',
                     color: '#34d399',
@@ -1777,7 +1782,7 @@ const TreeNode: React.FC<{
               )}
 
               {showIndices && node.index && node.index.length > 0 && (
-                <div className="absolute -bottom-1.5 -right-1 text-cyan-400 text-[10px] font-black z-20 scale-110 drop-shadow-[0_0_2px_rgba(0,0,0,0.8)]">
+                <div className="eval-tree-index-badge absolute -bottom-1.5 -right-1 text-cyan-400 text-[10px] font-black z-20 scale-110 drop-shadow-[0_0_2px_rgba(0,0,0,0.8)]">
                   {node.index.map(idx => absoluteToOrdinal?.[idx] || idx).join(',')}
                 </div>
               )}

@@ -70,9 +70,9 @@ interface DraggableNodeProps {
 
 const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, title, subtitle, slotIndex, colorDef, onRename, onPosChange, headerActions, children }) => {
   const controls = useControls() as any;
-  const scale = controls.instance?.transformState?.scale || 1;
   const nodeRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: defaultX, y: defaultY });
+  const posRef = useRef({ x: defaultX, y: defaultY });
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
   const [zIndex, setZIndex] = useState(() => ++globalZIndexCounter);
@@ -82,6 +82,15 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
   useEffect(() => {
     setEditValue(title);
   }, [title]);
+
+  useEffect(() => {
+    if (dragRef.current.isDragging) return;
+    posRef.current = { x: defaultX, y: defaultY };
+    setPos({ x: defaultX, y: defaultY });
+    if (nodeRef.current) {
+      nodeRef.current.style.transform = `translate3d(${defaultX}px, ${defaultY}px, 0)`;
+    }
+  }, [defaultX, defaultY]);
 
   useEffect(() => {
     if (!onRename) return;
@@ -99,24 +108,42 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { isDragging: true, lastX: e.clientX, lastY: e.clientY };
+    if (nodeRef.current) {
+      nodeRef.current.dataset.dragging = 'true';
+    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current.isDragging) return;
-    const dx = (e.clientX - dragRef.current.lastX) / scale;
-    const dy = (e.clientY - dragRef.current.lastY) / scale;
+    const currentScale = controls.instance?.transformState?.scale || 1;
+    const dx = (e.clientX - dragRef.current.lastX) / currentScale;
+    const dy = (e.clientY - dragRef.current.lastY) / currentScale;
     dragRef.current.lastX = e.clientX;
     dragRef.current.lastY = e.clientY;
-    setPos(p => ({ x: p.x + dx, y: p.y + dy }));
+    const nextX = posRef.current.x + dx;
+    const nextY = posRef.current.y + dy;
+    posRef.current = { x: nextX, y: nextY };
+    if (nodeRef.current) {
+      nodeRef.current.style.transform = `translate3d(${nextX}px, ${nextY}px, 0)`;
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (!dragRef.current.isDragging) return;
     dragRef.current.isDragging = false;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    const targetEl = e.currentTarget as HTMLElement;
+    if (targetEl.hasPointerCapture?.(e.pointerId)) {
+      targetEl.releasePointerCapture(e.pointerId);
+    }
+    if (nodeRef.current) {
+      delete nodeRef.current.dataset.dragging;
+    }
+    const finalPos = { x: posRef.current.x, y: posRef.current.y };
+    setPos(finalPos);
     if (onPosChange) {
-      onPosChange(pos.x, pos.y);
+      onPosChange(finalPos.x, finalPos.y);
     }
   };
 
@@ -155,8 +182,16 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
       ref={nodeRef}
       id={id}
       data-wand-target={slotIndex}
-      className={`absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
-      style={{ left: pos.x, top: pos.y, width: 'max-content', zIndex }}
+      className={`canvas-draggable-node absolute flex flex-col gap-4 glass-panel p-6 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] border ${colorDef.border}`}
+      style={{
+        left: 0,
+        top: 0,
+        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
+        width: 'max-content',
+        zIndex,
+        willChange: 'transform',
+        contain: 'layout style',
+      }}
       onPointerDownCapture={bringToFront}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -208,7 +243,7 @@ const DraggableNode: React.FC<DraggableNodeProps> = ({ id, defaultX, defaultY, t
       </div>
       
       {/* Absolute Badge for Slot Indicator */}
-      <div className={`absolute -bottom-3 -right-3 px-2 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-wider ${colorDef.text} shadow-lg pointer-events-none opacity-50`}>
+      <div className={`absolute -bottom-3 -right-3 px-2 py-1 bg-zinc-900/95 rounded-lg border border-white/10 text-[10px] font-black uppercase tracking-wider ${colorDef.text} shadow-lg pointer-events-none opacity-50`}>
         #{slotIndex}
       </div>
     </div>
@@ -358,7 +393,8 @@ export function CanvasWorkspace(props: CanvasWorkspaceProps) {
               <InitCamera wands={wands} activeTabId={activeTab.id} />
               
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
-          <div className="relative w-[10000px] h-[10000px] pointer-events-none cyber-grid">
+          <div className="relative w-[10000px] h-[10000px] pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none cyber-grid" style={{ contain: 'strict' }} />
             {/* Render Nodes */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-auto">
               {wands.map((slot, index) => {
@@ -668,4 +704,3 @@ function PinnedWandAttributes({ slot, data, wandName, colorDef, handleRename, pr
     </DraggableNode>
   );
 }
-

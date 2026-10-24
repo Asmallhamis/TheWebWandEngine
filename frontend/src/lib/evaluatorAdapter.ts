@@ -5,7 +5,7 @@ const compactAlwaysCast = (spells?: (string | null | undefined)[]) =>
   (spells || []).map(s => s || '').filter(Boolean);
 
 import { getActiveModBundle, ModBundle } from './modStorage';
-import { deleteTimelineStorage } from './timeline';
+import { deleteTimelineStorage, rehydrateTimelinePiles } from './timeline';
 let worker: Worker | null = null;
 let lastRequestId = 0;
 
@@ -312,6 +312,12 @@ export async function evaluateWand(
         if (settings.timelineEnabled === false) {
           delete data.data.timeline;
           data.data.timeline_disabled = true;
+        } else if (data.data?.timeline) {
+          const totalEvents = Number(data.data.timeline.total_events || data.data.timeline.events?.length || 0);
+          data.data.timeline.complete = !data.data.timeline.truncated
+            && totalEvents <= (data.data.timeline.events?.length || 0);
+          delete data.data.timeline.streamed;
+          rehydrateTimelinePiles(data.data);
         }
         return { data: data.data, id: requestId };
       }

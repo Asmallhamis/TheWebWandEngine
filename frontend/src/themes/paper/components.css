@@ -9,6 +9,7 @@
    1. Backdrop — laid paper with a faint warm light
    --------------------------------------------------------------------- */
 :root[data-paper-theme] .paper-backdrop {
+  contain: strict;
   background-color: var(--paper-canvas);
   background-image:
     radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
@@ -813,6 +814,38 @@
   color: var(--paper-cell-label) !important;
 }
 
+:root[data-paper-theme] :is(.eval-tree-index-badge, .eval-tree-iter-badge, .eval-tree-rec-badge) {
+  padding: 0 3.5px !important;
+  min-width: 14px;
+  height: 14px;
+  line-height: 12.5px !important;
+  font-family: var(--paper-font-mono);
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  text-align: center;
+  background-color: var(--paper-raised) !important;
+  border: 1px solid var(--paper-line-strong) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.22) !important;
+  transform: none !important;
+}
+
+:root[data-paper-theme] .eval-tree-index-badge {
+  right: -5px !important;
+  bottom: -5px !important;
+  color: var(--paper-ink) !important;
+}
+
+:root[data-paper-theme] .eval-tree-iter-badge {
+  top: -6px !important;
+  color: var(--paper-accent-ink) !important;
+}
+
+:root[data-paper-theme] .eval-tree-rec-badge {
+  top: -6px !important;
+  color: var(--paper-success) !important;
+}
+
 /* ---------------------------------------------------------------------
    7. Overlays — modals, settings, drawers
    --------------------------------------------------------------------- */
@@ -1012,6 +1045,24 @@
    --------------------------------------------------------------------- */
 :root[data-paper-theme] .canvas-workspace {
   background-color: var(--paper-canvas) !important;
+}
+
+:root[data-paper-theme] .canvas-workspace :is(
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .eval-section-bar,
+  .wand-timeline-heading,
+  .wand-eval-tree-heading
+) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root[data-paper-theme] .canvas-workspace .canvas-draggable-node {
+  box-shadow: var(--paper-shadow-md) !important;
 }
 /* ---------------------------------------------------------------------
    10. Spell picker — a quiet index card

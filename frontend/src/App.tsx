@@ -500,8 +500,10 @@ function App() {
     >
       {settings.coolUIMode && (
         <>
-          <CoolBackground theme={settings.coolUITheme} type={settings.coolUIBackground} />
-          <ThemeFilters />
+          {!(settings.isCanvasMode && isPaper) && (
+            <CoolBackground theme={settings.coolUITheme} type={settings.coolUIBackground} />
+          )}
+          {settings.coolUITheme === 'orionfire' && <ThemeFilters />}
           <OrionFireCanvas isActive={settings.coolUITheme === 'orionfire'} />
         </>
       )}
